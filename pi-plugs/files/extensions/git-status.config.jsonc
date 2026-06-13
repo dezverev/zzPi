@@ -1,0 +1,25 @@
+{
+  // Right overlay pane ordering. Lower numbers appear above higher-numbered panes.
+  "overlayOrder": 10,
+
+  // Minimum width requested for the Git Status pane.
+  "paneMinWidth": 48,
+
+  // Show the Git details pane automatically when a repository is detected.
+  "autoShowDetailsPane": true,
+
+  // Polling interval for refreshing Git status, in milliseconds.
+  "refreshIntervalMs": 5000,
+
+  // Timeout for `git status --porcelain --branch`, in milliseconds.
+  "gitStatusTimeoutMs": 5000,
+
+  // Maximum files shown under each section (conflicts/staged/modified/untracked).
+  "maxFilesPerSection": 8,
+
+  // Maximum displayed path length before paths are middle-truncated.
+  "maxPathLength": 96,
+
+  // Maximum visual lines rendered inside the pane before Pi's visual truncator clips it.
+  "maxRenderVisualLines": 1000,
+}

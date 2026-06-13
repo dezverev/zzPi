@@ -1,0 +1,41 @@
+{
+  // Width of the whole right overlay as a percentage of the terminal width.
+  "overlayWidthPercent": 36,
+
+  // Minimum width reserved for the right overlay and used as the default pane min width.
+  "defaultPaneMinWidth": 52,
+
+  // Number of columns left between the main chat tile and the right overlay.
+  "mainTileGap": 1,
+
+  // Smallest allowed main chat width after reserving room for the right overlay.
+  "minMainTileWidth": 1,
+
+  // Minimum terminal width before panes without their own visibleWhen predicate can appear.
+  "minTerminalWidth": 72,
+
+  // Top and bottom overlay margins, in terminal rows.
+  "overlayMarginTop": 1,
+  "overlayMarginBottom": 1,
+
+  // Maximum overlay height as a percentage of terminal rows.
+  "overlayMaxHeightPercent": 90,
+
+  // Pi keybinding used for the registered shortcut shown in help/keybinding lists.
+  // If changed, also update focusShortcutLetter so raw terminal Alt+<letter> handling matches.
+  "focusShortcut": "alt+o",
+
+  // Letter used for raw Alt+letter focus/blur handling while the overlay is open.
+  "focusShortcutLetter": "o",
+
+  // Ignore duplicate focus shortcut events inside this debounce window, in milliseconds.
+  "focusShortcutDebounceMs": 300,
+
+  // Footer status slot used while a right pane has focus.
+  "focusStatusKey": "right-overlay-focus",
+
+  // Scroll-repeat timings for holding up/down/page keys inside a focused pane.
+  "scrollRepeatInitialDelayMs": 220,
+  "scrollRepeatIntervalMs": 35,
+  "scrollRepeatIdleStopMs": 500,
+}

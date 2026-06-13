@@ -1,0 +1,91 @@
+{
+  // wf-testeragent is the workflow-mode testing gap filler. It runs after all
+  // planned implementation stages pass per-stage review and before whole-branch
+  // final review. It may add/update focused tests, then workflow mode sends its
+  // output through wf-revieweragent before final review proceeds.
+  "model": "gpt-5.5",
+  "provider": "openai-codex",
+  "providerRegistration": "none",
+  "endpoint": "http://127.0.0.1:1234",
+
+  // Choices shown by /wf-testeragent model. Keep model/provider metadata here so
+  // adding or changing the tester model is a config-only change.
+  "modelOptions": {
+    "gpt-5.5-xhigh": {
+      "label": "GPT-5.5 xhigh (openai-codex)",
+      "provider": "openai-codex",
+      "providerRegistration": "none",
+      "model": "gpt-5.5",
+      "contextWindow": 400000,
+      "maxOutputTokens": 32768,
+      "requestTimeoutMs": 1800000,
+      "reportMaxChars": 32000,
+      "thinking": "xhigh",
+      "tools": ["read", "bash", "edit", "write", "grep", "find", "ls", "readsubagent", "explorationsubagent"],
+    },
+    "qwen-35b-a3b": {
+      "label": "Qwen 3.6 35B A3B on 127.0.0.1 (LM Studio)",
+      "provider": "lm-studio",
+      "providerRegistration": "none",
+      "endpoint": "http://127.0.0.1:1234",
+      "model": "qwen/qwen3.6-35b-a3b",
+      "contextWindow": 262144,
+      "maxOutputTokens": 32768,
+      "requestTimeoutMs": 1800000,
+      "reportMaxChars": 32000,
+      "thinking": "off",
+      "tools": ["read", "bash", "edit", "write", "grep", "find", "ls", "readsubagent", "explorationsubagent"],
+    },
+    "qwen-35b-a3b-233": {
+      "label": "Qwen 3.6 35B A3B on 127.0.0.1 (LM Studio)",
+      "provider": "lm-studio",
+      "providerRegistration": "none",
+      "endpoint": "http://127.0.0.1:1234",
+      "model": "qwen/qwen3.6-35b-a3b",
+      "contextWindow": 262144,
+      "maxOutputTokens": 32768,
+      "requestTimeoutMs": 1800000,
+      "reportMaxChars": 32000,
+      "thinking": "off",
+      "tools": ["read", "bash", "edit", "write", "grep", "find", "ls", "readsubagent", "explorationsubagent"],
+    },
+    "qwen-35b-a3b-32": {
+      "label": "Qwen 3.6 35B A3B on 127.0.0.1 (LM Studio)",
+      "provider": "lm-studio",
+      "providerRegistration": "none",
+      "endpoint": "http://127.0.0.1:11444",
+      "model": "qwen/qwen3.6-35b-a3b",
+      "contextWindow": 262144,
+      "maxOutputTokens": 32768,
+      "requestTimeoutMs": 1800000,
+      "reportMaxChars": 32000,
+      "thinking": "off",
+      "tools": ["read", "bash", "edit", "write", "grep", "find", "ls", "readsubagent", "explorationsubagent"],
+    },
+    "qwen-27b": {
+      "label": "Qwen 3.6 27B on 127.0.0.1 (LM Studio)",
+      "provider": "lm-studio",
+      "providerRegistration": "none",
+      "endpoint": "http://127.0.0.1:1234",
+      "model": "qwen/qwen3.6-27b",
+      "contextWindow": 262144,
+      "maxOutputTokens": 32768,
+      "requestTimeoutMs": 1800000,
+      "reportMaxChars": 32000,
+      "thinking": "off",
+      "tools": ["read", "bash", "edit", "write", "grep", "find", "ls", "readsubagent", "explorationsubagent"],
+    },
+  },
+
+  // Mutating testing tools plus factual subagents. bash is used for targeted
+  // test/validation commands.
+  "tools": ["read", "bash", "edit", "write", "grep", "find", "ls", "readsubagent", "explorationsubagent"],
+
+  "requestTimeoutMs": 1800000,
+  "contextWindow": 400000,
+  "maxOutputTokens": 32768,
+  "reportMaxChars": 32000,
+  "thinking": "xhigh",
+
+  "systemPrompt": "You are wf-testeragent, a workflow-mode testing subagent for Pi. After implementation stages pass their own review, analyze the current branch for reasonable test gaps, add or update focused tests when useful, run targeted validation, and return only the requested JSON decision. Prefer meaningful, maintainable tests over broad or brittle coverage. If reviewer feedback is supplied, address that feedback before returning JSON.",
+}

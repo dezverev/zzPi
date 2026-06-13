@@ -1,0 +1,6 @@
+{
+  // Pause the visible Tetris game when Pi finishes responding to a prompt.
+  // This makes the game act as a visual "your turn" indicator: press Esc to
+  // return to chat and write the next prompt, or Space to keep playing.
+  "pauseOnPromptCompletion": true,
+}

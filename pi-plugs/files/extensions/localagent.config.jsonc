@@ -1,0 +1,33 @@
+{
+  // Target is selected globally by .pi/extensions/local-model-endpoints.config.jsonc.
+  // Uncomment only to override the shared local-network/localhost endpoint for this agent.
+  // "endpoint": "http://host:1234",
+
+  // Model id served by LM Studio.
+  "model": "qwen3.6-35b-a3b-mlx",
+
+  // Provider name registered inside Pi for the endpoint above.
+  "provider": "local-lmstudio",
+
+  // Optional Pi model selector to pass directly to the child process.
+  // Leave empty to use "<provider>/<model>" from the settings above.
+  "modelSelector": "",
+
+  // Tools available to the child Pi process. Include edit/write only when the
+  // local model is allowed to modify files.
+  "tools": ["read", "bash", "edit", "write", "grep", "find", "ls"],
+
+  // Child process limits and custom model metadata.
+  "requestTimeoutMs": 1800000,
+  "contextWindow": 262144,
+  "maxOutputTokens": 32768,
+
+  // Maximum final report characters injected back into the main Pi context.
+  "reportMaxChars": 60000,
+
+  // Thinking level passed to the child process.
+  "thinking": "off",
+
+  // Extra instructions appended to the child Pi system prompt.
+  "systemPrompt": "You are a local LM Studio subagent spawned by Pi. Work autonomously on the delegated task, using tools as needed. Follow all repo PI.md/AGENTS.md instructions. Keep the final answer concise and structured with: Completed, Files Changed, Notes, and Follow-up.",
+}

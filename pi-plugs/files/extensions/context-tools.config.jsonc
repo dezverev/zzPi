@@ -1,0 +1,34 @@
+{
+  // Right overlay pane ordering. Lower numbers appear above higher-numbered panes.
+  "overlayOrder": 21,
+
+  // Minimum width requested for the Context Tree pane.
+  "paneMinWidth": 52,
+
+  // Show the pane automatically as context is rebuilt.
+  "autoShowDetailsPane": true,
+
+  // Number of recent entries retained in each context bucket.
+  "maxRecentOperations": 4,
+
+  // Maximum label width for bucket names, tool labels, and commands before truncation.
+  "maxLabelLength": 72,
+
+  // Maximum tree nesting depth rendered in the pane.
+  "maxTreeDepth": 3,
+
+  // Maximum child buckets shown under a non-bash bucket before collapsing the rest.
+  "maxChildrenPerBucket": 8,
+
+  // Maximum bash command buckets shown before collapsing the rest.
+  "maxBashCommands": 8,
+
+  // Token-estimation divisor used for rough context accounting.
+  "estimatedCharsPerToken": 4,
+
+  // Approximate character-equivalent cost assigned to each image block.
+  "estimatedImageChars": 4800,
+
+  // Maximum visual lines rendered inside the pane before Pi's visual truncator clips it.
+  "maxRenderVisualLines": 1000,
+}

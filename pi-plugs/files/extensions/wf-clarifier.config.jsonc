@@ -1,0 +1,96 @@
+{
+  // wf-clarifier is the first workflow-mode subagent. It clarifies and enriches
+  // the user's initial prompt before the rest of the workflow runs.
+
+  // Default remote Pi model for the clarification pass.
+  "model": "gpt-5.5",
+  "provider": "openai-codex",
+  "providerRegistration": "none",
+
+  // Required by the shared child-agent config shape. Ignored when
+  // providerRegistration is "none".
+  "endpoint": "http://127.0.0.1:1234",
+
+  // Choices shown by /wf-clarifier model. Keep model/provider metadata here so
+  // adding or changing the clarifier model is a config-only change.
+  "modelOptions": {
+    "gpt-5.5-xhigh": {
+      "label": "GPT-5.5 xhigh (openai-codex)",
+      "provider": "openai-codex",
+      "providerRegistration": "none",
+      "model": "gpt-5.5",
+      "contextWindow": 400000,
+      "maxOutputTokens": 32768,
+      "requestTimeoutMs": 1800000,
+      "reportMaxChars": 20000,
+      "thinking": "xhigh",
+      "tools": ["readsubagent", "explorationsubagent"],
+    },
+    "qwen-35b-a3b": {
+      "label": "Qwen 3.6 35B A3B on 127.0.0.1 (LM Studio)",
+      "provider": "lm-studio",
+      "providerRegistration": "none",
+      "endpoint": "http://127.0.0.1:1234",
+      "model": "qwen/qwen3.6-35b-a3b",
+      "contextWindow": 262144,
+      "maxOutputTokens": 32768,
+      "requestTimeoutMs": 1800000,
+      "reportMaxChars": 20000,
+      "thinking": "off",
+      "tools": ["readsubagent", "explorationsubagent"],
+    },
+    "qwen-35b-a3b-233": {
+      "label": "Qwen 3.6 35B A3B on 127.0.0.1 (LM Studio)",
+      "provider": "lm-studio",
+      "providerRegistration": "none",
+      "endpoint": "http://127.0.0.1:1234",
+      "model": "qwen/qwen3.6-35b-a3b",
+      "contextWindow": 262144,
+      "maxOutputTokens": 32768,
+      "requestTimeoutMs": 1800000,
+      "reportMaxChars": 20000,
+      "thinking": "off",
+      "tools": ["readsubagent", "explorationsubagent"],
+    },
+    "qwen-35b-a3b-32": {
+      "label": "Qwen 3.6 35B A3B on 127.0.0.1 (LM Studio)",
+      "provider": "lm-studio",
+      "providerRegistration": "none",
+      "endpoint": "http://127.0.0.1:11444",
+      "model": "qwen/qwen3.6-35b-a3b",
+      "contextWindow": 262144,
+      "maxOutputTokens": 32768,
+      "requestTimeoutMs": 1800000,
+      "reportMaxChars": 20000,
+      "thinking": "off",
+      "tools": ["readsubagent", "explorationsubagent"],
+    },
+    "qwen-27b": {
+      "label": "Qwen 3.6 27B on 127.0.0.1 (LM Studio)",
+      "provider": "lm-studio",
+      "providerRegistration": "none",
+      "endpoint": "http://127.0.0.1:1234",
+      "model": "qwen/qwen3.6-27b",
+      "contextWindow": 262144,
+      "maxOutputTokens": 32768,
+      "requestTimeoutMs": 1800000,
+      "reportMaxChars": 20000,
+      "thinking": "off",
+      "tools": ["readsubagent", "explorationsubagent"],
+    },
+  },
+
+  // wf-clarifier should use these subagent tools for repo context. Those tools
+  // spawn their own child Pi processes and use their own configured Qwen models
+  // from readsubagent.config.jsonc and explorationsubagent.config.jsonc.
+  "tools": ["readsubagent", "explorationsubagent"],
+
+  "requestTimeoutMs": 1800000,
+  "contextWindow": 400000,
+  "maxOutputTokens": 32768,
+  "reportMaxChars": 20000,
+  "thinking": "xhigh",
+
+  // Extra instructions appended to the child Pi system prompt.
+  "systemPrompt": "You are wf-clarifier, a workflow-mode clarification subagent for Pi. Clarify and enrich the user's initial workflow prompt before any implementation planning begins. Use the readsubagent and explorationsubagent tools only to gather relevant repo facts, evidence, relationships, constraints, and uncertainty. Do not ask those tools for implementation plans, solution proposals, recommendations, or edit strategies; planning is the responsibility of later workflow agents. The readsubagent and explorationsubagent tools use their own configured Qwen models; do not try to replace them with raw inspection. Return only the requested JSON decision.",
+}

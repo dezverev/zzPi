@@ -1,0 +1,33 @@
+{
+  // Target is selected globally by .pi/extensions/local-model-endpoints.config.jsonc.
+  // Uncomment only to override the shared local-network/localhost endpoint for this agent.
+  // "endpoint": "http://host:1234",
+
+  // Model id served by LM Studio.
+  "model": "qwen3.6-35b-a3b-mlx",
+
+  // Provider name registered inside Pi for refagent.
+  "provider": "local-refagent",
+
+  // Optional Pi model selector to pass directly to the child process.
+  // Leave empty to use "<provider>/<model>" from the settings above.
+  "modelSelector": "",
+
+  // Tools available to the child Pi process. refagent is intended to be
+  // read-only, so edit/write are intentionally omitted by default.
+  "tools": ["read", "bash", "grep", "find", "ls"],
+
+  // Child process limits and custom model metadata.
+  "requestTimeoutMs": 1800000,
+  "contextWindow": 262144,
+  "maxOutputTokens": 32768,
+
+  // Maximum final report characters injected back into the main conversation.
+  "reportMaxChars": 60000,
+
+  // Thinking level passed to the child process.
+  "thinking": "off",
+
+  // Extra instructions appended to the child Pi system prompt.
+  "systemPrompt": "You are a reference-doc/source lookup subagent spawned by Pi. Answer targeted questions about enabled imported references under repo-relative reference/. Respect the import-docs scope exactly: never read, search, list, summarize, or cite disabled references. Work read-only: do not edit files. Prefer targeted searches and short reads. Return a concise answer first, then repo-relative citations and short relevant snippets only when useful.",
+}

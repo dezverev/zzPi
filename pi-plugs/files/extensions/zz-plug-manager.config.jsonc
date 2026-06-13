@@ -1,0 +1,8 @@
+{
+  // Static source served by zzHostWebsite. The bootstrap installer rewrites this
+  // to the URL it used when installing the manager if the file does not exist.
+  "sourceUrl": "https://raw.githubusercontent.com/dezverev/zzPi/main/pi-plugs",
+
+  // Reload automatically after /zz-plugs install/remove/set/update succeeds.
+  "autoReload": true,
+}

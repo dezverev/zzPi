@@ -1,0 +1,479 @@
+{
+  // Source of truth for the dependency-aware zzHostWebsite pi plug installer.
+  // Paths are relative to this .pi directory.
+  "schemaVersion": 1,
+  "commonFiles": [],
+  "plugins": [
+    {
+      "id": "zz-plug-manager",
+      "title": "zz plug manager",
+      "description": "Internal command extension that installs, removes, updates, and dependency-resolves this repo-local pi plug bundle from inside pi.",
+      "entry": "extensions/zz-plug-manager.ts",
+      "internal": true,
+      "pluginDeps": ["right-overlay-tiler", "zz-subagent-runtime"],
+      "fileDeps": ["extensions/zz-plug-manager.config.jsonc"],
+      "configFiles": ["extensions/zz-plug-manager.config.jsonc"],
+      "tags": ["manager", "internal"]
+    },
+    {
+      "id": "right-overlay-tiler",
+      "title": "Right overlay tiler",
+      "description": "Internal host for right-side overlay panes used by status/context/history extensions.",
+      "entry": "extensions/00-right-overlay-tiler.ts",
+      "internal": true,
+      "pluginDeps": [],
+      "fileDeps": [
+        "extensions/right-overlay-tiler.config.jsonc",
+        "extensions/lib/jsonc-config.ts",
+        "extensions/lib/right-overlay-tiler.ts"
+      ],
+      "configFiles": ["extensions/right-overlay-tiler.config.jsonc"],
+      "tags": ["ui", "overlay", "internal"]
+    },
+    {
+      "id": "zz-subagent-runtime",
+      "title": "zz subagent runtime",
+      "description": "Internal shared child-Pi subagent helper library and endpoint config for custom and bundled subagent extensions.",
+      "entry": "extensions/00-zz-subagent-runtime.ts",
+      "internal": true,
+      "pluginDeps": [],
+      "fileDeps": [
+        "extensions/local-model-endpoints.config.jsonc",
+        "extensions/lib/child-agent-model-options.ts",
+        "extensions/lib/child-pi-agent.ts",
+        "extensions/lib/jsonc-config.ts"
+      ],
+      "configFiles": ["extensions/local-model-endpoints.config.jsonc"],
+      "tags": ["agent", "runtime", "internal"]
+    },
+    {
+      "id": "zz-local-models",
+      "title": "zz local models",
+      "description": "Registers shared LM Studio Qwen models in Pi's normal /model picker.",
+      "entry": "extensions/zzLocalModels.ts",
+      "pluginDeps": [],
+      "fileDeps": [
+        "extensions/zzLocalModels.config.jsonc",
+        "extensions/lib/jsonc-config.ts"
+      ],
+      "configFiles": ["extensions/zzLocalModels.config.jsonc"],
+      "tags": ["model", "local-model", "lm-studio"]
+    },
+    {
+      "id": "context-files",
+      "title": "Context files",
+      "description": "Tracks read/write/edit file activity and shows file-context accounting in a right-side pane.",
+      "entry": "extensions/context-files.ts",
+      "pluginDeps": ["right-overlay-tiler"],
+      "fileDeps": [
+        "extensions/context-files.config.jsonc",
+        "extensions/lib/jsonc-config.ts",
+        "extensions/lib/right-overlay-tiler.ts"
+      ],
+      "configFiles": ["extensions/context-files.config.jsonc"],
+      "tags": ["ui", "context", "overlay"]
+    },
+    {
+      "id": "context-tools",
+      "title": "Context tools",
+      "description": "Shows context/tool usage accounting in a right-side pane.",
+      "entry": "extensions/context-tools.ts",
+      "pluginDeps": ["right-overlay-tiler"],
+      "fileDeps": [
+        "extensions/context-tools.config.jsonc",
+        "extensions/lib/jsonc-config.ts",
+        "extensions/lib/right-overlay-tiler.ts",
+        "extensions/lib/workflow-tree-state.ts"
+      ],
+      "configFiles": ["extensions/context-tools.config.jsonc"],
+      "tags": ["ui", "context", "overlay"]
+    },
+    {
+      "id": "context-tree-read",
+      "title": "Context tree read",
+      "description": "Reads targeted context-tree/file information through a child Pi process and displays scope in a right-side pane.",
+      "entry": "extensions/context-tree-read.ts",
+      "pluginDeps": ["right-overlay-tiler", "readsubagent"],
+      "fileDeps": [
+        "extensions/context-tree-read.config.jsonc",
+        "extensions/local-model-endpoints.config.jsonc",
+        "extensions/lib/child-pi-agent.ts",
+        "extensions/lib/jsonc-config.ts",
+        "extensions/lib/right-overlay-tiler.ts"
+      ],
+      "configFiles": [
+        "extensions/context-tree-read.config.jsonc",
+        "extensions/local-model-endpoints.config.jsonc"
+      ],
+      "tags": ["agent", "context", "overlay"]
+    },
+    {
+      "id": "workflow-tree",
+      "title": "Workflow Tree",
+      "description": "Shows workflow mode lifecycle, prompts, progress, and terminal state in a right-side pane.",
+      "entry": "extensions/workflow-tree.ts",
+      "pluginDeps": ["right-overlay-tiler"],
+      "fileDeps": [
+        "extensions/workflow-tree.config.jsonc",
+        "extensions/lib/jsonc-config.ts",
+        "extensions/lib/right-overlay-tiler.ts",
+        "extensions/lib/workflow-tree-state.ts"
+      ],
+      "configFiles": ["extensions/workflow-tree.config.jsonc"],
+      "tags": ["ui", "workflow", "overlay"]
+    },
+    {
+      "id": "explorationsubagent",
+      "title": "Exploration subagent",
+      "description": "Delegates exploratory read-only investigation to a child Pi process.",
+      "entry": "extensions/explorationsubagent.ts",
+      "pluginDeps": ["zz-subagent-runtime", "zz-local-models"],
+      "fileDeps": [
+        "extensions/explorationsubagent.config.jsonc",
+        "extensions/local-model-endpoints.config.jsonc",
+        "extensions/lib/child-pi-agent.ts",
+        "extensions/lib/jsonc-config.ts"
+      ],
+      "configFiles": [
+        "extensions/explorationsubagent.config.jsonc",
+        "extensions/local-model-endpoints.config.jsonc"
+      ],
+      "tags": ["agent"]
+    },
+    {
+      "id": "implementationsubagent",
+      "title": "Implementation subagent",
+      "description": "Adds /zzSubagentImplemention and an implementationsubagent tool for delegated implementation work through a child Pi process; Alt+S toggles the delegation mode.",
+      "entry": "extensions/implementationsubagent.ts",
+      "pluginDeps": ["zz-subagent-runtime", "zz-local-models", "readsubagent", "explorationsubagent"],
+      "fileDeps": [
+        "extensions/implementationsubagent.config.jsonc",
+        "extensions/local-model-endpoints.config.jsonc",
+        "extensions/lib/child-agent-model-options.ts",
+        "extensions/lib/child-pi-agent.ts",
+        "extensions/lib/jsonc-config.ts"
+      ],
+      "configFiles": [
+        "extensions/implementationsubagent.config.jsonc",
+        "extensions/local-model-endpoints.config.jsonc"
+      ],
+      "tags": ["agent", "implementation"]
+    },
+    {
+      "id": "git-status",
+      "title": "Git status",
+      "description": "Shows a VS Code-style Git branch/change summary in the footer and right-side details pane.",
+      "entry": "extensions/git-status.ts",
+      "pluginDeps": ["right-overlay-tiler"],
+      "fileDeps": [
+        "extensions/git-status.config.jsonc",
+        "extensions/lib/jsonc-config.ts",
+        "extensions/lib/right-overlay-tiler.ts"
+      ],
+      "configFiles": ["extensions/git-status.config.jsonc"],
+      "tags": ["git", "ui", "overlay"]
+    },
+    {
+      "id": "gitopsagent",
+      "title": "Git ops agent",
+      "description": "Delegates git-oriented analysis/operations to a child Pi process.",
+      "entry": "extensions/gitopsagent.ts",
+      "pluginDeps": ["zz-subagent-runtime"],
+      "fileDeps": [
+        "extensions/gitopsagent.config.jsonc",
+        "extensions/local-model-endpoints.config.jsonc",
+        "extensions/lib/child-pi-agent.ts",
+        "extensions/lib/jsonc-config.ts"
+      ],
+      "configFiles": [
+        "extensions/gitopsagent.config.jsonc",
+        "extensions/local-model-endpoints.config.jsonc"
+      ],
+      "tags": ["agent", "git"]
+    },
+    {
+      "id": "import-docs",
+      "title": "Import docs",
+      "description": "Adds /import-docs to clone/prune upstream docs/source references into repo-relative reference/ paths.",
+      "entry": "extensions/import-docs.ts",
+      "pluginDeps": [],
+      "fileDeps": ["extensions/import-docs.config.jsonc"],
+      "configFiles": ["extensions/import-docs.config.jsonc"],
+      "tags": ["docs", "reference"]
+    },
+    {
+      "id": "localagent",
+      "title": "Local agent",
+      "description": "Adds /localagent and a localagent tool that delegate general tasks to a child Pi process.",
+      "entry": "extensions/localagent.ts",
+      "pluginDeps": ["zz-subagent-runtime"],
+      "fileDeps": [
+        "extensions/localagent.config.jsonc",
+        "extensions/local-model-endpoints.config.jsonc",
+        "extensions/lib/child-pi-agent.ts",
+        "extensions/lib/jsonc-config.ts"
+      ],
+      "configFiles": [
+        "extensions/localagent.config.jsonc",
+        "extensions/local-model-endpoints.config.jsonc"
+      ],
+      "tags": ["agent", "local-model"]
+    },
+    {
+      "id": "pi-context",
+      "title": "PI.md context",
+      "description": "Strips built-in AGENTS.md/CLAUDE.md project context and injects discovered PI.md files instead.",
+      "entry": "extensions/pi-context.ts",
+      "pluginDeps": [],
+      "fileDeps": [
+        "extensions/pi-context.config.jsonc",
+        "extensions/lib/jsonc-config.ts"
+      ],
+      "configFiles": ["extensions/pi-context.config.jsonc"],
+      "tags": ["context"]
+    },
+    {
+      "id": "pr-review",
+      "title": "PR review",
+      "description": "Adds /pr-review and a prreview tool that delegate PR readiness review to a child Pi process.",
+      "entry": "extensions/pr-review.ts",
+      "pluginDeps": ["zz-subagent-runtime"],
+      "fileDeps": [
+        "extensions/pr-review.config.jsonc",
+        "extensions/local-model-endpoints.config.jsonc",
+        "extensions/lib/child-pi-agent.ts",
+        "extensions/lib/jsonc-config.ts"
+      ],
+      "configFiles": [
+        "extensions/pr-review.config.jsonc",
+        "extensions/local-model-endpoints.config.jsonc"
+      ],
+      "tags": ["agent", "git", "review"]
+    },
+    {
+      "id": "wf-clarifier",
+      "title": "Workflow clarifier",
+      "description": "Runs the first workflow-mode clarification pass, using read/exploration subagents to produce enriched prompts or questions; Alt+E enriches the next prompt, asks follow-up questions if needed, then sends it normally.",
+      "entry": "extensions/wf-clarifier.ts",
+      "internal": true,
+      "pluginDeps": ["readsubagent", "explorationsubagent"],
+      "fileDeps": [
+        "extensions/wf-clarifier.config.jsonc",
+        "extensions/lib/child-agent-model-options.ts",
+        "extensions/lib/child-pi-agent.ts",
+        "extensions/lib/jsonc-config.ts"
+      ],
+      "configFiles": ["extensions/wf-clarifier.config.jsonc"],
+      "tags": ["agent", "workflow"]
+    },
+    {
+      "id": "wf-brainstormer",
+      "title": "Workflow brainstormer",
+      "description": "Runs the second workflow-mode phase, researching solution options and tradeoffs from the clarified prompt.",
+      "entry": "extensions/wf-brainstormer.ts",
+      "internal": true,
+      "pluginDeps": ["readsubagent", "explorationsubagent"],
+      "fileDeps": [
+        "extensions/wf-brainstormer.config.jsonc",
+        "extensions/lib/child-agent-model-options.ts",
+        "extensions/lib/child-pi-agent.ts",
+        "extensions/lib/jsonc-config.ts"
+      ],
+      "configFiles": ["extensions/wf-brainstormer.config.jsonc"],
+      "tags": ["agent", "workflow"]
+    },
+    {
+      "id": "wf-adversarialreview",
+      "title": "Workflow adversarial review",
+      "description": "Runs a stage-aware workflow-mode review gate before selected wf-* stage outputs are shown as final user-facing output.",
+      "entry": "extensions/wf-adversarialreview.ts",
+      "internal": true,
+      "pluginDeps": ["readsubagent", "explorationsubagent"],
+      "fileDeps": [
+        "extensions/wf-adversarialreview.config.jsonc",
+        "extensions/lib/child-agent-model-options.ts",
+        "extensions/lib/child-pi-agent.ts",
+        "extensions/lib/jsonc-config.ts"
+      ],
+      "configFiles": ["extensions/wf-adversarialreview.config.jsonc"],
+      "tags": ["agent", "workflow", "review"]
+    },
+    {
+      "id": "wf-designplan",
+      "title": "Workflow design plan",
+      "description": "Runs the next workflow-mode phase, turning the selected brainstorm option into a reviewed development design plan.",
+      "entry": "extensions/wf-designplan.ts",
+      "internal": true,
+      "pluginDeps": ["readsubagent", "explorationsubagent", "wf-adversarialreview"],
+      "fileDeps": [
+        "extensions/wf-designplan.config.jsonc",
+        "extensions/lib/child-agent-model-options.ts",
+        "extensions/lib/child-pi-agent.ts",
+        "extensions/lib/jsonc-config.ts"
+      ],
+      "configFiles": ["extensions/wf-designplan.config.jsonc"],
+      "tags": ["agent", "workflow"]
+    },
+    {
+      "id": "wf-impplanner",
+      "title": "Workflow implementation planner",
+      "description": "Turns a reviewed design plan into reviewed per-step implementation plans and a concrete merged implementation plan.",
+      "entry": "extensions/wf-impplanner.ts",
+      "internal": true,
+      "pluginDeps": ["readsubagent", "explorationsubagent", "wf-adversarialreview", "wf-designplan"],
+      "fileDeps": [
+        "extensions/wf-impplanner.config.jsonc",
+        "extensions/lib/child-agent-model-options.ts",
+        "extensions/lib/child-pi-agent.ts",
+        "extensions/lib/jsonc-config.ts"
+      ],
+      "configFiles": ["extensions/wf-impplanner.config.jsonc"],
+      "tags": ["agent", "workflow"]
+    },
+    {
+      "id": "wf-implementeragent",
+      "title": "Workflow implementer agent",
+      "description": "Implements one reviewed wf-impplanner stage at a time and returns structured implementation results for workflow review.",
+      "entry": "extensions/wf-implementeragent.ts",
+      "internal": true,
+      "pluginDeps": ["zz-subagent-runtime", "readsubagent", "explorationsubagent", "wf-impplanner"],
+      "fileDeps": [
+        "extensions/wf-implementeragent.config.jsonc",
+        "extensions/lib/child-agent-model-options.ts",
+        "extensions/lib/child-pi-agent.ts",
+        "extensions/lib/jsonc-config.ts"
+      ],
+      "configFiles": ["extensions/wf-implementeragent.config.jsonc"],
+      "tags": ["agent", "workflow", "implementation"]
+    },
+    {
+      "id": "wf-revieweragent",
+      "title": "Workflow reviewer agent",
+      "description": "Reviews each wf-implementeragent stage and returns a green signal before workflow mode advances.",
+      "entry": "extensions/wf-revieweragent.ts",
+      "internal": true,
+      "pluginDeps": ["zz-subagent-runtime", "readsubagent", "explorationsubagent", "wf-impplanner", "wf-implementeragent"],
+      "fileDeps": [
+        "extensions/wf-revieweragent.config.jsonc",
+        "extensions/lib/child-agent-model-options.ts",
+        "extensions/lib/child-pi-agent.ts",
+        "extensions/lib/jsonc-config.ts"
+      ],
+      "configFiles": ["extensions/wf-revieweragent.config.jsonc"],
+      "tags": ["agent", "workflow", "review"]
+    },
+    {
+      "id": "wf-finalreviewagent",
+      "title": "Workflow final review agent",
+      "description": "Performs a whole-branch final review after all implementation stages pass, dispatching remediation loops until green.",
+      "entry": "extensions/wf-finalreviewagent.ts",
+      "internal": true,
+      "pluginDeps": ["zz-subagent-runtime", "readsubagent", "explorationsubagent", "wf-impplanner"],
+      "fileDeps": [
+        "extensions/wf-finalreviewagent.config.jsonc",
+        "extensions/lib/child-agent-model-options.ts",
+        "extensions/lib/child-pi-agent.ts",
+        "extensions/lib/jsonc-config.ts"
+      ],
+      "configFiles": ["extensions/wf-finalreviewagent.config.jsonc"],
+      "tags": ["agent", "workflow", "review"]
+    },
+    {
+      "id": "wf-testeragent",
+      "title": "Workflow tester agent",
+      "description": "Analyzes branch changes for reasonable test gaps and fills them before whole-branch final review.",
+      "entry": "extensions/wf-testeragent.ts",
+      "internal": true,
+      "pluginDeps": ["zz-subagent-runtime", "readsubagent", "explorationsubagent", "wf-impplanner"],
+      "fileDeps": [
+        "extensions/wf-testeragent.config.jsonc",
+        "extensions/lib/child-agent-model-options.ts",
+        "extensions/lib/child-pi-agent.ts",
+        "extensions/lib/jsonc-config.ts"
+      ],
+      "configFiles": ["extensions/wf-testeragent.config.jsonc"],
+      "tags": ["agent", "workflow", "testing"]
+    },
+    {
+      "id": "workflowmode",
+      "title": "Workflow mode",
+      "description": "Adds /workflowmode and input-focused Alt+W to clarify, enrich, brainstorm, select, design-plan, implementation-plan, then implement/review each plan stage, fill test gaps, and run whole-branch final review until green.",
+      "entry": "extensions/workflowmode.ts",
+      "pluginDeps": ["workflow-tree", "wf-clarifier", "wf-brainstormer", "wf-adversarialreview", "wf-designplan", "wf-impplanner", "wf-implementeragent", "wf-revieweragent", "wf-finalreviewagent", "wf-testeragent"],
+      "fileDeps": [
+        "extensions/lib/child-pi-agent.ts",
+        "extensions/lib/workflow-tree-state.ts"
+      ],
+      "configFiles": [],
+      "tags": ["workflow"]
+    },
+    {
+      "id": "readsubagent",
+      "title": "Read subagent",
+      "description": "Adds /readsubagent and a readsubagent tool for targeted file-inspection questions through a child Pi process.",
+      "entry": "extensions/readsubagent.ts",
+      "pluginDeps": ["zz-subagent-runtime", "zz-local-models"],
+      "fileDeps": [
+        "extensions/readsubagent.config.jsonc",
+        "extensions/local-model-endpoints.config.jsonc",
+        "extensions/lib/child-pi-agent.ts",
+        "extensions/lib/jsonc-config.ts"
+      ],
+      "configFiles": [
+        "extensions/readsubagent.config.jsonc",
+        "extensions/local-model-endpoints.config.jsonc"
+      ],
+      "tags": ["agent", "read-only"]
+    },
+    {
+      "id": "refagent",
+      "title": "Reference agent",
+      "description": "Adds /refagent and a refagent tool for targeted lookup questions about enabled imported references.",
+      "entry": "extensions/refagent.ts",
+      "pluginDeps": ["zz-subagent-runtime"],
+      "optionalPluginDeps": ["import-docs"],
+      "fileDeps": [
+        "extensions/refagent.config.jsonc",
+        "extensions/local-model-endpoints.config.jsonc",
+        "extensions/lib/child-pi-agent.ts",
+        "extensions/lib/jsonc-config.ts"
+      ],
+      "configFiles": [
+        "extensions/refagent.config.jsonc",
+        "extensions/local-model-endpoints.config.jsonc"
+      ],
+      "tags": ["agent", "docs", "reference"]
+    },
+    {
+      "id": "reviewsubagent",
+      "title": "Review subagent",
+      "description": "Delegates code-review style analysis to a child Pi process.",
+      "entry": "extensions/reviewsubagent.ts",
+      "pluginDeps": ["zz-subagent-runtime"],
+      "fileDeps": [
+        "extensions/reviewsubagent.config.jsonc",
+        "extensions/local-model-endpoints.config.jsonc",
+        "extensions/lib/child-pi-agent.ts",
+        "extensions/lib/jsonc-config.ts"
+      ],
+      "configFiles": [
+        "extensions/reviewsubagent.config.jsonc",
+        "extensions/local-model-endpoints.config.jsonc"
+      ],
+      "tags": ["agent", "review"]
+    },
+    {
+      "id": "tetris",
+      "title": "Tetris",
+      "description": "Adds /tetris, an overlay Tetris game for waiting during agent runs.",
+      "entry": "extensions/tetris.ts",
+      "pluginDeps": [],
+      "fileDeps": [
+        "extensions/tetris.config.jsonc",
+        "extensions/lib/jsonc-config.ts"
+      ],
+      "configFiles": ["extensions/tetris.config.jsonc"],
+      "tags": ["game", "ui"]
+    }
+  ]
+}

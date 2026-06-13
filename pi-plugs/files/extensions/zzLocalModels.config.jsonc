@@ -1,0 +1,32 @@
+{
+  // Registers shared LM Studio models in Pi's normal /model picker.
+  "enabled": true,
+  "provider": "lm-studio",
+  "name": "LM Studio",
+  "endpoint": "http://127.0.0.1:1234",
+  "apiKey": "lm-studio",
+
+  // Defaults applied to model entries unless overridden per model.
+  "contextWindow": 262144,
+  "maxTokens": 32768,
+  "reasoning": true,
+
+  "models": [
+    {
+      "id": "qwen/qwen3.6-35b-a3b",
+      "name": "Qwen 3.6 35B A3B (LM Studio 127.0.0.1)"
+    },
+    {
+      "id": "qwen/qwen3.6-35b-a3b",
+      "name": "Qwen 3.6 35B A3B (LM Studio 127.0.0.1)"
+    },
+    {
+      "id": "qwen/qwen3.6-35b-a3b",
+      "name": "Qwen 3.6 35B A3B (LM Studio 127.0.0.1)"
+    },
+    {
+      "id": "qwen/qwen3.6-27b",
+      "name": "Qwen 3.6 27B (LM Studio)"
+    }
+  ]
+}

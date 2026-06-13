@@ -1,0 +1,106 @@
+{
+  // Readsubagent model choices carry their own endpoint/provider metadata.
+  // /readsubagent model switches between local OpenAI-compatible endpoints and remote
+  // Pi providers. The shared local-model-endpoints config is only a fallback for
+  // configs/options that do not define an endpoint.
+
+  // Model id served by LM Studio.
+  "model": "qwen/qwen3.6-35b-a3b",
+
+  // Provider name used by the child process. The visible /model provider is
+  // registered by zzLocalModels, not by readsubagent itself.
+  "provider": "lm-studio",
+  "providerRegistration": "none",
+
+  // LM Studio endpoint for the default local Qwen model.
+  "endpoint": "http://127.0.0.1:1234",
+
+  // Optional Pi model selector to pass directly to the child process.
+  // Leave empty to use "<provider>/<model>" from the settings above.
+  "modelSelector": "",
+
+  // Choices shown by /readsubagent model. Keep model-specific provider/model metadata
+  // here so adding new readsubagent models is a config-only change.
+  // The object key is the stable selection id persisted in the session branch.
+  "modelOptions": {
+    "qwen": {
+      "label": "Qwen 3.6 35B A3B on 127.0.0.1 (LM Studio)",
+      "provider": "lm-studio",
+      "providerRegistration": "none",
+      "endpoint": "http://127.0.0.1:1234",
+      "model": "qwen/qwen3.6-35b-a3b",
+      "contextWindow": 262144,
+      "maxOutputTokens": 32768,
+      "requestTimeoutMs": 1800000,
+      "reportMaxChars": 16000,
+      "thinking": "off",
+    },
+    "qwen-233": {
+      "label": "Qwen 3.6 35B A3B on 127.0.0.1 (LM Studio)",
+      "provider": "lm-studio",
+      "providerRegistration": "none",
+      "endpoint": "http://127.0.0.1:1234",
+      "model": "qwen/qwen3.6-35b-a3b",
+      "contextWindow": 262144,
+      "maxOutputTokens": 32768,
+      "requestTimeoutMs": 1800000,
+      "reportMaxChars": 16000,
+      "thinking": "off",
+    },
+    "qwen-32": {
+      "label": "Qwen 3.6 35B A3B on 127.0.0.1 (LM Studio)",
+      "provider": "lm-studio",
+      "providerRegistration": "none",
+      "endpoint": "http://127.0.0.1:11444",
+      "model": "qwen/qwen3.6-35b-a3b",
+      "contextWindow": 262144,
+      "maxOutputTokens": 32768,
+      "requestTimeoutMs": 1800000,
+      "reportMaxChars": 16000,
+      "thinking": "off",
+    },
+    "gpt-5.5-xhigh": {
+      "label": "GPT-5.5 xhigh (openai-codex)",
+      "provider": "openai-codex",
+      "providerRegistration": "none",
+      "model": "gpt-5.5",
+      "contextWindow": 400000,
+      "maxOutputTokens": 32768,
+      "requestTimeoutMs": 1800000,
+      "reportMaxChars": 16000,
+      "thinking": "xhigh",
+    },
+  },
+
+  // Tools available to the child Pi process. readsubagent is read-only, so
+  // bash/edit/write are intentionally omitted by default.
+  "tools": ["read", "grep", "find", "ls"],
+
+  // Child process limits and custom model metadata.
+  "requestTimeoutMs": 1800000,
+  "contextWindow": 262144,
+  "maxOutputTokens": 32768,
+
+  // Hard cap for final report characters injected back into the main conversation.
+  // Individual tool calls can request a lower maxReportChars budget.
+  "reportMaxChars": 16000,
+
+  // Whether readsubagent mode starts on for session branches that do not yet
+  // have an explicit /readsubagent on/off state saved.
+  "enabledByDefault": true,
+
+  // How readsubagent mode handles direct read calls in the parent session:
+  // - "allow": read works normally.
+  // - "guard-large": compact oversized reads without offset/limit; small and explicit-range reads work normally.
+  // - "guard-large-any": compact any oversized direct read, even explicit ranges.
+  // - "block": strict legacy behavior; direct read calls are blocked.
+  "directReadPolicy": "guard-large-any",
+  "directReadMaxChars": 12000,
+  "directReadMaxLines": 300,
+
+  // Thinking level passed to the child process.
+  "thinking": "off",
+
+  // Extra instructions appended to the child Pi system prompt.
+  "systemPrompt": "You are a read-only file-inspection subagent spawned by Pi. The parent delegates to you instead of reading files directly when it needs factual answers, summaries, extracted snippets, symbol locations, docs/config details, or line ranges without raw contents in the parent context. Use tools as needed to inspect only the requested repo-relative paths and nearby supporting files. Do not edit or write files. Do not create implementation plans, solution proposals, edit strategies, code-review judgments, bug findings, correctness assessments, control-flow/type-safety analysis, or accept/reject recommendations. Your job is factual inspection, evidence, descriptive API/flow maps, and line-range pointers only. If the parent asks for hard logic, review, or whether code is correct/acceptable, state that this is outside readsubagent scope and return only the factual evidence/locations that would support a separate review. Start with the answer, then cite evidence with repo-relative paths and line numbers when possible. Prefer summaries and exact line ranges the parent can read later; include concrete snippets only when necessary and keep them short. Never dump whole files or raw tool output; if the question is too broad, propose a narrower factual follow-up.",
+}

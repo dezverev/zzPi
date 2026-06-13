@@ -1,0 +1,28 @@
+{
+  // Shared child-agent target selector for project-local child Pi agents.
+  // Agents use this when their own config does not define an "endpoint" override.
+  // Accepted active values:
+  // - "remoteLocal" (aliases: "local", "lan") = LM Studio on the local network.
+  // - "trueLocal" (aliases: "localhost") = LM Studio on this machine.
+  // - "trueRemote" (aliases: "remote", "cloud") = Pi's configured remote provider/model.
+  "active": "remoteLocal",
+
+  // LM Studio running on this machine.
+  // Accepted forms: server root ("http://host:1234"), "/v1", or a full
+  // "/v1/chat/completions" URL.
+  "trueLocalEndpoint": "http://127.0.0.1:1234",
+
+  // LM Studio running on another machine on the local network.
+  "remoteLocalEndpoint": "http://127.0.0.1:1234",
+
+  // Additional LM Studio endpoints on the local network.
+  "remoteLocalEndpoint2": "http://127.0.0.1:1234",
+  "remoteLocalEndpoint3": "http://127.0.0.1:11444",
+
+  // True remote fallback that uses Pi's configured provider/auth.
+  "trueRemoteProvider": "openai-codex",
+  "trueRemoteModel": "gpt-5.5",
+  "trueRemoteThinking": "xhigh",
+  "trueRemoteContextWindow": 400000,
+  "trueRemoteMaxOutputTokens": 32768,
+}

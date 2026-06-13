@@ -1,0 +1,17 @@
+{
+  // File names searched in the global Pi config dir and in cwd ancestors.
+  "contextFilenames": ["PI.md", "PI.MD"],
+
+  // Include PI.md from Pi's global agent directory, if present.
+  "includeGlobalContext": true,
+
+  // Include PI.md files discovered from the current working directory up through ancestors.
+  "includeAncestorContext": true,
+
+  // Remove Pi's built-in AGENTS.md/CLAUDE.md project_context block before injecting PI.md context.
+  "stripBuiltInProjectContext": true,
+
+  // Marker that PI.md context is inserted before in the system prompt.
+  // Set to an empty string to append PI.md context at the end instead.
+  "insertBeforeMarker": "\nCurrent date:",
+}
