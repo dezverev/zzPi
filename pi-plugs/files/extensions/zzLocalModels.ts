@@ -7,7 +7,7 @@ import {
   getPositiveIntegerField,
   getStringField,
   readJsoncConfig,
-} from "./lib/jsonc-config.ts";
+} from "./zz-lib/jsonc-config.ts";
 
 const CONFIG_FILE_PATH = ".pi/extensions/zzLocalModels.config.jsonc";
 
@@ -48,7 +48,7 @@ const DEFAULT_MODELS: readonly ZzLocalModelConfig[] = [
 ];
 const DEFAULT_CONFIG: ZzLocalModelsConfig = {
   apiKey: "lm-studio",
-  baseUrl: "http://127.0.0.1:1234/v1",
+  baseUrl: "http://127.0.0.1:11444/v1",
   enabled: true,
   models: DEFAULT_MODELS,
   name: "LM Studio",

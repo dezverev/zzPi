@@ -3,7 +3,7 @@ import { join } from "node:path";
 
 import { type ExtensionAPI, type ExtensionContext } from "@earendil-works/pi-coding-agent";
 
-import { getErrorMessage, isRecord, previewTask } from "./lib/child-pi-agent.ts";
+import { getErrorMessage, isRecord, previewTask } from "./zz-lib/child-pi-agent.ts";
 import {
   WORKFLOW_TREE_QUERY_EVENT,
   WORKFLOW_TREE_SNAPSHOT_EVENT,

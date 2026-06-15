@@ -1,10 +1,10 @@
-import type { ChildPiAgentConfig } from "./child-pi-agent.ts";
+import type { ChildPiAgentConfig } from "../zz-lib/child-pi-agent.ts";
 import {
   getErrorMessage,
   getModelSelector,
   normalizeBaseUrl,
   normalizeThinking,
-} from "./child-pi-agent.ts";
+} from "../zz-lib/child-pi-agent.ts";
 import {
   type ConfigObject,
   getPositiveIntegerField,
@@ -12,7 +12,7 @@ import {
   getStringField,
   isConfigObject,
   readJsoncConfig,
-} from "./jsonc-config.ts";
+} from "../zz-lib/jsonc-config.ts";
 
 export interface ChildAgentModelOption {
   readonly contextWindow?: number;

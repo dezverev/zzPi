@@ -15,7 +15,7 @@ import {
   runChildPiAgent,
   sendChildAgentReportMessage,
   truncateText,
-} from "./lib/child-pi-agent.ts";
+} from "./zz-lib/child-pi-agent.ts";
 import {
   type ChildAgentModelOption,
   applyChildAgentModelSelection,
@@ -35,11 +35,7 @@ const WF_BRAINSTORMER_STATE_ENTRY_TYPE = "wf-brainstormer-state";
 const STATUS_KEY = "wf-brainstormer";
 const DEFAULT_TOOLS = ["readsubagent", "explorationsubagent"];
 const EXCLUDED_CHILD_TOOLS = [
-  "localagent",
-  "refagent",
-  "prreview",
   "reviewsubagent",
-  "gitopsagent",
   "simpletasksubagent",
   "wfclarifier",
   "wf-clarifier",

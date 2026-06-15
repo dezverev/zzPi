@@ -16,7 +16,6 @@ import {
   getErrorMessage,
   getModelSelector,
   isRecord,
-  LEGACY_LOCALAGENT_CHILD_ENV,
   previewTask,
   readChildPiAgentConfig,
   registerChildAgentProvider,
@@ -26,7 +25,7 @@ import {
   sendChildAgentReportMessage,
   textFromContent,
   truncateText,
-} from "./lib/child-pi-agent.ts";
+} from "./zz-lib/child-pi-agent.ts";
 import {
   type ChildAgentModelOption,
   applyChildAgentModelSelection,
@@ -44,7 +43,7 @@ import {
   getPositiveIntegerField,
   getStringField,
   readJsoncConfig,
-} from "./lib/jsonc-config.ts";
+} from "./zz-lib/jsonc-config.ts";
 
 const CONFIG_FILE_PATH = ".pi/extensions/readsubagent.config.jsonc";
 const READSUBAGENT_MESSAGE_TYPE = "readsubagent-report";
@@ -55,13 +54,9 @@ const DEFAULT_TOOLS = ["read", "grep", "find", "ls"];
 type ReadSubagentModelOption = ChildAgentModelOption;
 
 const EXCLUDED_CHILD_TOOLS = [
-  "localagent",
-  "refagent",
   "readsubagent",
-  "prreview",
   "explorationsubagent",
   "reviewsubagent",
-  "gitopsagent",
   "simpletasksubagent",
 ] as const;
 const READSUBAGENT_EVENT_END = "readsubagent:end";
@@ -113,7 +108,7 @@ const MAIN_READSUBAGENT_PROMPT = [
   "Use main-context grep/find/ls only for one-shot low-output discovery with a clear next action, such as rg -l or a single tight rg -n; if the search would branch, require multiple commands, or produce broad output, use explorationsubagent.",
   "For exploratory repo archaeology or broad rg/find/ls work, use explorationsubagent instead of readsubagent or raw parent output.",
   "For code/implementation review, use reviewsubagent instead of readsubagent so review judgment happens in the review-focused model.",
-  "For git operations that mutate repo or remote state, use gitopsagent instead of readsubagent or parent-agent bash.",
+  "For git operations that mutate repo or remote state, handle them in the parent session rather than readsubagent.",
   "Ask narrow readsubagent questions and include repo-relative paths, symbols, line ranges, search terms, desired output shape, and a maxReportChars budget when possible.",
   "Prefer small readsubagent reports: ask for the direct answer, citations, and only the minimal snippets needed for the next action.",
   "If the readsubagent answer is too vague, incomplete, or lacks needed details, ask readsubagent a narrower follow-up question before using broad direct reads.",
@@ -122,7 +117,7 @@ const MAIN_READSUBAGENT_PROMPT = [
 
 const DEFAULT_READSUBAGENT_CONFIG: ChildPiAgentConfig = {
   contextWindow: 262_144,
-  endpoint: "http://127.0.0.1:1234",
+  endpoint: "http://127.0.0.1:11444",
   maxOutputTokens: 32_768,
   model: "qwen/qwen3.6-35b-a3b",
   provider: "lm-studio",
@@ -301,7 +296,7 @@ function notifyConfigErrors(ctx: ExtensionContext): void {
 
 function isChildPiAgentProcess(): boolean {
   return (
-    process.env[CHILD_PI_AGENT_ENV] === "1" || process.env[LEGACY_LOCALAGENT_CHILD_ENV] === "1"
+    process.env[CHILD_PI_AGENT_ENV] === "1"
   );
 }
 
@@ -887,7 +882,7 @@ export default function readSubagentExtension(pi: ExtensionAPI) {
       "If readsubagent's answer is too vague or missing needed details, ask readsubagent a narrower follow-up question before falling back to direct reads.",
       "Do not use readsubagent for broad repo exploration; use explorationsubagent when discovery requires broad rg/find/ls work.",
       "Do not use readsubagent for hard logic or code review; use direct reads plus validation or reviewsubagent when the goal is to inspect for issues, judge correctness, validate control flow/type safety, quality, maintainability, security, or regression risk.",
-      "Do not use readsubagent for git operations that mutate repo or remote state; use gitopsagent for committing, pushing, PR creation/merge, branch cleanup, and main sync.",
+      "Do not use readsubagent for git operations that mutate repo or remote state; handle committing, pushing, PR creation/merge, branch cleanup, and main sync in the parent session.",
     ],
     parameters: Type.Object({
       question: Type.String({

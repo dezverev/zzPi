@@ -15,7 +15,7 @@ import {
   runChildPiAgent,
   sendChildAgentReportMessage,
   truncateText,
-} from "./lib/child-pi-agent.ts";
+} from "./zz-lib/child-pi-agent.ts";
 import {
   type ChildAgentModelOption,
   applyChildAgentModelSelection,
@@ -37,11 +37,7 @@ const WF_REVIEWER_AGENT_STATE_ENTRY_TYPE = "wf-revieweragent-state";
 const STATUS_KEY = "wf-revieweragent";
 const DEFAULT_TOOLS = ["read", "bash", "grep", "find", "ls", "readsubagent", "explorationsubagent"];
 const EXCLUDED_CHILD_TOOLS = [
-  "localagent",
-  "refagent",
-  "prreview",
   "reviewsubagent",
-  "gitopsagent",
   "simpletasksubagent",
   "wfclarifier",
   "wf-clarifier",

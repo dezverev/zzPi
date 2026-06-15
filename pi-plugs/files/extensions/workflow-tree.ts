@@ -11,7 +11,7 @@ import {
   getErrorMessage,
   getPositiveIntegerField,
   readJsoncConfig,
-} from "./lib/jsonc-config.ts";
+} from "./zz-lib/jsonc-config.ts";
 import {
   registerRightOverlayPane,
   type RightOverlayPaneClient,

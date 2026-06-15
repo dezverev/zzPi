@@ -3,6 +3,9 @@
   // to the URL it used when installing the manager if the file does not exist.
   "sourceUrl": "https://raw.githubusercontent.com/dezverev/zzPi/main/pi-plugs",
 
+  // Shared runtime bundle used by plugs that declare sharedDeps.
+  "zzLibUrl": "https://raw.githubusercontent.com/dezverev/zzPi/main/zz-lib",
+
   // Reload automatically after /zz-plugs install/remove/set/update succeeds.
   "autoReload": true,
 }

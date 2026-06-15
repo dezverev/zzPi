@@ -13,7 +13,6 @@ import {
   getErrorMessage,
   getModelSelector,
   isRecord,
-  LEGACY_LOCALAGENT_CHILD_ENV,
   previewTask,
   readChildPiAgentConfig,
   registerChildAgentProvider,
@@ -22,7 +21,7 @@ import {
   runChildPiAgent,
   sendChildAgentReportMessage,
   truncateText,
-} from "./lib/child-pi-agent.ts";
+} from "./zz-lib/child-pi-agent.ts";
 import {
   type ChildAgentModelOption,
   applyChildAgentModelSelection,
@@ -35,7 +34,7 @@ import {
   getChildAgentModelOption,
   readChildAgentModelOptions,
 } from "./lib/child-agent-model-options.ts";
-import { getBooleanField, readJsoncConfig } from "./lib/jsonc-config.ts";
+import { getBooleanField, readJsoncConfig } from "./zz-lib/jsonc-config.ts";
 
 const CONFIG_FILE_PATH = ".pi/extensions/implementationsubagent.config.jsonc";
 const IMPLEMENTATION_SUBAGENT_MESSAGE_TYPE = "implementationsubagent-report";
@@ -43,11 +42,7 @@ const IMPLEMENTATION_SUBAGENT_STATE_ENTRY_TYPE = "implementationsubagent-state";
 const STATUS_KEY = "implementationsubagent";
 const DEFAULT_TOOLS = ["read", "bash", "edit", "write", "grep", "find", "ls", "readsubagent", "explorationsubagent"];
 const EXCLUDED_CHILD_TOOLS = [
-  "localagent",
-  "refagent",
-  "prreview",
   "reviewsubagent",
-  "gitopsagent",
   "simpletasksubagent",
   "implementationsubagent",
   "zzSubagentImplemention",
@@ -443,7 +438,7 @@ function buildImplementationSubagentPrompt(task: string): string {
     "You are running as implementationsubagent, an implementation worker spawned by the parent Pi agent.",
     "Implement the delegated task in the repository. Treat the parent-supplied task, plan, context, constraints, and validation requests as the scope boundary.",
     "Use repository tools to inspect files, edit/write files, and run focused checks/tests when practical. Use readsubagent or explorationsubagent only for factual context gathering when it materially reduces ambiguity.",
-    "Do not perform git commits, pushes, branch operations, PR operations, broad code-review judgment, or unrelated follow-up work. Do not call implementationsubagent, localagent, review/git agents, or wf-* agents.",
+    "Do not perform git commits, pushes, branch operations, PR operations, broad code-review judgment, or unrelated follow-up work. Do not call implementationsubagent, review/git agents, or wf-* agents.",
     "Prefer minimal, maintainable changes aligned with existing project conventions. If the task is unsafe, underspecified, or blocked, return questions/blockers rather than guessing.",
     "Return a concise structured final report with: Status, Summary, Files Changed, Tests/Checks Run, Validation, Blockers/Questions, and Notes. Include exact repo-relative paths for changed files.",
     `Delegated implementation task:\n${task}`,
@@ -498,7 +493,7 @@ function formatReport(
 
 function isChildPiAgentProcess(): boolean {
   return (
-    process.env[CHILD_PI_AGENT_ENV] === "1" || process.env[LEGACY_LOCALAGENT_CHILD_ENV] === "1"
+    process.env[CHILD_PI_AGENT_ENV] === "1"
   );
 }
 

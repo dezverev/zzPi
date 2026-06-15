@@ -12,7 +12,6 @@ import {
   getErrorMessage,
   getModelSelector,
   isRecord,
-  LEGACY_LOCALAGENT_CHILD_ENV,
   previewTask,
   readChildPiAgentConfig,
   registerChildAgentProvider,
@@ -21,7 +20,7 @@ import {
   runChildPiAgent,
   sendChildAgentReportMessage,
   truncateText,
-} from "./lib/child-pi-agent.ts";
+} from "./zz-lib/child-pi-agent.ts";
 import {
   type ChildAgentModelOption,
   applyChildAgentModelSelection,
@@ -41,13 +40,9 @@ const EXPLORATIONSUBAGENT_STATE_ENTRY_TYPE = "explorationsubagent-state";
 const STATUS_KEY = "explorationsubagent";
 const DEFAULT_TOOLS = ["read", "bash", "grep", "find", "ls"];
 const EXCLUDED_CHILD_TOOLS = [
-  "localagent",
-  "refagent",
   "readsubagent",
-  "prreview",
   "explorationsubagent",
   "reviewsubagent",
-  "gitopsagent",
   "simpletasksubagent",
   "wfimpplanner",
   "wf-impplanner",
@@ -66,13 +61,13 @@ const MAIN_EXPLORATIONSUBAGENT_PROMPT = [
   "Delegate exploratory repo archaeology instead of dumping raw search output into the parent context.",
   "Good exploration requests include the factual discovery question, likely scope paths, known symbols, search terms, why the search may be broad, and the desired report shape.",
   "Ask the child for a summarized factual map: relevant files, key symbols, how they connect, searches tried, uncertainty, and possible next factual reads/searches. Do not ask explorationsubagent for hard logic, correctness analysis, code review, implementation plans, solution proposals, edit recommendations, or edit strategies.",
-  "Do not use explorationsubagent when direct raw file contents, exact oldText for edits, final verification snippets, code-review judgment, hard logic/correctness analysis, or git mutations are required; use read for exact contents, readsubagent for targeted file facts, reviewsubagent for code review, and gitopsagent for git/PR operations.",
+  "Do not use explorationsubagent when direct raw file contents, exact oldText for edits, final verification snippets, code-review judgment, hard logic/correctness analysis, or git mutations are required; use read for exact contents, readsubagent for targeted file facts, reviewsubagent for code review, and handle git/PR operations in the parent session.",
   "</explorationsubagent_delegation>",
 ].join("\n");
 
 const DEFAULT_EXPLORATIONSUBAGENT_CONFIG: ChildPiAgentConfig = {
   contextWindow: 262_144,
-  endpoint: "http://127.0.0.1:1234",
+  endpoint: "http://127.0.0.1:11444",
   maxOutputTokens: 32_768,
   model: "qwen/qwen3.6-35b-a3b",
   provider: "lm-studio",
@@ -212,7 +207,7 @@ function notifyConfigErrorIfNeeded(ctx: ExtensionContext): void {
 
 function isChildPiAgentProcess(): boolean {
   return (
-    process.env[CHILD_PI_AGENT_ENV] === "1" || process.env[LEGACY_LOCALAGENT_CHILD_ENV] === "1"
+    process.env[CHILD_PI_AGENT_ENV] === "1"
   );
 }
 
@@ -633,7 +628,7 @@ export default function explorationSubagentExtension(pi: ExtensionAPI) {
       "Use direct read, not explorationsubagent, when raw file contents, exact oldText for edits, precise ranges, or final verification snippets are required.",
       "Use readsubagent, not explorationsubagent, when target files are known and the parent needs a targeted answer rather than broad discovery.",
       "Use reviewsubagent, not explorationsubagent, when the goal is code review judgment, bug finding, correctness analysis, control-flow/type-safety validation, or deciding whether code is acceptable rather than factual discovery.",
-      "Use gitopsagent, not explorationsubagent, when the task is committing, pushing, creating or merging PRs, branch cleanup, or syncing main.",
+      "Do not use explorationsubagent when the task is committing, pushing, creating or merging PRs, branch cleanup, or syncing main; handle those git operations in the parent session.",
     ],
     parameters: Type.Object({
       question: Type.String({

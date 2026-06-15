@@ -1,0 +1,50 @@
+{
+  "archive": "pi-plugs.tar.gz",
+  "commonFiles": [
+    "extensions/zz-lib/child-pi-agent.ts",
+    "extensions/zz-lib/jsonc-config.ts",
+    "extensions/zz-lib/version.ts"
+  ],
+  "default": "all-visible",
+  "files": [
+    {
+      "bytes": 824,
+      "path": "README.md",
+      "sha256": "86ecb3f11d0e1e7bc3b03ff1125e2e9ccd5fc57d40ab97d3d61f8a23fb2f5b8b"
+    },
+    {
+      "bytes": 316,
+      "path": "zz-lib.catalog.jsonc",
+      "sha256": "c674680120f9ee1c1da71c3836fd9858531688c8ca98d9df3c28143be0215d27"
+    },
+    {
+      "bytes": 41807,
+      "path": "extensions/zz-lib/child-pi-agent.ts",
+      "sha256": "f1f8b46c438f5f91cfdae06e8e45f3abce31f448c2403c27f5d0c9b1fcd5d0cc"
+    },
+    {
+      "bytes": 5435,
+      "path": "extensions/zz-lib/jsonc-config.ts",
+      "sha256": "c92a07e7c0266591a3a93073a1e238fba0649c53c207423312b75e6a923d349c"
+    },
+    {
+      "bytes": 74,
+      "path": "extensions/zz-lib/version.ts",
+      "sha256": "bb42b356ccbd93b48ab860903bbc9301de8a392f0c81e083c5ded85357842804"
+    }
+  ],
+  "install_target": "./.pi",
+  "plugins": [],
+  "repository_raw_base": "https://raw.githubusercontent.com/dezverev/zzPi/main",
+  "requiredSharedLibs": [],
+  "required_shared_libs": [],
+  "schemaVersion": 2,
+  "sharedLib": {
+    "id": "zz-lib",
+    "version": "1.0.0"
+  },
+  "source": "zzPi git export",
+  "updated_at": "2026-06-15T08:56:23.253089+00:00",
+  "visiblePlugins": [],
+  "zzLibVersion": "1.0.0"
+}

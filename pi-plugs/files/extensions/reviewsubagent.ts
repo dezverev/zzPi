@@ -11,7 +11,6 @@ import {
   getErrorMessage,
   getModelSelector,
   isRecord,
-  LEGACY_LOCALAGENT_CHILD_ENV,
   normalizeChildPiAgentConfig,
   previewTask,
   renderChildAgentMessage,
@@ -20,26 +19,22 @@ import {
   sendChildAgentReportMessage,
   summarizeToolCalls,
   truncateText,
-} from "./lib/child-pi-agent.ts";
+} from "./zz-lib/child-pi-agent.ts";
 import {
   getPositiveIntegerField,
   getStringArrayField,
   getStringField,
   readJsoncConfig,
-} from "./lib/jsonc-config.ts";
+} from "./zz-lib/jsonc-config.ts";
 
 const CONFIG_FILE_PATH = ".pi/extensions/reviewsubagent.config.jsonc";
 const REVIEWSUBAGENT_MESSAGE_TYPE = "reviewsubagent-report";
 const STATUS_KEY = "reviewsubagent";
 const DEFAULT_TOOLS = ["read", "bash", "grep", "find", "ls"];
 const EXCLUDED_CHILD_TOOLS = [
-  "localagent",
-  "refagent",
   "readsubagent",
-  "prreview",
   "explorationsubagent",
   "reviewsubagent",
-  "gitopsagent",
   "simpletasksubagent",
 ] as const;
 const REVIEWSUBAGENT_EVENT_END = "reviewsubagent:end";
@@ -51,8 +46,7 @@ const MAIN_REVIEWSUBAGENT_PROMPT = [
   "<reviewsubagent_code_review>",
   "Use reviewsubagent for code/implementation review when the goal is to evaluate correctness, quality, maintainability, security, type safety, or regression risk.",
   "Do not use readsubagent for code review; readsubagent is for targeted file-inspection answers when review judgment is not needed.",
-  "Use prreview for PR-level git summaries/title/body/risk reports; use reviewsubagent for focused code review of files, diffs, or implementations.",
-  "Use gitopsagent for follow-up git operations such as staging, committing, pushing, opening PRs, merging PRs, branch cleanup, or syncing main; reviewsubagent is read-only.",
+  "Handle follow-up git operations such as staging, committing, pushing, opening PRs, merging PRs, branch cleanup, or syncing main in the parent session; reviewsubagent is read-only.",
   "Give reviewsubagent the review focus, repo-relative paths, relevant symbols/search terms, expected concerns, and a maxReportChars budget when possible.",
   "Keep direct parent reads/rg for exact edit snippets, precise verification ranges, or small targeted searches where the next action is clear.",
   "</reviewsubagent_code_review>",
@@ -149,7 +143,7 @@ function notifyConfigErrorIfNeeded(ctx: ExtensionContext): void {
 
 function isChildPiAgentProcess(): boolean {
   return (
-    process.env[CHILD_PI_AGENT_ENV] === "1" || process.env[LEGACY_LOCALAGENT_CHILD_ENV] === "1"
+    process.env[CHILD_PI_AGENT_ENV] === "1"
   );
 }
 
@@ -409,8 +403,7 @@ export default function reviewSubagentExtension(pi: ExtensionAPI) {
     promptGuidelines: [
       "Use reviewsubagent for code/implementation review when the goal is to evaluate correctness, quality, maintainability, security, type safety, or regression risk.",
       "Do not use readsubagent for code review; readsubagent is for targeted file-inspection answers when review judgment is not needed.",
-      "Use prreview for PR-level git summary/title/body/risk review; use reviewsubagent for focused code review of files, diffs, or implementations.",
-      "Use gitopsagent for follow-up git operations such as staging, committing, pushing, opening PRs, merging PRs, branch cleanup, or syncing main; reviewsubagent is read-only.",
+      "Handle follow-up git operations such as staging, committing, pushing, opening PRs, merging PRs, branch cleanup, or syncing main in the parent session; reviewsubagent is read-only.",
       "Provide repo-relative paths, relevant symbols/search terms, review focus, expected concerns, and maxReportChars when possible.",
       "Use direct read/grep instead when you need exact snippets for edits, precise line ranges, or final verification rather than review judgment.",
     ],

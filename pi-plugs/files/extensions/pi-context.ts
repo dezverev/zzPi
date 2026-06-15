@@ -13,7 +13,7 @@ import {
   getStringArrayField,
   getStringField,
   readJsoncConfig,
-} from "./lib/jsonc-config.ts";
+} from "./zz-lib/jsonc-config.ts";
 
 const CONFIG_FILE_PATH = ".pi/extensions/pi-context.config.jsonc";
 

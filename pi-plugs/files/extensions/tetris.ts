@@ -12,7 +12,7 @@ import {
   getBooleanField,
   getErrorMessage as getConfigErrorMessage,
   readJsoncConfig,
-} from "./lib/jsonc-config.ts";
+} from "./zz-lib/jsonc-config.ts";
 
 const BOARD_WIDTH = 10;
 const BOARD_HEIGHT = 20;

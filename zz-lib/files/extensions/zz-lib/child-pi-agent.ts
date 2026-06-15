@@ -18,9 +18,9 @@ import {
 } from "./jsonc-config.ts";
 
 export const CHILD_PI_AGENT_ENV = "PI_CHILD_PI_AGENT";
-export const LEGACY_LOCALAGENT_CHILD_ENV = "PI_LOCALAGENT_CHILD";
-export const LOCAL_MODEL_ENDPOINTS_CONFIG_FILE_PATH =
+export const DEFAULT_LOCAL_MODEL_ENDPOINTS_CONFIG_FILE_PATH =
   ".pi/extensions/local-model-endpoints.config.jsonc";
+export const LOCAL_MODEL_ENDPOINTS_CONFIG_FILE_PATH = DEFAULT_LOCAL_MODEL_ENDPOINTS_CONFIG_FILE_PATH;
 
 const THINKING_LEVELS = ["off", "minimal", "low", "medium", "high", "xhigh"] as const;
 const MAX_STDERR_CHARS = 8_000;
@@ -138,6 +138,7 @@ export interface ReadChildPiAgentConfigOptions {
   readonly configFilePath: string;
   readonly cwd: string;
   readonly defaults: ChildPiAgentConfig;
+  readonly localModelEndpointsConfigFilePath?: string;
 }
 
 export interface ChildPiAgentConfigReadResult {
@@ -232,7 +233,10 @@ function getFirstStringConfigField(
 
 type SharedLocalEndpointMode = "remoteLocal" | "trueLocal" | "trueRemote";
 
-function normalizeLocalEndpointMode(rawMode: string): SharedLocalEndpointMode {
+function normalizeLocalEndpointMode(
+  rawMode: string,
+  localModelEndpointsConfigFilePath: string,
+): SharedLocalEndpointMode {
   const mode = rawMode.trim().toLowerCase();
   if (
     mode === "truelocal" ||
@@ -267,7 +271,7 @@ function normalizeLocalEndpointMode(rawMode: string): SharedLocalEndpointMode {
   }
 
   throw new Error(
-    `${LOCAL_MODEL_ENDPOINTS_CONFIG_FILE_PATH} active must be "remoteLocal", "trueLocal", or "trueRemote".`,
+    `${localModelEndpointsConfigFilePath} active must be "remoteLocal", "trueLocal", or "trueRemote".`,
   );
 }
 
@@ -278,14 +282,15 @@ function getRemoteModelSelector(record: Record<string, unknown>): StringConfigFi
 function readSharedLocalEndpointSelection(
   cwd: string,
   defaults: ChildPiAgentConfig,
+  localModelEndpointsConfigFilePath: string,
 ): SharedLocalEndpointSelection | undefined {
-  const record = readJsoncConfig(LOCAL_MODEL_ENDPOINTS_CONFIG_FILE_PATH, cwd);
+  const record = readJsoncConfig(localModelEndpointsConfigFilePath, cwd);
   if (!record) return undefined;
 
   const rawMode =
     getFirstStringConfigField(record, ["active", "mode", "current", "endpointMode"])?.value ??
     "remoteLocal";
-  const mode = normalizeLocalEndpointMode(rawMode);
+  const mode = normalizeLocalEndpointMode(rawMode, localModelEndpointsConfigFilePath);
 
   if (mode === "trueRemote") {
     const provider = getFirstStringConfigField(record, ["trueRemoteProvider", "remoteProvider"]);
@@ -306,7 +311,7 @@ function readSharedLocalEndpointSelection(
       ...(modelSelector?.value ? { modelSelector: modelSelector.value } : {}),
       provider: provider?.value ?? defaults.provider,
       providerRegistration: "none",
-      source: `${LOCAL_MODEL_ENDPOINTS_CONFIG_FILE_PATH} active=${mode} remote model`,
+      source: `${localModelEndpointsConfigFilePath} active=${mode} remote model`,
       thinking:
         getFirstStringConfigField(record, ["trueRemoteThinking", "remoteThinking"])?.value ??
         defaults.thinking,
@@ -325,23 +330,29 @@ function readSharedLocalEndpointSelection(
       mode === "trueLocal"
         ? "trueLocalEndpoint/localEndpoint"
         : "remoteLocalEndpoint/lanEndpoint/localNetworkEndpoint/remoteEndpoint";
-    throw new Error(`${LOCAL_MODEL_ENDPOINTS_CONFIG_FILE_PATH} must define ${expected}.`);
+    throw new Error(`${localModelEndpointsConfigFilePath} must define ${expected}.`);
   }
 
   return {
     endpoint: normalizeBaseUrl(
       endpointField.value,
-      `${LOCAL_MODEL_ENDPOINTS_CONFIG_FILE_PATH} ${endpointField.field}`,
+      `${localModelEndpointsConfigFilePath} ${endpointField.field}`,
     ),
-    source: `${LOCAL_MODEL_ENDPOINTS_CONFIG_FILE_PATH} active=${mode} field=${endpointField.field}`,
+    source: `${localModelEndpointsConfigFilePath} active=${mode} field=${endpointField.field}`,
   };
 }
 
 function getDefaultEndpointSelection(
   options: ReadChildPiAgentConfigOptions,
 ): SharedLocalEndpointSelection {
+  const localModelEndpointsConfigFilePath =
+    options.localModelEndpointsConfigFilePath ?? LOCAL_MODEL_ENDPOINTS_CONFIG_FILE_PATH;
   return (
-    readSharedLocalEndpointSelection(options.cwd, options.defaults) ?? {
+    readSharedLocalEndpointSelection(
+      options.cwd,
+      options.defaults,
+      localModelEndpointsConfigFilePath,
+    ) ?? {
       endpoint: options.defaults.endpoint,
       source: "agent default",
     }

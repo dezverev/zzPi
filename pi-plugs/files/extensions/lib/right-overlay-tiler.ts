@@ -6,7 +6,7 @@ import {
   getPercentField,
   readJsoncConfig,
   type ConfigObject,
-} from "./jsonc-config.ts";
+} from "../zz-lib/jsonc-config.ts";
 
 const REGISTER_EVENT = "right-overlay-tiler:register";
 const UNREGISTER_EVENT = "right-overlay-tiler:unregister";

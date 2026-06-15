@@ -37,6 +37,8 @@ Environment:
   ZZ_PI_RAW_BASE              Raw git URL for this repo (default stamped at export time).
   ZZ_PI_PLUGS_URL              Exact plug bundle URL (default: local checkout ./pi-plugs,
                                otherwise $ZZ_PI_RAW_BASE/pi-plugs)
+  ZZ_LIB_URL                   Exact shared zz-lib bundle URL (default: local checkout ./zz-lib,
+                               otherwise $ZZ_PI_RAW_BASE/zz-lib)
   ZZ_PI_PLUGS_PROJECT_DIR      Target repo/project dir (default: current directory)
   ZZ_PI_PLUGS                  Same as --plugins
   ZZ_PI_PLUGS_ALL=1            Same as --all
@@ -57,16 +59,24 @@ fi
 
 DEFAULT_RAW_BASE="https://raw.githubusercontent.com/dezverev/zzPi/main"
 DEFAULT_RAW_BASE="${DEFAULT_RAW_BASE%/}"
+RAW_BASE="${ZZ_PI_RAW_BASE:-$DEFAULT_RAW_BASE}"
+RAW_BASE="${RAW_BASE%/}"
 if [ -n "${ZZ_PI_PLUGS_URL:-}" ]; then
   PLUGS_BASE="$ZZ_PI_PLUGS_URL"
 elif [ -n "$SCRIPT_DIR" ] && [ -f "$SCRIPT_DIR/pi-plugs/manifest.json" ] && [ -f "$SCRIPT_DIR/pi-plugs/pi-plugs.tar.gz" ]; then
   PLUGS_BASE="file://$SCRIPT_DIR/pi-plugs"
 else
-  RAW_BASE="${ZZ_PI_RAW_BASE:-$DEFAULT_RAW_BASE}"
-  RAW_BASE="${RAW_BASE%/}"
   PLUGS_BASE="$RAW_BASE/pi-plugs"
 fi
 PLUGS_BASE="${PLUGS_BASE%/}"
+if [ -n "${ZZ_LIB_URL:-}" ]; then
+  ZZ_LIB_BASE="$ZZ_LIB_URL"
+elif [ -n "$SCRIPT_DIR" ] && [ -f "$SCRIPT_DIR/zz-lib/manifest.json" ]; then
+  ZZ_LIB_BASE="file://$SCRIPT_DIR/zz-lib"
+else
+  ZZ_LIB_BASE="$RAW_BASE/zz-lib"
+fi
+ZZ_LIB_BASE="${ZZ_LIB_BASE%/}"
 PROJECT_DIR="${ZZ_PI_PLUGS_PROJECT_DIR:-$PWD}"
 
 LIST=0
@@ -134,7 +144,7 @@ ZZ_PI_PLUGS_EXCLUDE="$EXCLUDE" \
 ZZ_PI_PLUGS_RESET_CONFIG="$RESET_CONFIG" \
 ZZ_PI_PLUGS_FORCE="$FORCE" \
 ZZ_PI_PLUGS_DRY_RUN="$DRY_RUN" \
-python3 - "$PROJECT_DIR" "$MANIFEST_TMP" "$ARCHIVE_TMP" "$PLUGS_BASE" <<'PY'
+python3 - "$PROJECT_DIR" "$MANIFEST_TMP" "$ARCHIVE_TMP" "$PLUGS_BASE" "$ZZ_LIB_BASE" <<'PY'
 from __future__ import annotations
 
 import json
@@ -145,6 +155,8 @@ import sys
 import tarfile
 import tempfile
 import hashlib
+import urllib.parse
+import urllib.request
 from pathlib import Path
 from typing import Any
 
@@ -152,8 +164,10 @@ project_dir = Path(sys.argv[1]).resolve()
 manifest_path = Path(sys.argv[2])
 archive_path = Path(sys.argv[3])
 plugs_base = sys.argv[4]
+zz_lib_base = sys.argv[5].rstrip("/")
 pi_dir = project_dir / ".pi"
 state_path = pi_dir / "zz-pi-plugs-manifest.json"
+zz_lib_state_path = pi_dir / "zz-lib-manifest.json"
 
 
 def truthy(value: str | None) -> bool:
@@ -257,13 +271,13 @@ def prompt_for_plugins() -> list[str]:
     return parse_plugin_refs(answer)
 
 
-def read_existing_selected_plugins() -> list[str]:
+def read_existing_selected_plugins() -> list[str] | None:
     if not state_path.is_file():
-        return []
+        return None
     try:
         state = load_json(state_path)
     except Exception:
-        return []
+        return None
 
     def normalize_plugin_ids(value: Any) -> list[str]:
         if not isinstance(value, list):
@@ -278,8 +292,11 @@ def read_existing_selected_plugins() -> list[str]:
                 selected.append(item)
         return selected
 
-    selected = normalize_plugin_ids(state.get("selected_plugins"))
-    return selected or normalize_plugin_ids(state.get("installed_plugins"))
+    if isinstance(state.get("selected_plugins"), list):
+        return normalize_plugin_ids(state.get("selected_plugins"))
+    if isinstance(state.get("installed_plugins"), list):
+        return normalize_plugin_ids(state.get("installed_plugins"))
+    return None
 
 
 if plugin_arg.strip():
@@ -289,10 +306,15 @@ elif all_mode:
 elif select_mode:
     requested = prompt_for_plugins()
 else:
-    # Re-runs without explicit --plugins keep the existing selected plug set.
-    # First install still bootstraps the generally useful context panes and Tetris.
-    # Use --plugins none for no visible default plugs.
-    requested = read_existing_selected_plugins() or parse_plugin_refs("context-files,context-tools,tetris")
+    # Re-runs without explicit --plugins keep the existing selected plug set,
+    # including an intentionally empty set from --plugins none.
+    # First install still bootstraps the generally useful context-tools pane and Tetris.
+    existing_selection = read_existing_selected_plugins()
+    requested = (
+        existing_selection
+        if existing_selection is not None
+        else parse_plugin_refs("context-tools,tetris")
+    )
 
 exclude = set(parse_plugin_refs(exclude_arg)) if exclude_arg.strip() else set()
 requested = [pid for pid in requested if pid not in exclude]
@@ -326,6 +348,36 @@ installed = [manager_id] + [pid for pid in dependency_closure([manager_id] + req
 auto_required = [pid for pid in installed if pid != manager_id and pid not in requested]
 
 
+def version_key(value: str) -> tuple[int, ...]:
+    parts = [int(part) for part in re.split(r"[^0-9]+", value) if part]
+    return tuple(parts or [0])
+
+
+def normalize_shared_dep(value: Any, owner: str) -> tuple[str, str]:
+    if isinstance(value, str):
+        return value, "0.0.0"
+    if isinstance(value, dict) and isinstance(value.get("id"), str):
+        min_version = value.get("minVersion", value.get("min_version", "0.0.0"))
+        return value["id"], str(min_version or "0.0.0")
+    raise SystemExit(f"bad sharedDeps entry for {owner}")
+
+
+def required_shared_libs_for_plugins(plugin_ids: list[str]) -> list[dict[str, str]]:
+    merged: dict[str, str] = {}
+    for pid in plugin_ids:
+        plugin = plugin_by_id[pid]
+        for raw_dep in plugin.get("sharedDeps", []) or []:
+            dep_id, min_version = normalize_shared_dep(raw_dep, pid)
+            if dep_id != "zz-lib":
+                raise SystemExit(f"unsupported shared dependency for {pid}: {dep_id}")
+            if dep_id not in merged or version_key(min_version) > version_key(merged[dep_id]):
+                merged[dep_id] = min_version
+    return [{"id": dep_id, "minVersion": min_version} for dep_id, min_version in sorted(merged.items())]
+
+
+required_shared_libs = required_shared_libs_for_plugins(installed)
+
+
 def add_owner(owners: dict[str, list[str]], rel: str, owner: str) -> None:
     rel = rel.replace("\\", "/").lstrip("/")
     if not rel or ".." in rel.split("/"):
@@ -357,6 +409,8 @@ print("Resolved pi plug install plan:")
 print("  requested: " + (", ".join(requested) if requested else "(none)"))
 if auto_required:
     print("  auto deps: " + ", ".join(auto_required))
+if required_shared_libs:
+    print("  shared:   " + ", ".join(f"{dep['id']}>={dep['minVersion']}" for dep in required_shared_libs))
 print(f"  files:     {len(owned_files)}")
 print(f"  target:    {pi_dir}")
 if dry_run:
@@ -394,6 +448,107 @@ def safe_extract(archive: Path, dest: Path) -> None:
             if target != dest_real and dest_real not in target.parents:
                 raise SystemExit(f"archive path escapes extraction dir: {member.name}")
         tar.extractall(dest)
+
+
+def bundle_file_url(base_url: str, rel: str) -> str:
+    encoded = "/".join(urllib.parse.quote(part) for part in rel.split("/"))
+    return f"{base_url.rstrip('/')}/files/{encoded}"
+
+
+def download_bytes(url: str) -> bytes:
+    with urllib.request.urlopen(url) as response:  # noqa: S310 - installer fetches user-configured bundle URLs
+        return response.read()
+
+
+def download_json(url: str) -> dict[str, Any]:
+    parsed = json.loads(download_bytes(url).decode("utf-8"))
+    if not isinstance(parsed, dict):
+        raise SystemExit(f"bad JSON response from {url}")
+    return parsed
+
+
+def shared_lib_version(manifest: dict[str, Any]) -> str:
+    shared_lib = manifest.get("sharedLib")
+    if isinstance(shared_lib, dict) and isinstance(shared_lib.get("version"), str):
+        return shared_lib["version"]
+    if isinstance(manifest.get("zzLibVersion"), str):
+        return manifest["zzLibVersion"]
+    if isinstance(manifest.get("version"), str):
+        return manifest["version"]
+    return "0.0.0"
+
+
+def ensure_zz_lib(dep: dict[str, str]) -> int:
+    min_version = dep["minVersion"]
+    manifest_url = f"{zz_lib_base}/manifest.json"
+    lib_manifest = download_json(manifest_url)
+    lib_id = lib_manifest.get("sharedLib", {}).get("id") if isinstance(lib_manifest.get("sharedLib"), dict) else "zz-lib"
+    if lib_id != "zz-lib":
+        raise SystemExit(f"bad zz-lib manifest: sharedLib.id is {lib_id!r}")
+    lib_version = shared_lib_version(lib_manifest)
+    if version_key(lib_version) < version_key(min_version):
+        raise SystemExit(f"zz-lib {lib_version} from {zz_lib_base} is older than required {min_version}")
+
+    lib_common = [str(path) for path in lib_manifest.get("commonFiles", []) or []]
+    if not lib_common:
+        raise SystemExit("bad zz-lib manifest: commonFiles is empty")
+    lib_files = {str(f.get("path")): f for f in lib_manifest.get("files", []) if isinstance(f, dict)}
+    missing = [rel for rel in lib_common if rel not in lib_files]
+    if missing:
+        raise SystemExit("zz-lib manifest is missing files:\n  - " + "\n  - ".join(missing))
+
+    old_state = load_json(zz_lib_state_path) if zz_lib_state_path.is_file() else {}
+    old_owned_raw = old_state.get("owned_files")
+    old_owned = {str(path) for path in old_owned_raw} if isinstance(old_owned_raw, dict) else set()
+
+    collisions: list[str] = []
+    for rel in sorted(lib_common):
+        target = safe_target(pi_dir, rel)
+        if target.exists() and rel not in old_owned and not force:
+            collisions.append(rel)
+    if collisions:
+        raise SystemExit(
+            "Refusing to overwrite existing unowned zz-lib files:\n  - "
+            + "\n  - ".join(collisions)
+            + "\nUse --force if you want this installer to claim them."
+        )
+
+    pi_dir.mkdir(parents=True, exist_ok=True)
+    owned_files_for_state = {rel: ["zz-lib"] for rel in sorted(lib_common)}
+    for rel in sorted(lib_common):
+        info = lib_files[rel]
+        expected = str(info.get("sha256") or "")
+        data = download_bytes(bundle_file_url(zz_lib_base, rel))
+        actual = hashlib.sha256(data).hexdigest()
+        if expected and actual != expected:
+            raise SystemExit(f"zz-lib hash mismatch for {rel}: expected {expected}, got {actual}")
+        target = safe_target(pi_dir, rel)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(data)
+
+    file_hashes = {rel: hash_file(safe_target(pi_dir, rel)) for rel in sorted(lib_common)}
+    state = {
+        "installer": "zz-lib",
+        "schemaVersion": 1,
+        "zzLibVersion": lib_version,
+        "manifest_updated_at": lib_manifest.get("updated_at"),
+        "source": lib_manifest.get("source"),
+        "bundle_url": zz_lib_base,
+        "owned_files": owned_files_for_state,
+        "file_hashes": file_hashes,
+    }
+    zz_lib_state_path.write_text(json.dumps(state, indent=2) + "\n", encoding="utf-8")
+    return len(lib_common)
+
+
+def ensure_shared_libs(deps: list[dict[str, str]]) -> list[str]:
+    ensured: list[str] = []
+    for dep in deps:
+        if dep["id"] != "zz-lib":
+            raise SystemExit(f"unsupported shared dependency: {dep['id']}")
+        count = ensure_zz_lib(dep)
+        ensured.append(f"zz-lib {dep['minVersion']} ({count} files)")
+    return ensured
 
 
 def strip_json_comments(text: str) -> str:
@@ -525,6 +680,8 @@ def load_old_state() -> dict[str, Any]:
         return {}
 
 
+ensured_shared_libs = ensure_shared_libs(required_shared_libs)
+
 old_state = load_old_state()
 old_owned_raw = old_state.get("owned_files")
 if isinstance(old_owned_raw, dict):
@@ -606,7 +763,8 @@ try:
         manager_config_path.write_text(
             '{\n'
             '  // Static source served by zzHostWebsite.\n'
-            f'  "sourceUrl": "{plugs_base}",\n\n'
+            f'  "sourceUrl": "{plugs_base}",\n'
+            f'  "zzLibUrl": "{zz_lib_base}",\n\n'
             '  // Reload automatically after /zz-plugs install/remove/set/update succeeds.\n'
             '  "autoReload": true,\n'
             '}\n',
@@ -623,6 +781,7 @@ try:
         "selected_plugins": requested,
         "installed_plugins": installed,
         "auto_required_plugins": auto_required,
+        "required_shared_libs": required_shared_libs,
         "owned_files": {rel: owned_files[rel] for rel in sorted(owned_files)},
         "config_files": sorted(config_files),
         "file_hashes": file_hashes,
@@ -635,6 +794,8 @@ print("\n  zz pi plugs installed project-locally")
 print(f"  -> selected: {', '.join(requested) if requested else '(none)'}")
 if auto_required:
     print(f"  -> auto deps: {', '.join(auto_required)}")
+if ensured_shared_libs:
+    print(f"  -> shared libs: {', '.join(ensured_shared_libs)}")
 print(f"  -> installed plugins: {len(installed)}")
 print(f"  -> files owned: {len(new_owned)}")
 if merged_configs:

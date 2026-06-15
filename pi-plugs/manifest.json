@@ -4,9 +4,9 @@
   "default": "all-visible",
   "files": [
     {
-      "bytes": 11728,
+      "bytes": 9780,
       "path": "README.md",
-      "sha256": "846f277ba2c05b56a71c37963df62628eadcc3c05019a76b469ec92a32f0a2f9"
+      "sha256": "6d74ef5438af9aea921bc13f36d4d1947b7a39596e9e21191f56b566c96f6e17"
     },
     {
       "bytes": 20112,
@@ -14,9 +14,9 @@
       "sha256": "9b0e63d12b8120fb35df7041921d5fdf8dacdb672e6d1d803536090488d3e798"
     },
     {
-      "bytes": 19724,
+      "bytes": 17630,
       "path": "pi-plugs.catalog.jsonc",
-      "sha256": "2e7216fe10a48fe6a946315808ba725184af511d8ad203de86b8eea475acf447"
+      "sha256": "0e450fe8cc518429f5e890e343afd09afb9524e64f45002ee3bf8321c5e1d677"
     },
     {
       "bytes": 257,
@@ -24,19 +24,9 @@
       "sha256": "1342ca9b09a234b66bdb07fd651c0af75eac673ca7619bb6d47f95f16bb182aa"
     },
     {
-      "bytes": 771,
+      "bytes": 866,
       "path": "extensions/00-zz-subagent-runtime.ts",
-      "sha256": "dfd1e42ee8bd3fd7cb7d5fb1bff48dbd579f5d458b68d945c33d22394c64fa1d"
-    },
-    {
-      "bytes": 836,
-      "path": "extensions/context-files.config.jsonc",
-      "sha256": "84ec87aedf93148853c4ee09d721d72fdedb43ff93ecbf54bdb94f96868a8c78"
-    },
-    {
-      "bytes": 25876,
-      "path": "extensions/context-files.ts",
-      "sha256": "411feef18d3e655be4bd985bb88580ee0034dc99e92c0676d1d636832d07dc8e"
+      "sha256": "37b20fa7509d46c6ae34a3d442e4bb9f2d050f74bbd337f9ad68b9975ca39795"
     },
     {
       "bytes": 1091,
@@ -44,29 +34,19 @@
       "sha256": "ca9a5e589a3f43ac80f2c4ff6528c765c714d3c32bfd1bb447d1eb6102700305"
     },
     {
-      "bytes": 39802,
+      "bytes": 39805,
       "path": "extensions/context-tools.ts",
-      "sha256": "0698a15ea9aee6030dbae6ded185c729723d3682bdb549f4e185c88f232b9430"
+      "sha256": "5ccfeb5167f39487b6c5edeeb1b5b7d9174c373575bf5cc74a5ff56d39028f02"
     },
     {
-      "bytes": 535,
-      "path": "extensions/context-tree-read.config.jsonc",
-      "sha256": "b6c8c483ee47c5d60282d158580eb622ad55ec8c7efdcda955c4aa0ec801a238"
-    },
-    {
-      "bytes": 24010,
-      "path": "extensions/context-tree-read.ts",
-      "sha256": "c8e3c74b5286a47b82e5006361306f65d73def01a4ca78fcf1d38de431f18320"
-    },
-    {
-      "bytes": 4847,
+      "bytes": 4848,
       "path": "extensions/explorationsubagent.config.jsonc",
-      "sha256": "4345abc1b3455e769f935d43a31dee1a4be6f1915b98bbf206fa6f39d5a6d4ff"
+      "sha256": "8d164640576ab72716a13b4d79ff922091cf7801dbd0b6697a5359d2b6f46bbf"
     },
     {
-      "bytes": 30462,
+      "bytes": 30375,
       "path": "extensions/explorationsubagent.ts",
-      "sha256": "133566de63a1bcfeec014d9a646e2a674d699ac44a2ed934d09471df59143639"
+      "sha256": "77d453f1d46e146232a60615d3b1c670770a909dd7295e5c992f018d63aba4b2"
     },
     {
       "bytes": 819,
@@ -74,54 +54,24 @@
       "sha256": "b6176949dfcddb4cc120c54b3fb14beb6f535c56e9e03d83cc9d7c9716a97ac1"
     },
     {
-      "bytes": 18541,
+      "bytes": 18544,
       "path": "extensions/git-status.ts",
-      "sha256": "34f0987d3ac340590cafb43791e64d2497bc25a03f1adcc1a40afed236d9de9c"
+      "sha256": "467739069f3ebb9277ed5d7a4cb3ecbf1c83604807e0bd565db5a9124b845c16"
     },
     {
-      "bytes": 2646,
-      "path": "extensions/gitopsagent.config.jsonc",
-      "sha256": "6630774f7622fcc5b2be17964b97971a199aa3c0f6ecbbaa3b1a46aee21308be"
-    },
-    {
-      "bytes": 24059,
-      "path": "extensions/gitopsagent.ts",
-      "sha256": "c0bcc77640ebb051834f65cff11bb2049bb2d92cfd2ff0e30083035a9f4c00f8"
-    },
-    {
-      "bytes": 4095,
+      "bytes": 4096,
       "path": "extensions/implementationsubagent.config.jsonc",
-      "sha256": "dfcb4a9e05085635ad16d2f73082fed9e1e7a0ed7f37c13041235043582f78d8"
+      "sha256": "663fea5ac4a817bab6744670a65e6e017ef735c454f58b6805ed7f7a5f116f8b"
     },
     {
-      "bytes": 31302,
+      "bytes": 31152,
       "path": "extensions/implementationsubagent.ts",
-      "sha256": "63d0a31d88b708f67a98a76700150df40825776c069e86fdd337611c7ba151ec"
-    },
-    {
-      "bytes": 6628,
-      "path": "extensions/import-docs.config.jsonc",
-      "sha256": "2db5537a73f759474ec669cdc680907e012ed1dbd148cc7e5522d135867727ca"
-    },
-    {
-      "bytes": 55296,
-      "path": "extensions/import-docs.ts",
-      "sha256": "6fc1b04e2da0c279e3f675a7887ad99ed964c30555cc4786953e838eaeba6cd5"
+      "sha256": "60a0ca646c7fe34506f18642256f0ed1e05aba03f7362219b4baf6a39660e318"
     },
     {
       "bytes": 1179,
       "path": "extensions/local-model-endpoints.config.jsonc",
-      "sha256": "c32f55d581b709e5284e710a51f50eb0c2e95a2ccba722e1161af61a1afe7170"
-    },
-    {
-      "bytes": 1406,
-      "path": "extensions/localagent.config.jsonc",
-      "sha256": "1b1fedc5eca27b808fd67dac6898be984d89240f11fdb83b67ef5e8d4ffbfbcf"
-    },
-    {
-      "bytes": 9423,
-      "path": "extensions/localagent.ts",
-      "sha256": "ab929c2a2a5e36ce1d9f9b66e2356150d22e1f845fdcbdda012f4320cc72cd46"
+      "sha256": "f71cd001dfb1c9c58052f0eaa404bd4e65ca53f0dc0b7112f00a280cc32bb1d5"
     },
     {
       "bytes": 674,
@@ -129,39 +79,19 @@
       "sha256": "6a6e7a93dec4407c874d9f91541411a01e62d767df18d4356a7e6402f153e077"
     },
     {
-      "bytes": 5747,
+      "bytes": 5750,
       "path": "extensions/pi-context.ts",
-      "sha256": "85f3cb0cdace85ababb79b471f482aea6d401268fd4521ebd131c9172a8fda3b"
+      "sha256": "ef76e8961f48a9795e5131676828a2cda5bc44d5b00ae816ee89c563b3d3e1d7"
     },
     {
-      "bytes": 1978,
-      "path": "extensions/pr-review.config.jsonc",
-      "sha256": "396c24d3fbda3b5506511e5a2fc7f25f371a74ed8bbec22c7b65667e5ce64a62"
-    },
-    {
-      "bytes": 13524,
-      "path": "extensions/pr-review.ts",
-      "sha256": "a85ad6f4f50dd9db9b775332bfbbd917a9f1c9d6c0654fd2d1639a1e4431b76c"
-    },
-    {
-      "bytes": 5168,
+      "bytes": 5170,
       "path": "extensions/readsubagent.config.jsonc",
-      "sha256": "505f92ef2eeb20d112f329095bfb92b38778227a8a1152ea6d90d6cc01616091"
+      "sha256": "49a1ddae51eb696c26fcd9b5329a8703b2b04ad83f8c55c34f37027871e57bab"
     },
     {
-      "bytes": 41989,
+      "bytes": 41859,
       "path": "extensions/readsubagent.ts",
-      "sha256": "0001b81d77acdc81fc06d54a1719245aab75721fa820bc3e5848c8c17bd967b8"
-    },
-    {
-      "bytes": 1581,
-      "path": "extensions/refagent.config.jsonc",
-      "sha256": "9e34c756e1f0756acb60f35741f030deabcb9361d49a8aff494ea1eff3636d2e"
-    },
-    {
-      "bytes": 11530,
-      "path": "extensions/refagent.ts",
-      "sha256": "a2f9063cd8a3ae583517f39564c0eade847266271f6bea1d7c2d36d8f95078d3"
+      "sha256": "3905957437714f19139784163b370faab88c4479235df936c39ae4f268e646ff"
     },
     {
       "bytes": 2292,
@@ -169,9 +99,9 @@
       "sha256": "5d2d00fe9c7a4715db2e26cd3819782ae46a9bfd8f6e3ff52fee745dd368e9c3"
     },
     {
-      "bytes": 20679,
+      "bytes": 20258,
       "path": "extensions/reviewsubagent.ts",
-      "sha256": "98c37a333ac398586786553cae6ecb33570c79fd7f70354bd76319fa6adeea89"
+      "sha256": "428d7d35183bb56a16ba832e0de61760a2d395d58481f9a02d57d4deee56865c"
     },
     {
       "bytes": 1496,
@@ -184,9 +114,9 @@
       "sha256": "00c8a748c8743bd3e1ab9e5448bb14e9a46a887235d85c2e6273b25a6e9a9fdd"
     },
     {
-      "bytes": 27465,
+      "bytes": 27468,
       "path": "extensions/tetris.ts",
-      "sha256": "4c3cca3cbc70d042cce50879ba3e86cf2948d4d1ea52a92616451bd788226a1e"
+      "sha256": "9061ee491b339f944a920230553eda3107722cbbc7e01da303d8635acd23efc2"
     },
     {
       "bytes": 254,
@@ -194,94 +124,94 @@
       "sha256": "ebcaf1c4135ab183c1556a359df1456fa2b615e0012abbace02be86b6656596e"
     },
     {
-      "bytes": 3888,
+      "bytes": 3889,
       "path": "extensions/wf-adversarialreview.config.jsonc",
-      "sha256": "3b2a342e765915df4aba17d8975fd5e233d4897850cb5d9a0c31efe1bac608a0"
+      "sha256": "0e975e69202ab42398a614d523e6313104bc5b4237f5587a2d87b8485e5ba745"
     },
     {
-      "bytes": 23688,
+      "bytes": 23630,
       "path": "extensions/wf-adversarialreview.ts",
-      "sha256": "f57aacfa8f426d964164bab2b22121be40c885aa7059444d3b0b0b0d6762e46d"
+      "sha256": "c78bd6ca20dce9d79f7eb608edadde43dad921fe1246993a6600b819293c72c4"
     },
     {
-      "bytes": 4005,
+      "bytes": 4006,
       "path": "extensions/wf-brainstormer.config.jsonc",
-      "sha256": "81a9a215c28061d9965ab7fa89805a5cd4aedc53b0a14d2f6d9712b8f24407b9"
+      "sha256": "048cec3e6849dbc6343d5c8e59c308edaafa866b3d64c7859cfb3b808275705b"
     },
     {
-      "bytes": 24174,
+      "bytes": 24116,
       "path": "extensions/wf-brainstormer.ts",
-      "sha256": "0fa3a85260b170480c6384161e8d37ab786ad9b85ddff319a018b25c8e16e239"
+      "sha256": "f7195c6d08849162b648098b55042e8dee11eebc1978c2457e8de8ba292b5a76"
     },
     {
-      "bytes": 3956,
+      "bytes": 3957,
       "path": "extensions/wf-clarifier.config.jsonc",
-      "sha256": "51868112496104797691c460453993561c34906acb3f6ec2174ba616346e592f"
+      "sha256": "e644f729df939cf77415fe9fd3d2f466a534c852dd8b6cee65c40962190ed06b"
     },
     {
-      "bytes": 29778,
+      "bytes": 29720,
       "path": "extensions/wf-clarifier.ts",
-      "sha256": "94b1b2e71f36f9ade53769fb1e4638c845de8d81976a05ad2c834208026217cd"
+      "sha256": "3586e12e3528e3ef4ca25c58b5ea642a86537546149782b30181853722c331bb"
     },
     {
-      "bytes": 4094,
+      "bytes": 4095,
       "path": "extensions/wf-designplan.config.jsonc",
-      "sha256": "563cc3bb34dd3265834b9a7d825c37d333a60eb23c0352c0094aa3188274059d"
+      "sha256": "3e359915c1bab2086e930ef21393b93e436a03a934154ddb4a3afc7375336606"
     },
     {
-      "bytes": 35326,
+      "bytes": 35268,
       "path": "extensions/wf-designplan.ts",
-      "sha256": "249366dd06d3fa2b7d2c2a7a08654beb53b55439975a03fc5244a1f3e1083cfc"
+      "sha256": "f9d23169cae93ac4694a02422f1c155cb4f143c881bdc355bb120e4978381ec4"
     },
     {
-      "bytes": 3766,
+      "bytes": 3767,
       "path": "extensions/wf-finalreviewagent.config.jsonc",
-      "sha256": "51071cc5f7987e87833c34e815a7acffbae7eba9f372382ad3e08e576285208c"
+      "sha256": "baf0924b78177617c5d66f33f567c2ef187ddd72b90459d6e021cf5b12520f77"
     },
     {
-      "bytes": 28468,
+      "bytes": 28410,
       "path": "extensions/wf-finalreviewagent.ts",
-      "sha256": "ff92e8b285ae80513a7deef9dae13ea1108681a677e1794bb151aaefb8f80d17"
+      "sha256": "8cdb99fd8a0961aad3921c38290d4ea13b3b086c794a6400f5373fc7ee49303e"
     },
     {
-      "bytes": 3815,
+      "bytes": 3816,
       "path": "extensions/wf-implementeragent.config.jsonc",
-      "sha256": "f07a1e6b5d5c1d784b568cbf02a761d69798177efd154cd65968cc6c8e17ef5b"
+      "sha256": "b314f0c49b312a3e64dd63e71d484910d85c0e8fb25f5aeac722e35584aff6bb"
     },
     {
-      "bytes": 24861,
+      "bytes": 24803,
       "path": "extensions/wf-implementeragent.ts",
-      "sha256": "236ff38c8b8c967f0464bd3a9ba5c56cc2f29562a06588a4a2112a44927069aa"
+      "sha256": "22edc52dd253c77a76c4268fc35ecbb815db8ca9d77c3b2780ee8847b5417ad8"
     },
     {
-      "bytes": 4067,
+      "bytes": 4068,
       "path": "extensions/wf-impplanner.config.jsonc",
-      "sha256": "e33459dc61f7c9e1ee56e2d089b61a849647d6cefa61dca764d97b83f226b673"
+      "sha256": "ecd6b05e21c37c42bf602f00892a514231be6a15e0309da7a6659aee5dbf2798"
     },
     {
-      "bytes": 53698,
+      "bytes": 53640,
       "path": "extensions/wf-impplanner.ts",
-      "sha256": "4d9cc04e3a2425b32b0831b7c7ebae2c9a25fc0ca9bbd5c3a4d79aab2612ea75"
+      "sha256": "2d681cefdca7376f799dcc507fdb12ed9649c677bf00ab6a122f8ad4bd087a4c"
     },
     {
-      "bytes": 3570,
+      "bytes": 3571,
       "path": "extensions/wf-revieweragent.config.jsonc",
-      "sha256": "463ec8d9af1f164588f80b7ee8213dd44947aee66cbae251029364c28abfe886"
+      "sha256": "5a1b451fe8f10d53da3b0af6359b9035389096c69b42488254836cbf8af0cc48"
     },
     {
-      "bytes": 26118,
+      "bytes": 26060,
       "path": "extensions/wf-revieweragent.ts",
-      "sha256": "07329795ef2306f969db239aa580f9c55f431e70375023096a1482628291212d"
+      "sha256": "ade4795240bc740d0ec00899f0f7129d7f09491891d6d948a3b52777bc40022a"
     },
     {
-      "bytes": 3874,
+      "bytes": 3875,
       "path": "extensions/wf-testeragent.config.jsonc",
-      "sha256": "96de2ed0a20c27509ecc95f053abcdf09b78aabba1c6f0e837c6eab91391c45e"
+      "sha256": "e49f958176809649166f6a88f3c946732038686fc0598bb8e5968343009d3b53"
     },
     {
-      "bytes": 25242,
+      "bytes": 25184,
       "path": "extensions/wf-testeragent.ts",
-      "sha256": "f9456c9558ac6a3327f6e20a8cf24dcde8fd7f84524d4563bd2584a755b3735f"
+      "sha256": "fa1fb1b0c4ddfa1ad7756148caaae8a13c1ca793dd170d2ee4e8c973efbc92f2"
     },
     {
       "bytes": 738,
@@ -289,54 +219,44 @@
       "sha256": "706ad2ca20b3d0ae6370e4a584081b5b8660a97b2b511031b12153162d4512e9"
     },
     {
-      "bytes": 34567,
+      "bytes": 34570,
       "path": "extensions/workflow-tree.ts",
-      "sha256": "b7505f74160e2b4df862952457f3cfa101d210bbeaf95b4b8ae0da52a2d989b4"
+      "sha256": "8d68ee77fb02dd6daace7d17d683ce96fb27805a3d5af06532dc543923fcba14"
     },
     {
-      "bytes": 125743,
+      "bytes": 125746,
       "path": "extensions/workflowmode.ts",
-      "sha256": "e662d09f293da6973a84bd51a972ff6eb2bf143a3f960f9296c30507a2098713"
+      "sha256": "ee8f0c91e4e66463906ea6c70f4bae173c19dd24890c4b3b8f5e2d1aa69177a6"
     },
     {
-      "bytes": 347,
+      "bytes": 491,
       "path": "extensions/zz-plug-manager.config.jsonc",
-      "sha256": "ccc2084e9855d4005a88f9b116f3af8f6e30e59a123392988decb1c087848fbe"
+      "sha256": "bf53a2a78af53602abf4a86f6b81a0cb6f4c3a8daa213465be51995c72d3c9f4"
     },
     {
-      "bytes": 31887,
+      "bytes": 39270,
       "path": "extensions/zz-plug-manager.ts",
-      "sha256": "fc156fa025da947d71f97282ab67c5cc078847942e80c081b1c4408b99dbea02"
+      "sha256": "6411b6ba49b66cac629fa1155521a010601b762eacaf102d4c0b85be3c2ff05a"
     },
     {
-      "bytes": 761,
+      "bytes": 774,
       "path": "extensions/zzLocalModels.config.jsonc",
-      "sha256": "1271618085530a8d2024a0d7d278dcfee0c80965a334bab280a5d647c2cd548a"
+      "sha256": "506851b73af20015b2830837f61a7c5d29d9989402902cde2439b523d83aa4b3"
     },
     {
-      "bytes": 6308,
+      "bytes": 6312,
       "path": "extensions/zzLocalModels.ts",
-      "sha256": "664c155787b2c99741f153dd5c677472fc25f6a912178cfe74ebe13d95916b5c"
+      "sha256": "2fc0bbe92ea1e33b0b1c5b2e0717f6588585bb7b2dcb13ce3745510b420210d8"
     },
     {
-      "bytes": 11801,
+      "bytes": 11825,
       "path": "extensions/lib/child-agent-model-options.ts",
-      "sha256": "131d81ee07c5240211129dc372d8fb69a604aa7b805f50890b744845b3e43614"
+      "sha256": "d1ae08154d928d9ccc8e68f9fd5b4f50bb5b1f0c7f787004e98b04f9d7bb50ad"
     },
     {
-      "bytes": 41415,
-      "path": "extensions/lib/child-pi-agent.ts",
-      "sha256": "709f8292eedb20d177289f7b07e72d946f108a8e7e7673759c733e476a368e10"
-    },
-    {
-      "bytes": 5435,
-      "path": "extensions/lib/jsonc-config.ts",
-      "sha256": "c92a07e7c0266591a3a93073a1e238fba0649c53c207423312b75e6a923d349c"
-    },
-    {
-      "bytes": 38278,
+      "bytes": 38286,
       "path": "extensions/lib/right-overlay-tiler.ts",
-      "sha256": "b9361ae37c1377bb07579f60f2d3f8da948dbf9a7e36708717de25009e479eb1"
+      "sha256": "4afbf24627b1a9b8b1b459f8ec212a2cf63b2fd9c1cb072606575f1e2fc3c0b9"
     },
     {
       "bytes": 4409,
@@ -362,6 +282,7 @@
         "right-overlay-tiler",
         "zz-subagent-runtime"
       ],
+      "sharedDeps": [],
       "tags": [
         "manager",
         "internal"
@@ -376,13 +297,18 @@
       "entry": "extensions/00-right-overlay-tiler.ts",
       "fileDeps": [
         "extensions/right-overlay-tiler.config.jsonc",
-        "extensions/lib/jsonc-config.ts",
         "extensions/lib/right-overlay-tiler.ts"
       ],
       "id": "right-overlay-tiler",
       "internal": true,
       "optionalPluginDeps": [],
       "pluginDeps": [],
+      "sharedDeps": [
+        {
+          "id": "zz-lib",
+          "minVersion": "1.0.0"
+        }
+      ],
       "tags": [
         "ui",
         "overlay",
@@ -398,14 +324,18 @@
       "entry": "extensions/00-zz-subagent-runtime.ts",
       "fileDeps": [
         "extensions/local-model-endpoints.config.jsonc",
-        "extensions/lib/child-agent-model-options.ts",
-        "extensions/lib/child-pi-agent.ts",
-        "extensions/lib/jsonc-config.ts"
+        "extensions/lib/child-agent-model-options.ts"
       ],
       "id": "zz-subagent-runtime",
       "internal": true,
       "optionalPluginDeps": [],
       "pluginDeps": [],
+      "sharedDeps": [
+        {
+          "id": "zz-lib",
+          "minVersion": "1.0.0"
+        }
+      ],
       "tags": [
         "agent",
         "runtime",
@@ -420,13 +350,18 @@
       "description": "Registers shared LM Studio Qwen models in Pi's normal /model picker.",
       "entry": "extensions/zzLocalModels.ts",
       "fileDeps": [
-        "extensions/zzLocalModels.config.jsonc",
-        "extensions/lib/jsonc-config.ts"
+        "extensions/zzLocalModels.config.jsonc"
       ],
       "id": "zz-local-models",
       "internal": false,
       "optionalPluginDeps": [],
       "pluginDeps": [],
+      "sharedDeps": [
+        {
+          "id": "zz-lib",
+          "minVersion": "1.0.0"
+        }
+      ],
       "tags": [
         "model",
         "local-model",
@@ -436,37 +371,12 @@
     },
     {
       "configFiles": [
-        "extensions/context-files.config.jsonc"
-      ],
-      "description": "Tracks read/write/edit file activity and shows file-context accounting in a right-side pane.",
-      "entry": "extensions/context-files.ts",
-      "fileDeps": [
-        "extensions/context-files.config.jsonc",
-        "extensions/lib/jsonc-config.ts",
-        "extensions/lib/right-overlay-tiler.ts"
-      ],
-      "id": "context-files",
-      "internal": false,
-      "optionalPluginDeps": [],
-      "pluginDeps": [
-        "right-overlay-tiler"
-      ],
-      "tags": [
-        "ui",
-        "context",
-        "overlay"
-      ],
-      "title": "Context files"
-    },
-    {
-      "configFiles": [
         "extensions/context-tools.config.jsonc"
       ],
       "description": "Shows context/tool usage accounting in a right-side pane.",
       "entry": "extensions/context-tools.ts",
       "fileDeps": [
         "extensions/context-tools.config.jsonc",
-        "extensions/lib/jsonc-config.ts",
         "extensions/lib/right-overlay-tiler.ts",
         "extensions/lib/workflow-tree-state.ts"
       ],
@@ -475,6 +385,12 @@
       "optionalPluginDeps": [],
       "pluginDeps": [
         "right-overlay-tiler"
+      ],
+      "sharedDeps": [
+        {
+          "id": "zz-lib",
+          "minVersion": "1.0.0"
+        }
       ],
       "tags": [
         "ui",
@@ -485,41 +401,12 @@
     },
     {
       "configFiles": [
-        "extensions/context-tree-read.config.jsonc",
-        "extensions/local-model-endpoints.config.jsonc"
-      ],
-      "description": "Reads targeted context-tree/file information through a child Pi process and displays scope in a right-side pane.",
-      "entry": "extensions/context-tree-read.ts",
-      "fileDeps": [
-        "extensions/context-tree-read.config.jsonc",
-        "extensions/local-model-endpoints.config.jsonc",
-        "extensions/lib/child-pi-agent.ts",
-        "extensions/lib/jsonc-config.ts",
-        "extensions/lib/right-overlay-tiler.ts"
-      ],
-      "id": "context-tree-read",
-      "internal": false,
-      "optionalPluginDeps": [],
-      "pluginDeps": [
-        "right-overlay-tiler",
-        "readsubagent"
-      ],
-      "tags": [
-        "agent",
-        "context",
-        "overlay"
-      ],
-      "title": "Context tree read"
-    },
-    {
-      "configFiles": [
         "extensions/workflow-tree.config.jsonc"
       ],
       "description": "Shows workflow mode lifecycle, prompts, progress, and terminal state in a right-side pane.",
       "entry": "extensions/workflow-tree.ts",
       "fileDeps": [
         "extensions/workflow-tree.config.jsonc",
-        "extensions/lib/jsonc-config.ts",
         "extensions/lib/right-overlay-tiler.ts",
         "extensions/lib/workflow-tree-state.ts"
       ],
@@ -528,6 +415,12 @@
       "optionalPluginDeps": [],
       "pluginDeps": [
         "right-overlay-tiler"
+      ],
+      "sharedDeps": [
+        {
+          "id": "zz-lib",
+          "minVersion": "1.0.0"
+        }
       ],
       "tags": [
         "ui",
@@ -545,9 +438,7 @@
       "entry": "extensions/explorationsubagent.ts",
       "fileDeps": [
         "extensions/explorationsubagent.config.jsonc",
-        "extensions/local-model-endpoints.config.jsonc",
-        "extensions/lib/child-pi-agent.ts",
-        "extensions/lib/jsonc-config.ts"
+        "extensions/local-model-endpoints.config.jsonc"
       ],
       "id": "explorationsubagent",
       "internal": false,
@@ -555,6 +446,12 @@
       "pluginDeps": [
         "zz-subagent-runtime",
         "zz-local-models"
+      ],
+      "sharedDeps": [
+        {
+          "id": "zz-lib",
+          "minVersion": "1.0.0"
+        }
       ],
       "tags": [
         "agent"
@@ -571,9 +468,7 @@
       "fileDeps": [
         "extensions/implementationsubagent.config.jsonc",
         "extensions/local-model-endpoints.config.jsonc",
-        "extensions/lib/child-agent-model-options.ts",
-        "extensions/lib/child-pi-agent.ts",
-        "extensions/lib/jsonc-config.ts"
+        "extensions/lib/child-agent-model-options.ts"
       ],
       "id": "implementationsubagent",
       "internal": false,
@@ -583,6 +478,12 @@
         "zz-local-models",
         "readsubagent",
         "explorationsubagent"
+      ],
+      "sharedDeps": [
+        {
+          "id": "zz-lib",
+          "minVersion": "1.0.0"
+        }
       ],
       "tags": [
         "agent",
@@ -598,7 +499,6 @@
       "entry": "extensions/git-status.ts",
       "fileDeps": [
         "extensions/git-status.config.jsonc",
-        "extensions/lib/jsonc-config.ts",
         "extensions/lib/right-overlay-tiler.ts"
       ],
       "id": "git-status",
@@ -606,6 +506,12 @@
       "optionalPluginDeps": [],
       "pluginDeps": [
         "right-overlay-tiler"
+      ],
+      "sharedDeps": [
+        {
+          "id": "zz-lib",
+          "minVersion": "1.0.0"
+        }
       ],
       "tags": [
         "git",
@@ -616,117 +522,27 @@
     },
     {
       "configFiles": [
-        "extensions/gitopsagent.config.jsonc",
-        "extensions/local-model-endpoints.config.jsonc"
-      ],
-      "description": "Delegates git-oriented analysis/operations to a child Pi process.",
-      "entry": "extensions/gitopsagent.ts",
-      "fileDeps": [
-        "extensions/gitopsagent.config.jsonc",
-        "extensions/local-model-endpoints.config.jsonc",
-        "extensions/lib/child-pi-agent.ts",
-        "extensions/lib/jsonc-config.ts"
-      ],
-      "id": "gitopsagent",
-      "internal": false,
-      "optionalPluginDeps": [],
-      "pluginDeps": [
-        "zz-subagent-runtime"
-      ],
-      "tags": [
-        "agent",
-        "git"
-      ],
-      "title": "Git ops agent"
-    },
-    {
-      "configFiles": [
-        "extensions/import-docs.config.jsonc"
-      ],
-      "description": "Adds /import-docs to clone/prune upstream docs/source references into repo-relative reference/ paths.",
-      "entry": "extensions/import-docs.ts",
-      "fileDeps": [
-        "extensions/import-docs.config.jsonc"
-      ],
-      "id": "import-docs",
-      "internal": false,
-      "optionalPluginDeps": [],
-      "pluginDeps": [],
-      "tags": [
-        "docs",
-        "reference"
-      ],
-      "title": "Import docs"
-    },
-    {
-      "configFiles": [
-        "extensions/localagent.config.jsonc",
-        "extensions/local-model-endpoints.config.jsonc"
-      ],
-      "description": "Adds /localagent and a localagent tool that delegate general tasks to a child Pi process.",
-      "entry": "extensions/localagent.ts",
-      "fileDeps": [
-        "extensions/localagent.config.jsonc",
-        "extensions/local-model-endpoints.config.jsonc",
-        "extensions/lib/child-pi-agent.ts",
-        "extensions/lib/jsonc-config.ts"
-      ],
-      "id": "localagent",
-      "internal": false,
-      "optionalPluginDeps": [],
-      "pluginDeps": [
-        "zz-subagent-runtime"
-      ],
-      "tags": [
-        "agent",
-        "local-model"
-      ],
-      "title": "Local agent"
-    },
-    {
-      "configFiles": [
         "extensions/pi-context.config.jsonc"
       ],
       "description": "Strips built-in AGENTS.md/CLAUDE.md project context and injects discovered PI.md files instead.",
       "entry": "extensions/pi-context.ts",
       "fileDeps": [
-        "extensions/pi-context.config.jsonc",
-        "extensions/lib/jsonc-config.ts"
+        "extensions/pi-context.config.jsonc"
       ],
       "id": "pi-context",
       "internal": false,
       "optionalPluginDeps": [],
       "pluginDeps": [],
+      "sharedDeps": [
+        {
+          "id": "zz-lib",
+          "minVersion": "1.0.0"
+        }
+      ],
       "tags": [
         "context"
       ],
       "title": "PI.md context"
-    },
-    {
-      "configFiles": [
-        "extensions/pr-review.config.jsonc",
-        "extensions/local-model-endpoints.config.jsonc"
-      ],
-      "description": "Adds /pr-review and a prreview tool that delegate PR readiness review to a child Pi process.",
-      "entry": "extensions/pr-review.ts",
-      "fileDeps": [
-        "extensions/pr-review.config.jsonc",
-        "extensions/local-model-endpoints.config.jsonc",
-        "extensions/lib/child-pi-agent.ts",
-        "extensions/lib/jsonc-config.ts"
-      ],
-      "id": "pr-review",
-      "internal": false,
-      "optionalPluginDeps": [],
-      "pluginDeps": [
-        "zz-subagent-runtime"
-      ],
-      "tags": [
-        "agent",
-        "git",
-        "review"
-      ],
-      "title": "PR review"
     },
     {
       "configFiles": [
@@ -736,9 +552,7 @@
       "entry": "extensions/wf-clarifier.ts",
       "fileDeps": [
         "extensions/wf-clarifier.config.jsonc",
-        "extensions/lib/child-agent-model-options.ts",
-        "extensions/lib/child-pi-agent.ts",
-        "extensions/lib/jsonc-config.ts"
+        "extensions/lib/child-agent-model-options.ts"
       ],
       "id": "wf-clarifier",
       "internal": true,
@@ -746,6 +560,12 @@
       "pluginDeps": [
         "readsubagent",
         "explorationsubagent"
+      ],
+      "sharedDeps": [
+        {
+          "id": "zz-lib",
+          "minVersion": "1.0.0"
+        }
       ],
       "tags": [
         "agent",
@@ -761,9 +581,7 @@
       "entry": "extensions/wf-brainstormer.ts",
       "fileDeps": [
         "extensions/wf-brainstormer.config.jsonc",
-        "extensions/lib/child-agent-model-options.ts",
-        "extensions/lib/child-pi-agent.ts",
-        "extensions/lib/jsonc-config.ts"
+        "extensions/lib/child-agent-model-options.ts"
       ],
       "id": "wf-brainstormer",
       "internal": true,
@@ -771,6 +589,12 @@
       "pluginDeps": [
         "readsubagent",
         "explorationsubagent"
+      ],
+      "sharedDeps": [
+        {
+          "id": "zz-lib",
+          "minVersion": "1.0.0"
+        }
       ],
       "tags": [
         "agent",
@@ -786,9 +610,7 @@
       "entry": "extensions/wf-adversarialreview.ts",
       "fileDeps": [
         "extensions/wf-adversarialreview.config.jsonc",
-        "extensions/lib/child-agent-model-options.ts",
-        "extensions/lib/child-pi-agent.ts",
-        "extensions/lib/jsonc-config.ts"
+        "extensions/lib/child-agent-model-options.ts"
       ],
       "id": "wf-adversarialreview",
       "internal": true,
@@ -796,6 +618,12 @@
       "pluginDeps": [
         "readsubagent",
         "explorationsubagent"
+      ],
+      "sharedDeps": [
+        {
+          "id": "zz-lib",
+          "minVersion": "1.0.0"
+        }
       ],
       "tags": [
         "agent",
@@ -812,9 +640,7 @@
       "entry": "extensions/wf-designplan.ts",
       "fileDeps": [
         "extensions/wf-designplan.config.jsonc",
-        "extensions/lib/child-agent-model-options.ts",
-        "extensions/lib/child-pi-agent.ts",
-        "extensions/lib/jsonc-config.ts"
+        "extensions/lib/child-agent-model-options.ts"
       ],
       "id": "wf-designplan",
       "internal": true,
@@ -823,6 +649,12 @@
         "readsubagent",
         "explorationsubagent",
         "wf-adversarialreview"
+      ],
+      "sharedDeps": [
+        {
+          "id": "zz-lib",
+          "minVersion": "1.0.0"
+        }
       ],
       "tags": [
         "agent",
@@ -838,9 +670,7 @@
       "entry": "extensions/wf-impplanner.ts",
       "fileDeps": [
         "extensions/wf-impplanner.config.jsonc",
-        "extensions/lib/child-agent-model-options.ts",
-        "extensions/lib/child-pi-agent.ts",
-        "extensions/lib/jsonc-config.ts"
+        "extensions/lib/child-agent-model-options.ts"
       ],
       "id": "wf-impplanner",
       "internal": true,
@@ -850,6 +680,12 @@
         "explorationsubagent",
         "wf-adversarialreview",
         "wf-designplan"
+      ],
+      "sharedDeps": [
+        {
+          "id": "zz-lib",
+          "minVersion": "1.0.0"
+        }
       ],
       "tags": [
         "agent",
@@ -865,9 +701,7 @@
       "entry": "extensions/wf-implementeragent.ts",
       "fileDeps": [
         "extensions/wf-implementeragent.config.jsonc",
-        "extensions/lib/child-agent-model-options.ts",
-        "extensions/lib/child-pi-agent.ts",
-        "extensions/lib/jsonc-config.ts"
+        "extensions/lib/child-agent-model-options.ts"
       ],
       "id": "wf-implementeragent",
       "internal": true,
@@ -877,6 +711,12 @@
         "readsubagent",
         "explorationsubagent",
         "wf-impplanner"
+      ],
+      "sharedDeps": [
+        {
+          "id": "zz-lib",
+          "minVersion": "1.0.0"
+        }
       ],
       "tags": [
         "agent",
@@ -893,9 +733,7 @@
       "entry": "extensions/wf-revieweragent.ts",
       "fileDeps": [
         "extensions/wf-revieweragent.config.jsonc",
-        "extensions/lib/child-agent-model-options.ts",
-        "extensions/lib/child-pi-agent.ts",
-        "extensions/lib/jsonc-config.ts"
+        "extensions/lib/child-agent-model-options.ts"
       ],
       "id": "wf-revieweragent",
       "internal": true,
@@ -906,6 +744,12 @@
         "explorationsubagent",
         "wf-impplanner",
         "wf-implementeragent"
+      ],
+      "sharedDeps": [
+        {
+          "id": "zz-lib",
+          "minVersion": "1.0.0"
+        }
       ],
       "tags": [
         "agent",
@@ -922,9 +766,7 @@
       "entry": "extensions/wf-finalreviewagent.ts",
       "fileDeps": [
         "extensions/wf-finalreviewagent.config.jsonc",
-        "extensions/lib/child-agent-model-options.ts",
-        "extensions/lib/child-pi-agent.ts",
-        "extensions/lib/jsonc-config.ts"
+        "extensions/lib/child-agent-model-options.ts"
       ],
       "id": "wf-finalreviewagent",
       "internal": true,
@@ -934,6 +776,12 @@
         "readsubagent",
         "explorationsubagent",
         "wf-impplanner"
+      ],
+      "sharedDeps": [
+        {
+          "id": "zz-lib",
+          "minVersion": "1.0.0"
+        }
       ],
       "tags": [
         "agent",
@@ -950,9 +798,7 @@
       "entry": "extensions/wf-testeragent.ts",
       "fileDeps": [
         "extensions/wf-testeragent.config.jsonc",
-        "extensions/lib/child-agent-model-options.ts",
-        "extensions/lib/child-pi-agent.ts",
-        "extensions/lib/jsonc-config.ts"
+        "extensions/lib/child-agent-model-options.ts"
       ],
       "id": "wf-testeragent",
       "internal": true,
@@ -962,6 +808,12 @@
         "readsubagent",
         "explorationsubagent",
         "wf-impplanner"
+      ],
+      "sharedDeps": [
+        {
+          "id": "zz-lib",
+          "minVersion": "1.0.0"
+        }
       ],
       "tags": [
         "agent",
@@ -975,7 +827,6 @@
       "description": "Adds /workflowmode and input-focused Alt+W to clarify, enrich, brainstorm, select, design-plan, implementation-plan, then implement/review each plan stage, fill test gaps, and run whole-branch final review until green.",
       "entry": "extensions/workflowmode.ts",
       "fileDeps": [
-        "extensions/lib/child-pi-agent.ts",
         "extensions/lib/workflow-tree-state.ts"
       ],
       "id": "workflowmode",
@@ -993,6 +844,12 @@
         "wf-finalreviewagent",
         "wf-testeragent"
       ],
+      "sharedDeps": [
+        {
+          "id": "zz-lib",
+          "minVersion": "1.0.0"
+        }
+      ],
       "tags": [
         "workflow"
       ],
@@ -1007,9 +864,7 @@
       "entry": "extensions/readsubagent.ts",
       "fileDeps": [
         "extensions/readsubagent.config.jsonc",
-        "extensions/local-model-endpoints.config.jsonc",
-        "extensions/lib/child-pi-agent.ts",
-        "extensions/lib/jsonc-config.ts"
+        "extensions/local-model-endpoints.config.jsonc"
       ],
       "id": "readsubagent",
       "internal": false,
@@ -1018,39 +873,17 @@
         "zz-subagent-runtime",
         "zz-local-models"
       ],
+      "sharedDeps": [
+        {
+          "id": "zz-lib",
+          "minVersion": "1.0.0"
+        }
+      ],
       "tags": [
         "agent",
         "read-only"
       ],
       "title": "Read subagent"
-    },
-    {
-      "configFiles": [
-        "extensions/refagent.config.jsonc",
-        "extensions/local-model-endpoints.config.jsonc"
-      ],
-      "description": "Adds /refagent and a refagent tool for targeted lookup questions about enabled imported references.",
-      "entry": "extensions/refagent.ts",
-      "fileDeps": [
-        "extensions/refagent.config.jsonc",
-        "extensions/local-model-endpoints.config.jsonc",
-        "extensions/lib/child-pi-agent.ts",
-        "extensions/lib/jsonc-config.ts"
-      ],
-      "id": "refagent",
-      "internal": false,
-      "optionalPluginDeps": [
-        "import-docs"
-      ],
-      "pluginDeps": [
-        "zz-subagent-runtime"
-      ],
-      "tags": [
-        "agent",
-        "docs",
-        "reference"
-      ],
-      "title": "Reference agent"
     },
     {
       "configFiles": [
@@ -1061,15 +894,19 @@
       "entry": "extensions/reviewsubagent.ts",
       "fileDeps": [
         "extensions/reviewsubagent.config.jsonc",
-        "extensions/local-model-endpoints.config.jsonc",
-        "extensions/lib/child-pi-agent.ts",
-        "extensions/lib/jsonc-config.ts"
+        "extensions/local-model-endpoints.config.jsonc"
       ],
       "id": "reviewsubagent",
       "internal": false,
       "optionalPluginDeps": [],
       "pluginDeps": [
         "zz-subagent-runtime"
+      ],
+      "sharedDeps": [
+        {
+          "id": "zz-lib",
+          "minVersion": "1.0.0"
+        }
       ],
       "tags": [
         "agent",
@@ -1084,13 +921,18 @@
       "description": "Adds /tetris, an overlay Tetris game for waiting during agent runs.",
       "entry": "extensions/tetris.ts",
       "fileDeps": [
-        "extensions/tetris.config.jsonc",
-        "extensions/lib/jsonc-config.ts"
+        "extensions/tetris.config.jsonc"
       ],
       "id": "tetris",
       "internal": false,
       "optionalPluginDeps": [],
       "pluginDeps": [],
+      "sharedDeps": [
+        {
+          "id": "zz-lib",
+          "minVersion": "1.0.0"
+        }
+      ],
       "tags": [
         "game",
         "ui"
@@ -1099,26 +941,31 @@
     }
   ],
   "repository_raw_base": "https://raw.githubusercontent.com/dezverev/zzPi/main",
+  "requiredSharedLibs": [
+    {
+      "id": "zz-lib",
+      "minVersion": "1.0.0"
+    }
+  ],
+  "required_shared_libs": [
+    {
+      "id": "zz-lib",
+      "minVersion": "1.0.0"
+    }
+  ],
   "schemaVersion": 2,
   "source": "zzPi git export",
-  "updated_at": "2026-06-13T10:23:07.221055+00:00",
+  "updated_at": "2026-06-15T08:56:23.158683+00:00",
   "visiblePlugins": [
     "zz-local-models",
-    "context-files",
     "context-tools",
-    "context-tree-read",
     "workflow-tree",
     "explorationsubagent",
     "implementationsubagent",
     "git-status",
-    "gitopsagent",
-    "import-docs",
-    "localagent",
     "pi-context",
-    "pr-review",
     "workflowmode",
     "readsubagent",
-    "refagent",
     "reviewsubagent",
     "tetris"
   ]

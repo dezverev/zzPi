@@ -13,7 +13,7 @@
   "providerRegistration": "none",
 
   // LM Studio endpoint for the default local Qwen model.
-  "endpoint": "http://127.0.0.1:1234",
+  "endpoint": "http://127.0.0.1:11444",
 
   // Optional Pi model selector to pass directly to the child process.
   // Leave empty to use "<provider>/<model>" from the settings above.
@@ -27,7 +27,7 @@
       "label": "Qwen 3.6 35B A3B on 127.0.0.1 (LM Studio)",
       "provider": "lm-studio",
       "providerRegistration": "none",
-      "endpoint": "http://127.0.0.1:1234",
+      "endpoint": "http://127.0.0.1:11444",
       "model": "qwen/qwen3.6-35b-a3b",
       "contextWindow": 262144,
       "maxOutputTokens": 32768,

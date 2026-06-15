@@ -10,7 +10,7 @@ import {
   getErrorMessage,
   getPositiveIntegerField,
   readJsoncConfig,
-} from "./lib/jsonc-config.ts";
+} from "./zz-lib/jsonc-config.ts";
 import {
   WORKFLOW_TREE_LIFECYCLES,
   WORKFLOW_TREE_QUERY_EVENT,

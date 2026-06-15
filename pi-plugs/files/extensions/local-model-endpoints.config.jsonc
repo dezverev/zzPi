@@ -13,11 +13,11 @@
   "trueLocalEndpoint": "http://127.0.0.1:1234",
 
   // LM Studio running on another machine on the local network.
-  "remoteLocalEndpoint": "http://127.0.0.1:1234",
+  "remoteLocalEndpoint": "http://127.0.0.1:11444",
 
   // Additional LM Studio endpoints on the local network.
   "remoteLocalEndpoint2": "http://127.0.0.1:1234",
-  "remoteLocalEndpoint3": "http://127.0.0.1:11444",
+  "remoteLocalEndpoint3": "http://127.0.0.1:1234",
 
   // True remote fallback that uses Pi's configured provider/auth.
   "trueRemoteProvider": "openai-codex",

@@ -10,6 +10,8 @@ const MANAGER_ID = "zz-plug-manager";
 const STATE_FILE = ".pi/zz-pi-plugs-manifest.json";
 const CONFIG_FILE = ".pi/extensions/zz-plug-manager.config.jsonc";
 const DEFAULT_SOURCE_URL = "https://raw.githubusercontent.com/dezverev/zzPi/main/pi-plugs";
+const DEFAULT_ZZ_LIB_URL = "https://raw.githubusercontent.com/dezverev/zzPi/main/zz-lib";
+const ZZ_LIB_STATE_FILE = ".pi/zz-lib-manifest.json";
 const MESSAGE_TYPE = "zz-plugs";
 
 type JsonRecord = Record<string, unknown>;
@@ -17,12 +19,18 @@ type JsonRecord = Record<string, unknown>;
 interface ManagerConfig {
   readonly autoReload: boolean;
   readonly sourceUrl: string;
+  readonly zzLibUrl: string;
 }
 
 interface PlugManifestFile {
   readonly path: string;
   readonly bytes: number;
   readonly sha256: string;
+}
+
+interface SharedDep {
+  readonly id: string;
+  readonly minVersion: string;
 }
 
 interface PlugManifestPlugin {
@@ -35,6 +43,7 @@ interface PlugManifestPlugin {
   readonly optionalPluginDeps: string[];
   readonly fileDeps: string[];
   readonly configFiles: string[];
+  readonly sharedDeps: SharedDep[];
   readonly tags: string[];
 }
 
@@ -48,6 +57,16 @@ interface PlugManifest {
   readonly files: PlugManifestFile[];
 }
 
+interface SharedLibManifest {
+  readonly schemaVersion: number;
+  readonly updated_at?: string;
+  readonly source?: string;
+  readonly commonFiles: string[];
+  readonly files: PlugManifestFile[];
+  readonly sharedLib?: { readonly id?: string; readonly version?: string };
+  readonly zzLibVersion?: string;
+}
+
 interface InstallState {
   readonly installer?: string;
   readonly schemaVersion?: number;
@@ -57,6 +76,7 @@ interface InstallState {
   readonly selected_plugins?: string[];
   readonly installed_plugins?: string[];
   readonly auto_required_plugins?: string[];
+  readonly required_shared_libs?: SharedDep[];
   readonly owned_files?: Record<string, string[]>;
   readonly config_files?: string[];
   readonly file_hashes?: Record<string, string>;
@@ -67,6 +87,7 @@ interface ResolvedPlan {
   readonly selected: string[];
   readonly installed: string[];
   readonly autoRequired: string[];
+  readonly requiredSharedLibs: SharedDep[];
   readonly ownedFiles: Record<string, string[]>;
   readonly configFiles: Set<string>;
 }
@@ -79,6 +100,7 @@ interface ApplyOptions {
 }
 
 interface ApplyResult {
+  readonly ensuredSharedLibs: string[];
   readonly mergedConfigs: string[];
   readonly plan: ResolvedPlan;
   readonly preservedConfigs: string[];
@@ -268,11 +290,25 @@ async function fetchFile(sourceUrl: string, relPath: string, expectedSha: string
   return buffer;
 }
 
+function defaultZzLibUrl(sourceUrl: string): string {
+  const trimmed = sourceUrl.replace(/\/+$/u, "");
+  try {
+    const url = new URL(trimmed);
+    const parentPath = url.pathname.replace(/\/+$/u, "").replace(/\/[^/]*$/u, "");
+    url.pathname = `${parentPath}/zz-lib`;
+    return url.toString().replace(/\/+$/u, "");
+  } catch {
+    return trimmed.replace(/\/[^/]*$/u, "/zz-lib") || DEFAULT_ZZ_LIB_URL;
+  }
+}
+
 async function loadConfig(cwd: string): Promise<ManagerConfig> {
   const record = await readJson(resolve(cwd, CONFIG_FILE));
-  const sourceUrl = process.env.ZZ_PI_PLUGS_URL || asString(record?.sourceUrl) || DEFAULT_SOURCE_URL;
+  const rawSourceUrl = process.env.ZZ_PI_PLUGS_URL || asString(record?.sourceUrl) || DEFAULT_SOURCE_URL;
+  const sourceUrl = rawSourceUrl.replace(/\/+$/u, "");
+  const rawZzLibUrl = process.env.ZZ_LIB_URL || asString(record?.zzLibUrl) || defaultZzLibUrl(sourceUrl);
   const autoReload = typeof record?.autoReload === "boolean" ? record.autoReload : true;
-  return { sourceUrl: sourceUrl.replace(/\/+$/u, ""), autoReload };
+  return { sourceUrl, zzLibUrl: rawZzLibUrl.replace(/\/+$/u, ""), autoReload };
 }
 
 async function loadManifest(sourceUrl: string, signal?: AbortSignal): Promise<PlugManifest> {
@@ -293,6 +329,53 @@ function visiblePlugins(manifest: PlugManifest): PlugManifestPlugin[] {
 
 function visiblePluginIds(manifest: PlugManifest): Set<string> {
   return new Set(visiblePlugins(manifest).map((plugin) => plugin.id));
+}
+
+function versionKey(value: string): number[] {
+  const parts = value.split(/[^0-9]+/u).filter(Boolean).map((part) => Number(part));
+  return parts.length > 0 ? parts : [0];
+}
+
+function compareVersions(left: string, right: string): number {
+  const a = versionKey(left);
+  const b = versionKey(right);
+  const length = Math.max(a.length, b.length);
+  for (let i = 0; i < length; i += 1) {
+    const diff = (a[i] ?? 0) - (b[i] ?? 0);
+    if (diff !== 0) return diff;
+  }
+  return 0;
+}
+
+function normalizeSharedDep(value: unknown, owner: string): SharedDep {
+  if (typeof value === "string") return { id: value, minVersion: "0.0.0" };
+  if (isRecord(value) && typeof value.id === "string") {
+    const rawMinVersion = typeof value.minVersion === "string"
+      ? value.minVersion
+      : typeof value.min_version === "string"
+        ? value.min_version
+        : "0.0.0";
+    return { id: value.id, minVersion: rawMinVersion };
+  }
+  throw new Error(`Bad sharedDeps entry for ${owner}`);
+}
+
+function requiredSharedLibsForPlugins(
+  plugins: Map<string, PlugManifestPlugin>,
+  installed: string[],
+): SharedDep[] {
+  const merged = new Map<string, string>();
+  for (const id of installed) {
+    const plugin = plugins.get(id);
+    if (!plugin) continue;
+    for (const rawDep of plugin.sharedDeps ?? []) {
+      const dep = normalizeSharedDep(rawDep, id);
+      if (dep.id !== "zz-lib") throw new Error(`Unsupported shared dependency for ${id}: ${dep.id}`);
+      const current = merged.get(dep.id);
+      if (!current || compareVersions(dep.minVersion, current) > 0) merged.set(dep.id, dep.minVersion);
+    }
+  }
+  return [...merged.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([id, minVersion]) => ({ id, minVersion }));
 }
 
 function normalizeSelectedPlugins(manifest: PlugManifest, ids: string[]): string[] {
@@ -391,7 +474,8 @@ function resolvePlan(manifest: PlugManifest, selectedInput: string[]): ResolvedP
     }
   }
 
-  return { selected, installed, autoRequired, ownedFiles, configFiles };
+  const requiredSharedLibs = requiredSharedLibsForPlugins(plugins, installed);
+  return { selected, installed, autoRequired, requiredSharedLibs, ownedFiles, configFiles };
 }
 
 async function loadState(cwd: string): Promise<InstallState> {
@@ -417,6 +501,101 @@ function oldConfigSet(state: InstallState, oldOwned: Set<string>): Set<string> {
   return new Set([...oldOwned].filter((path) => path.endsWith(".config.jsonc")));
 }
 
+async function loadZzLibManifest(zzLibUrl: string, signal?: AbortSignal): Promise<SharedLibManifest> {
+  const manifest = await fetchJson<SharedLibManifest>(`${zzLibUrl.replace(/\/+$/u, "")}/manifest.json`, signal);
+  if (!Array.isArray(manifest.commonFiles) || !Array.isArray(manifest.files)) {
+    throw new Error("Bad zz-lib manifest: missing commonFiles/files arrays");
+  }
+  return manifest;
+}
+
+function sharedLibVersion(manifest: SharedLibManifest): string {
+  return manifest.sharedLib?.version ?? manifest.zzLibVersion ?? "0.0.0";
+}
+
+async function ensureZzLib(
+  cwd: string,
+  zzLibUrl: string,
+  dep: SharedDep,
+  force: boolean,
+  signal?: AbortSignal,
+): Promise<string> {
+  const manifest = await loadZzLibManifest(zzLibUrl, signal);
+  const libId = manifest.sharedLib?.id ?? "zz-lib";
+  if (libId !== "zz-lib") throw new Error(`Bad zz-lib manifest: sharedLib.id is ${libId}`);
+  const libVersion = sharedLibVersion(manifest);
+  if (compareVersions(libVersion, dep.minVersion) < 0) {
+    throw new Error(`zz-lib ${libVersion} from ${zzLibUrl} is older than required ${dep.minVersion}`);
+  }
+
+  const commonFiles = manifest.commonFiles.map(cleanRelPath);
+  if (commonFiles.length === 0) throw new Error("Bad zz-lib manifest: commonFiles is empty");
+  const files = new Map(manifest.files.map((file) => [cleanRelPath(file.path), file]));
+  for (const rel of commonFiles) {
+    if (!files.has(rel)) throw new Error(`zz-lib manifest is missing required file: ${rel}`);
+  }
+
+  const piDir = resolve(cwd, ".pi");
+  const statePath = resolve(cwd, ZZ_LIB_STATE_FILE);
+  const oldState = await readJson(statePath);
+  const oldOwnedRaw = oldState?.owned_files;
+  const oldOwned = isRecord(oldOwnedRaw) ? new Set(Object.keys(oldOwnedRaw)) : new Set<string>();
+
+  const collisions: string[] = [];
+  for (const rel of [...commonFiles].sort()) {
+    const target = safeTarget(piDir, rel);
+    if ((await fileExists(target)) && !oldOwned.has(rel) && !force) collisions.push(rel);
+  }
+  if (collisions.length > 0) {
+    throw new Error(
+      `Refusing to overwrite existing unowned zz-lib files:\n  - ${collisions.join("\n  - ")}\nUse --force if you want zz-lib to claim them.`,
+    );
+  }
+
+  await mkdir(piDir, { recursive: true });
+  for (const rel of [...commonFiles].sort()) {
+    const info = files.get(rel);
+    if (!info) throw new Error(`zz-lib manifest is missing required file: ${rel}`);
+    const buffer = await fetchFile(zzLibUrl, rel, info.sha256, signal);
+    const target = safeTarget(piDir, rel);
+    await mkdir(dirname(target), { recursive: true });
+    await writeFile(target, buffer);
+  }
+
+  const fileHashes: Record<string, string> = {};
+  for (const rel of [...commonFiles].sort()) {
+    const target = safeTarget(piDir, rel);
+    if (await fileExists(target)) fileHashes[rel] = await hashFile(target);
+  }
+  const state = {
+    installer: "zz-lib",
+    schemaVersion: 1,
+    zzLibVersion: libVersion,
+    manifest_updated_at: manifest.updated_at,
+    source: manifest.source,
+    bundle_url: zzLibUrl,
+    owned_files: Object.fromEntries([...commonFiles].sort().map((rel) => [rel, ["zz-lib"]])),
+    file_hashes: fileHashes,
+  };
+  await writeFile(statePath, `${JSON.stringify(state, null, 2)}\n`, "utf8");
+  return `zz-lib ${dep.minVersion} (${commonFiles.length} files)`;
+}
+
+async function ensureSharedLibs(
+  cwd: string,
+  zzLibUrl: string,
+  deps: SharedDep[],
+  force: boolean,
+  signal?: AbortSignal,
+): Promise<string[]> {
+  const ensured: string[] = [];
+  for (const dep of deps) {
+    if (dep.id !== "zz-lib") throw new Error(`Unsupported shared dependency: ${dep.id}`);
+    ensured.push(await ensureZzLib(cwd, zzLibUrl, dep, force, signal));
+  }
+  return ensured;
+}
+
 async function removeEmptyDirs(root: string): Promise<void> {
   if (!existsSync(root)) return;
   const entries = await readdir(root, { withFileTypes: true });
@@ -434,6 +613,7 @@ async function removeEmptyDirs(root: string): Promise<void> {
 async function applySelection(
   cwd: string,
   sourceUrl: string,
+  zzLibUrl: string,
   manifest: PlugManifest,
   selected: string[],
   options: ApplyOptions,
@@ -463,7 +643,9 @@ async function applySelection(
     );
   }
 
-  if (options.dryRun) return { mergedConfigs: [], plan, preservedConfigs: [], removed: [], warnings: [] };
+  if (options.dryRun) return { ensuredSharedLibs: [], mergedConfigs: [], plan, preservedConfigs: [], removed: [], warnings: [] };
+
+  const ensuredSharedLibs = await ensureSharedLibs(cwd, zzLibUrl, plan.requiredSharedLibs, options.force, signal);
 
   const removed: string[] = [];
   const warnings: string[] = [];
@@ -522,12 +704,13 @@ async function applySelection(
     selected_plugins: plan.selected,
     installed_plugins: plan.installed,
     auto_required_plugins: plan.autoRequired,
+    required_shared_libs: plan.requiredSharedLibs,
     owned_files: Object.fromEntries(Object.keys(plan.ownedFiles).sort().map((rel) => [rel, plan.ownedFiles[rel] ?? []])),
     config_files: [...plan.configFiles].sort(),
     file_hashes: fileHashes,
   };
   await writeFile(resolve(cwd, STATE_FILE), `${JSON.stringify(nextState, null, 2)}\n`, "utf8");
-  return { mergedConfigs, plan, preservedConfigs, removed, warnings };
+  return { ensuredSharedLibs, mergedConfigs, plan, preservedConfigs, removed, warnings };
 }
 
 function parseFlags(parts: string[]): { flags: ApplyOptions; values: string[] } {
@@ -593,6 +776,10 @@ function applyResultText(result: ApplyResult, dryRun: boolean): string {
   const lines = [dryRun ? "Dry-run zz plug plan:" : "zz plugs updated:"];
   lines.push(`  selected:  ${result.plan.selected.length > 0 ? result.plan.selected.join(", ") : "(none)"}`);
   if (result.plan.autoRequired.length > 0) lines.push(`  auto deps: ${result.plan.autoRequired.join(", ")}`);
+  if (result.plan.requiredSharedLibs.length > 0) {
+    lines.push(`  shared:   ${result.plan.requiredSharedLibs.map((dep) => `${dep.id}>=${dep.minVersion}`).join(", ")}`);
+  }
+  if (result.ensuredSharedLibs.length > 0) lines.push(`  shared libs: ${result.ensuredSharedLibs.join(", ")}`);
   lines.push(`  installed: ${result.plan.installed.join(", ")}`);
   lines.push(`  files:     ${Object.keys(result.plan.ownedFiles).length}`);
   if (result.mergedConfigs.length > 0) lines.push(`  updated configs: ${result.mergedConfigs.length}`);
@@ -873,7 +1060,7 @@ export default function zzPlugManager(pi: ExtensionAPI) {
           return;
         }
 
-        const result = await applySelection(ctx.cwd, config.sourceUrl, manifest, nextSelected, flags, ctx.signal);
+        const result = await applySelection(ctx.cwd, config.sourceUrl, config.zzLibUrl, manifest, nextSelected, flags, ctx.signal);
         show(pi, applyResultText(result, flags.dryRun));
         if (!flags.dryRun && flags.reload && config.autoReload) {
           await ctx.reload();

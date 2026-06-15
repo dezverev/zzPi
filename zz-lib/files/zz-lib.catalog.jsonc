@@ -1,0 +1,12 @@
+{
+  // Source of truth for the shared zz-lib runtime installed under .pi/extensions/zz-lib/.
+  "schemaVersion": 1,
+  "id": "zz-lib",
+  "version": "1.0.0",
+  "commonFiles": [
+    "extensions/zz-lib/child-pi-agent.ts",
+    "extensions/zz-lib/jsonc-config.ts",
+    "extensions/zz-lib/version.ts"
+  ],
+  "plugins": []
+}
