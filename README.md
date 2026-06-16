@@ -2,6 +2,8 @@
 
 `zzPi` is a context-routing toolkit for coding agents.
 
+Built on [Pi](https://pi.dev) — huge thanks to Pi's creator for making a flexible local agent harness that makes this kind of routing possible.
+
 The goal is simple: **keep the main thread's context small and valuable**. Do not make the expensive/remote/main model explore every file, scan every directory, or carry raw repo noise forever. Send that work to local agents, then give the main model a compact map of what actually matters.
 
 This repository is generated from `zzHostWebsite`. Do not edit generated `pi-plugs/` or `zz-lib/` artifacts directly; regenerate the export from the source checkout instead.
