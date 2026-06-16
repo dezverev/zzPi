@@ -8,4 +8,4 @@ Claude subagent: .claude/agents/readsubagent.md
 Readsubagent MCP server: clients/zz-readsubagent-mcp
 Readsubagent installers: clients/install-codex-readsubagent.{sh,ps1}, clients/install-claude-readsubagent.{sh,ps1}, clients/install-copilot-readsubagent.{sh,ps1}, clients/install-zz-readsubagent-mcp.{sh,ps1}
 Raw base default: https://raw.githubusercontent.com/dezverev/zzPi/main
-Exported at: 2026-06-16T04:00:47Z
+Exported at: 2026-06-16T04:18:31Z
