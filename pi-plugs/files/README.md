@@ -11,9 +11,9 @@ This directory is the tracked master source for the repo-local pi plug bundle se
 
 ## Extensions
 
-- `extensions/zz-plug-manager.ts` — internal bootstrap/manager extension. Adds `/zz-plugs list|status|select|install|remove|set|update` so plug selection can happen from inside pi. `/zz-plugs select` opens a scrollable `[ ]` / `[x]` checklist in TUI mode.
+- `extensions/zz-plug-manager.ts` — internal bootstrap/manager extension. Adds `/zz-plugs list|status|select|install|remove|set|update` so plug selection can happen from inside pi. `/zz-plugs select` opens a scrollable `[ ]` / `[x]` checklist in TUI mode and also exposes Codex/Claude/Copilot readsubagent harness integrations for install/remove from the same UI.
 - `extensions/00-right-overlay-tiler.ts` — coordinates right-side overlay panes and keeps them out of the main chat tile. Use `/right-overlay focus` or `Alt+O` to focus the side panes; use `Esc` to return focus to chat.
-- `extensions/00-zz-subagent-runtime.ts` — internal no-op marker plug that installs pi-plugs child-agent model options plus endpoint config and declares the shared `zz-lib` runtime so repo-local custom subagents can import `./zz-lib/child-pi-agent.ts` and `./lib/child-agent-model-options.ts`.
+- `extensions/00-zz-subagent-runtime.ts` — internal shared child-agent runtime plug. Installs pi-plugs child-agent model options plus endpoint config, declares the shared `zz-lib` runtime, and adds `/zz-model-setup setup|status|set <endpoint> [model-id] [provider-id]` so users can point local-model configs at their own LM Studio/OpenAI-compatible endpoint.
 - `extensions/git-status.ts` — shows a VS Code-style Git branch/change summary in the pi footer and opens the right-side details pane by default when a Git repo is detected. Use `/git-status` to toggle it.
 - `extensions/tetris.ts` — adds `/tetris`, a right-side overlay Tetris game. Arrow keys move/rotate/drop, `Space` hard-drops, `Enter` opens the pause menu, and `Esc` pauses/hides back to chat until `/tetris` is run again. Settings are documented in `extensions/tetris.config.jsonc`.
 - `extensions/pi-context.ts` — strips Pi's built-in `AGENTS.md`/`CLAUDE.md` project context before model calls and injects only `PI.md` files discovered globally and from parent directories. Use `/pi-context` to list the files that will be sent.
@@ -41,7 +41,7 @@ Extension tunables live beside the extensions as commented JSONC files and are r
 - `extensions/git-status.config.jsonc` — Git polling interval, pane limits, and command timeout.
 - `extensions/tetris.config.jsonc` — Tetris overlay behavior, including whether to auto-pause when a prompt finishes.
 - `extensions/pi-context.config.jsonc` — PI.md discovery behavior and system-prompt insertion settings.
-- `extensions/local-model-endpoints.config.jsonc` — shared true-local vs remote-local LM Studio endpoint selector for child Pi agents.
+- `extensions/local-model-endpoints.config.jsonc` — shared true-local vs remote-local LM Studio endpoint selector for child Pi agents; `/zz-model-setup` writes this plus installed local model/subagent configs.
 - `extensions/implementationsubagent.config.jsonc` — implementation-subagent child Pi model, `modelOptions` entries for `/zzSubagentImplemention model`, default/toggle-mode behavior, mutating implementation tool allowlist plus factual subagents, timeouts, and report limits.
 - `extensions/readsubagent.config.jsonc` — read-subagent child Pi model, `modelOptions` entries for `/readsubagent model` (model/endpoint/provider/providerRegistration/contextWindow/maxOutputTokens/reportMaxChars/thinking/tools), read-only tool allowlist, default/toggle-mode behavior, direct-read guard policy, timeouts, and report limits.
 - `extensions/explorationsubagent.config.jsonc` — exploration-subagent child Pi model, `modelOptions` entries for `/explorationsubagent model` (model/endpoint/provider/providerRegistration/contextWindow/maxOutputTokens/reportMaxChars/thinking/tools), read-only tool allowlist with `bash` for discovery commands, timeouts, and report limits.

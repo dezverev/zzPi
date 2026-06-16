@@ -28,7 +28,7 @@ interface ZzLocalModelsConfig {
   readonly provider: string;
 }
 
-const DEFAULT_CONTEXT_WINDOW = 262_144;
+const DEFAULT_CONTEXT_WINDOW = 127_000;
 const DEFAULT_MAX_TOKENS = 32_768;
 const DEFAULT_MODELS: readonly ZzLocalModelConfig[] = [
   {

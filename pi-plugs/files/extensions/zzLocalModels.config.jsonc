@@ -1,5 +1,6 @@
 {
   // Registers shared LM Studio models in Pi's normal /model picker.
+  // Run /zz-model-setup setup after install to use your own endpoint/model.
   "enabled": true,
   "provider": "lm-studio",
   "name": "LM Studio",
@@ -7,7 +8,7 @@
   "apiKey": "lm-studio",
 
   // Defaults applied to model entries unless overridden per model.
-  "contextWindow": 262144,
+  "contextWindow": 127000,
   "maxTokens": 32768,
   "reasoning": true,
 

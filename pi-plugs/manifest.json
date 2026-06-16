@@ -4,9 +4,9 @@
   "default": "all-visible",
   "files": [
     {
-      "bytes": 9780,
+      "bytes": 10028,
       "path": "README.md",
-      "sha256": "6d74ef5438af9aea921bc13f36d4d1947b7a39596e9e21191f56b566c96f6e17"
+      "sha256": "4d6133ef3f248bb51e0ebd981dd832a6066bd325185f56871181bd342953d67d"
     },
     {
       "bytes": 20112,
@@ -14,9 +14,9 @@
       "sha256": "9b0e63d12b8120fb35df7041921d5fdf8dacdb672e6d1d803536090488d3e798"
     },
     {
-      "bytes": 17630,
+      "bytes": 17656,
       "path": "pi-plugs.catalog.jsonc",
-      "sha256": "0e450fe8cc518429f5e890e343afd09afb9524e64f45002ee3bf8321c5e1d677"
+      "sha256": "d3b0ec7d99a349d71fcd02902735b1de86cbcd305e7a5883ab45f50f85fbe3bc"
     },
     {
       "bytes": 257,
@@ -24,9 +24,9 @@
       "sha256": "1342ca9b09a234b66bdb07fd651c0af75eac673ca7619bb6d47f95f16bb182aa"
     },
     {
-      "bytes": 866,
+      "bytes": 20898,
       "path": "extensions/00-zz-subagent-runtime.ts",
-      "sha256": "37b20fa7509d46c6ae34a3d442e4bb9f2d050f74bbd337f9ad68b9975ca39795"
+      "sha256": "59def7f7d50e409fe825457f7ce452b8d5d694443c97db723fca2fdd06263a97"
     },
     {
       "bytes": 1091,
@@ -41,12 +41,12 @@
     {
       "bytes": 4848,
       "path": "extensions/explorationsubagent.config.jsonc",
-      "sha256": "8d164640576ab72716a13b4d79ff922091cf7801dbd0b6697a5359d2b6f46bbf"
+      "sha256": "64bda7acd2c5d7775bf2fdc44b48a3a4c5f8620a442e1d7855a838b65f75e7a9"
     },
     {
       "bytes": 30375,
       "path": "extensions/explorationsubagent.ts",
-      "sha256": "77d453f1d46e146232a60615d3b1c670770a909dd7295e5c992f018d63aba4b2"
+      "sha256": "7aa8aaa65dc13e4cd32b8c6730d6893b61bb9efef31d24ac85e1580167b83694"
     },
     {
       "bytes": 819,
@@ -61,7 +61,7 @@
     {
       "bytes": 4096,
       "path": "extensions/implementationsubagent.config.jsonc",
-      "sha256": "663fea5ac4a817bab6744670a65e6e017ef735c454f58b6805ed7f7a5f116f8b"
+      "sha256": "d77a63209af27d1a8923bbd809d79db625c54f783d5ec97d7b9602fd15e56f7a"
     },
     {
       "bytes": 31152,
@@ -69,9 +69,9 @@
       "sha256": "60a0ca646c7fe34506f18642256f0ed1e05aba03f7362219b4baf6a39660e318"
     },
     {
-      "bytes": 1179,
+      "bytes": 1259,
       "path": "extensions/local-model-endpoints.config.jsonc",
-      "sha256": "f71cd001dfb1c9c58052f0eaa404bd4e65ca53f0dc0b7112f00a280cc32bb1d5"
+      "sha256": "ff09028009b4f6857b6e0e179a40901e65f0daaa3939f314d5f52d76d88d6629"
     },
     {
       "bytes": 674,
@@ -86,12 +86,12 @@
     {
       "bytes": 5170,
       "path": "extensions/readsubagent.config.jsonc",
-      "sha256": "49a1ddae51eb696c26fcd9b5329a8703b2b04ad83f8c55c34f37027871e57bab"
+      "sha256": "f85bd5c7026394f58cf43c802b5b6fc36461a02392a5ebf3cfffe6677dce917a"
     },
     {
       "bytes": 41859,
       "path": "extensions/readsubagent.ts",
-      "sha256": "3905957437714f19139784163b370faab88c4479235df936c39ae4f268e646ff"
+      "sha256": "dda03d77a74fef8392c9b5953c2f30de22020ab34776c85c7f4c3bc83823f7d9"
     },
     {
       "bytes": 2292,
@@ -126,7 +126,7 @@
     {
       "bytes": 3889,
       "path": "extensions/wf-adversarialreview.config.jsonc",
-      "sha256": "0e975e69202ab42398a614d523e6313104bc5b4237f5587a2d87b8485e5ba745"
+      "sha256": "d0ab99d743ca6bbef62c645952d2fc85db3f1aa914fbc2b3910a140289b2e319"
     },
     {
       "bytes": 23630,
@@ -136,7 +136,7 @@
     {
       "bytes": 4006,
       "path": "extensions/wf-brainstormer.config.jsonc",
-      "sha256": "048cec3e6849dbc6343d5c8e59c308edaafa866b3d64c7859cfb3b808275705b"
+      "sha256": "7eea6249d8ac04d90d71ba407584b9cbef41e00cde766b3da8dd6f0f64382860"
     },
     {
       "bytes": 24116,
@@ -146,7 +146,7 @@
     {
       "bytes": 3957,
       "path": "extensions/wf-clarifier.config.jsonc",
-      "sha256": "e644f729df939cf77415fe9fd3d2f466a534c852dd8b6cee65c40962190ed06b"
+      "sha256": "f2bd411b49fe0c2053abf417eb97f4663a9586c49cf9a6a3506e5f792a2a011e"
     },
     {
       "bytes": 29720,
@@ -156,7 +156,7 @@
     {
       "bytes": 4095,
       "path": "extensions/wf-designplan.config.jsonc",
-      "sha256": "3e359915c1bab2086e930ef21393b93e436a03a934154ddb4a3afc7375336606"
+      "sha256": "c99f58d49d234116fafd7ad5249bd3bce8075eeb17b6f931d8f32b1555a43d20"
     },
     {
       "bytes": 35268,
@@ -166,7 +166,7 @@
     {
       "bytes": 3767,
       "path": "extensions/wf-finalreviewagent.config.jsonc",
-      "sha256": "baf0924b78177617c5d66f33f567c2ef187ddd72b90459d6e021cf5b12520f77"
+      "sha256": "4e81416b5ebbfff37cc09ade9919a75d9728480081bc0f613980c8d23df0b5e2"
     },
     {
       "bytes": 28410,
@@ -176,7 +176,7 @@
     {
       "bytes": 3816,
       "path": "extensions/wf-implementeragent.config.jsonc",
-      "sha256": "b314f0c49b312a3e64dd63e71d484910d85c0e8fb25f5aeac722e35584aff6bb"
+      "sha256": "43506dbc2ba03327b84db7321706f1e83bacdb6952116d7c63485d7b9b6b1111"
     },
     {
       "bytes": 24803,
@@ -186,7 +186,7 @@
     {
       "bytes": 4068,
       "path": "extensions/wf-impplanner.config.jsonc",
-      "sha256": "ecd6b05e21c37c42bf602f00892a514231be6a15e0309da7a6659aee5dbf2798"
+      "sha256": "c0027210e06ef5511217e131418991688b5ca3c61d0041349dd48425644d39d5"
     },
     {
       "bytes": 53640,
@@ -196,7 +196,7 @@
     {
       "bytes": 3571,
       "path": "extensions/wf-revieweragent.config.jsonc",
-      "sha256": "5a1b451fe8f10d53da3b0af6359b9035389096c69b42488254836cbf8af0cc48"
+      "sha256": "b3b3b6c6a62c38a2896dd3ca0a67819885b59b8df6946e8d1617f96923673105"
     },
     {
       "bytes": 26060,
@@ -206,7 +206,7 @@
     {
       "bytes": 3875,
       "path": "extensions/wf-testeragent.config.jsonc",
-      "sha256": "e49f958176809649166f6a88f3c946732038686fc0598bb8e5968343009d3b53"
+      "sha256": "31072f387b3fa84e3fdc5f1ef575400a5334e6cd35f696fefab5bcff9bf5cf6b"
     },
     {
       "bytes": 25184,
@@ -234,19 +234,19 @@
       "sha256": "bf53a2a78af53602abf4a86f6b81a0cb6f4c3a8daa213465be51995c72d3c9f4"
     },
     {
-      "bytes": 39270,
+      "bytes": 71042,
       "path": "extensions/zz-plug-manager.ts",
-      "sha256": "6411b6ba49b66cac629fa1155521a010601b762eacaf102d4c0b85be3c2ff05a"
+      "sha256": "a8273872c2a92b153f31e84e8045401145145a57f80a1219f7ec367bcc8cdc1f"
     },
     {
-      "bytes": 774,
+      "bytes": 851,
       "path": "extensions/zzLocalModels.config.jsonc",
-      "sha256": "506851b73af20015b2830837f61a7c5d29d9989402902cde2439b523d83aa4b3"
+      "sha256": "b12c1b147c1c4116f7982a60d62969cd58dabe91e377bc32a3fed7cac9484455"
     },
     {
       "bytes": 6312,
       "path": "extensions/zzLocalModels.ts",
-      "sha256": "2fc0bbe92ea1e33b0b1c5b2e0717f6588585bb7b2dcb13ce3745510b420210d8"
+      "sha256": "a46624fc7e5eb4fb0845e6f702335ce33abf33d4332a920ae4b8767d04f9d252"
     },
     {
       "bytes": 11825,
@@ -320,7 +320,7 @@
       "configFiles": [
         "extensions/local-model-endpoints.config.jsonc"
       ],
-      "description": "Internal shared child-Pi subagent helper library and endpoint config for custom and bundled subagent extensions.",
+      "description": "Internal shared child-Pi subagent helper library, endpoint config, and /zz-model-setup command for custom and bundled subagent extensions.",
       "entry": "extensions/00-zz-subagent-runtime.ts",
       "fileDeps": [
         "extensions/local-model-endpoints.config.jsonc",
@@ -955,7 +955,7 @@
   ],
   "schemaVersion": 2,
   "source": "zzPi git export",
-  "updated_at": "2026-06-15T22:55:58.377969+00:00",
+  "updated_at": "2026-06-16T04:00:47.733631+00:00",
   "visiblePlugins": [
     "zz-local-models",
     "context-tools",

@@ -26,7 +26,7 @@
       "providerRegistration": "none",
       "endpoint": "http://127.0.0.1:11444",
       "model": "qwen/qwen3.6-35b-a3b",
-      "contextWindow": 262144,
+      "contextWindow": 127000,
       "maxOutputTokens": 32768,
       "requestTimeoutMs": 1800000,
       "reportMaxChars": 16000,
@@ -52,7 +52,7 @@
       "providerRegistration": "none",
       "endpoint": "http://127.0.0.1:11444",
       "model": "qwen/qwen3.6-35b-a3b",
-      "contextWindow": 262144,
+      "contextWindow": 127000,
       "maxOutputTokens": 32768,
       "requestTimeoutMs": 1800000,
       "reportMaxChars": 16000,
@@ -79,7 +79,7 @@
 
   // Child process limits and custom model metadata.
   "requestTimeoutMs": 1800000,
-  "contextWindow": 262144,
+  "contextWindow": 127000,
   "maxOutputTokens": 32768,
 
   // Hard cap for final report characters injected back into the main conversation.

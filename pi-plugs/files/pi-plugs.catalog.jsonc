@@ -54,7 +54,7 @@
     {
       "id": "zz-subagent-runtime",
       "title": "zz subagent runtime",
-      "description": "Internal shared child-Pi subagent helper library and endpoint config for custom and bundled subagent extensions.",
+      "description": "Internal shared child-Pi subagent helper library, endpoint config, and /zz-model-setup command for custom and bundled subagent extensions.",
       "entry": "extensions/00-zz-subagent-runtime.ts",
       "internal": true,
       "pluginDeps": [],

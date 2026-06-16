@@ -27,7 +27,7 @@ Useful options:
 ./install.sh --dry-run --select
 ```
 
-The installer writes project-local files under `./.pi/` in the directory where you run it.
+The installer writes project-local files under `./.pi/` in the directory where you run it. Once inside Pi, `/zz-plugs select` also lists `codex-readsubagent`, `claude-readsubagent`, and `copilot-readsubagent` so you can install/remove those harness integrations from the same checklist.
 
 ## Codex, Claude, and Copilot readsubagent
 
@@ -66,7 +66,9 @@ MCP server only (any MCP-capable harness):
 curl -fsSL https://raw.githubusercontent.com/dezverev/zzPi/main/install-zz-readsubagent-mcp.sh | bash
 ```
 
-The Claude/Copilot/MCP readsubagent spawns a headless `pi` child on a local model, so it needs `pi` on PATH with a local-model provider — install the `zz-local-models` plug from this repo (`./install.sh --plugins zz-local-models`) or define your own Pi provider — and a local OpenAI-compatible server (e.g. LM Studio) reachable. Endpoints default to `127.0.0.1` in this public export; override with the documented `ZZ_*` env vars.
+The Claude/Copilot/MCP readsubagent spawns a headless `pi` child on a local model, so it needs `pi` on PATH with a local-model provider — install the `zz-local-models` plug from this repo (`./install.sh --plugins zz-local-models`) or define your own Pi provider — and a local OpenAI-compatible server (e.g. LM Studio) reachable. Endpoints default to `127.0.0.1` in this public export.
+
+After installing pi plugs, start `pi` in the target repo and run `/zz-model-setup setup` to point the repo-local `zz-local-models`, local endpoint, and child-agent configs at your own LM Studio/OpenAI-compatible endpoint and model. Non-interactive form: `/zz-model-setup set http://<your-lmstudio-host>:1234 qwen/qwen3.6-35b-a3b lm-studio`, then `/reload`.
 
 ## Repository layout
 

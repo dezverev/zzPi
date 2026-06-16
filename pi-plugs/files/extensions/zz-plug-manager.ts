@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import { mkdir, readdir, readFile, rm, stat, unlink, writeFile } from "node:fs/promises";
+import { homedir } from "node:os";
 import { dirname, resolve, sep } from "node:path";
 
 import type { ExtensionAPI, ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
@@ -101,6 +102,7 @@ interface ApplyOptions {
 
 interface ApplyResult {
   readonly ensuredSharedLibs: string[];
+  readonly harnessActions: string[];
   readonly mergedConfigs: string[];
   readonly plan: ResolvedPlan;
   readonly preservedConfigs: string[];
@@ -316,7 +318,7 @@ async function loadManifest(sourceUrl: string, signal?: AbortSignal): Promise<Pl
   if (!Array.isArray(manifest.plugins) || !Array.isArray(manifest.files)) {
     throw new Error("Bad plug manifest: missing plugins/files arrays");
   }
-  return manifest;
+  return withHarnessIntegrationPlugins(manifest);
 }
 
 function pluginMap(manifest: PlugManifest): Map<string, PlugManifestPlugin> {
@@ -329,6 +331,70 @@ function visiblePlugins(manifest: PlugManifest): PlugManifestPlugin[] {
 
 function visiblePluginIds(manifest: PlugManifest): Set<string> {
   return new Set(visiblePlugins(manifest).map((plugin) => plugin.id));
+}
+
+const HARNESS_INTEGRATION_IDS = ["codex-readsubagent", "claude-readsubagent", "copilot-readsubagent"] as const;
+type HarnessIntegrationId = (typeof HARNESS_INTEGRATION_IDS)[number];
+
+function isHarnessIntegrationId(id: string): id is HarnessIntegrationId {
+  return (HARNESS_INTEGRATION_IDS as readonly string[]).includes(id);
+}
+
+function harnessIntegrationPlugin(id: HarnessIntegrationId): PlugManifestPlugin {
+  if (id === "codex-readsubagent") {
+    return {
+      id,
+      title: "Codex readsubagent",
+      description: "Installs the Codex readsubagent custom agent, AGENTS.md guidance, and Codex LM Studio provider block.",
+      entry: "extensions/00-zz-subagent-runtime.ts",
+      internal: false,
+      pluginDeps: ["zz-subagent-runtime"],
+      optionalPluginDeps: [],
+      fileDeps: [],
+      configFiles: [],
+      sharedDeps: [],
+      tags: ["agent", "codex", "read-only"],
+    };
+  }
+
+  if (id === "claude-readsubagent") {
+    return {
+      id,
+      title: "Claude readsubagent",
+      description: "Installs the Claude Code readsubagent, MCP server registration, and CLAUDE.md guidance.",
+      entry: "extensions/00-zz-subagent-runtime.ts",
+      internal: false,
+      pluginDeps: ["zz-subagent-runtime", "zz-local-models"],
+      optionalPluginDeps: [],
+      fileDeps: [],
+      configFiles: [],
+      sharedDeps: [],
+      tags: ["agent", "claude", "mcp", "read-only"],
+    };
+  }
+
+  return {
+    id,
+    title: "Copilot readsubagent",
+    description: "Installs the Copilot/VS Code MCP readsubagent server and copilot-instructions.md guidance.",
+    entry: "extensions/00-zz-subagent-runtime.ts",
+    internal: false,
+    pluginDeps: ["zz-subagent-runtime", "zz-local-models"],
+    optionalPluginDeps: [],
+    fileDeps: [],
+    configFiles: [],
+    sharedDeps: [],
+    tags: ["agent", "copilot", "mcp", "read-only"],
+  };
+}
+
+function withHarnessIntegrationPlugins(manifest: PlugManifest): PlugManifest {
+  const existing = new Set(manifest.plugins.map((plugin) => plugin.id));
+  const plugins = [...manifest.plugins];
+  for (const id of HARNESS_INTEGRATION_IDS) {
+    if (!existing.has(id)) plugins.push(harnessIntegrationPlugin(id));
+  }
+  return { ...manifest, plugins, visiblePlugins: visiblePlugins({ ...manifest, plugins }).map((plugin) => plugin.id) };
 }
 
 function versionKey(value: string): number[] {
@@ -596,6 +662,665 @@ async function ensureSharedLibs(
   return ensured;
 }
 
+const CODEX_AGENT_REL = ".codex/agents/readsubagent.toml";
+const CODEX_MANIFEST_REL = ".codex/zz-codex-readsubagent-manifest.json";
+const CLAUDE_AGENT_REL = ".claude/agents/readsubagent.md";
+const CLAUDE_MANIFEST_REL = ".claude/zz-claude-readsubagent-manifest.json";
+const COPILOT_MANIFEST_REL = ".github/zz-copilot-readsubagent-manifest.json";
+const MCP_ONLY_MANIFEST_REL = ".zz-mcp/zz-readsubagent-mcp-manifest.json";
+const READSUBAGENT_SERVER_REL = ".zz-mcp/zz-readsubagent-mcp.py";
+const SERVER_NAME = "zz_readsubagent";
+const SERVER_ARGS_PATH = ".zz-mcp/zz-readsubagent-mcp.py";
+const DEFAULT_LOCAL_PROVIDER_URL = "http://127.0.0.1:11444/v1";
+const DEFAULT_LOCAL_MODEL_SELECTOR = "lm-studio/qwen/qwen3.6-35b-a3b";
+
+const CODEX_AGENTS_START = "<!-- zz-codex-readsubagent:start -->";
+const CODEX_AGENTS_END = "<!-- zz-codex-readsubagent:end -->";
+const CLAUDE_GUIDANCE_START = "<!-- zz-claude-readsubagent:start -->";
+const CLAUDE_GUIDANCE_END = "<!-- zz-claude-readsubagent:end -->";
+const COPILOT_GUIDANCE_START = "<!-- zz-copilot-readsubagent:start -->";
+const COPILOT_GUIDANCE_END = "<!-- zz-copilot-readsubagent:end -->";
+const CODEX_PROVIDER_START = "# zz-codex-readsubagent:start";
+const CODEX_PROVIDER_END = "# zz-codex-readsubagent:end";
+
+const CODEX_AGENTS_BLOCK = `${CODEX_AGENTS_START}
+## Read Planning
+
+Before doing focused reads of specific implementation files, start with a
+read-planning pass through the \`readsubagent\` custom agent.
+
+Use \`readsubagent\` to get:
+
+- A short map of the relevant subsystem.
+- Candidate files and directories, with reasons.
+- The smallest focused read list for the main agent.
+- Search terms, symbols, or line anchors that should guide the focused reads.
+- Files or areas that look related but should be avoided for now.
+- Uncertainty or follow-up questions that could change the read plan.
+
+Use at least a ten-minute wait for \`readsubagent\` when the tool supports an
+explicit timeout, because the local model may be slower than hosted models.
+Prefer a longer wait over assuming the subagent stalled.
+
+Use \`readsubagent\` only for factual read planning and file inspection. Do not
+ask it to create implementation plans, solution proposals, edit strategies,
+code-review judgments, bug findings, correctness assessments, or accept/reject
+recommendations.
+${CODEX_AGENTS_END}`;
+
+const CLAUDE_GUIDANCE_BLOCK = `${CLAUDE_GUIDANCE_START}
+## Read Planning
+
+Before doing focused reads of specific implementation files, start with a
+read-planning pass through the \`readsubagent\` subagent, which delegates to a
+local model via the \`mcp__zz_readsubagent__readsubagent\` MCP tool.
+
+Use \`readsubagent\` to get a short subsystem map, candidate files, the smallest
+focused read list, useful search terms/line anchors, areas to avoid, and
+uncertainty or follow-up questions.
+
+The local model can be slow. Allow a long wait for \`readsubagent\`; prefer
+waiting over assuming it stalled. Use it only for factual read planning and file
+inspection, not implementation planning or code-review judgments.
+${CLAUDE_GUIDANCE_END}`;
+
+const COPILOT_GUIDANCE_BLOCK = `${COPILOT_GUIDANCE_START}
+## Read Planning
+
+Before doing focused reads of specific implementation files, ask Copilot to use
+the \`readsubagent\` tool from the \`zz_readsubagent\` MCP server to get a
+read-planning pass. The tool delegates to a local model via \`pi\` and returns a
+concise factual report with paths and line ranges.
+
+Use \`readsubagent\` for factual read planning and file inspection only. Do not
+ask it for implementation plans, edit strategies, code-review judgments, or
+correctness assessments. The local model can be slow; prefer waiting over
+assuming it stalled.
+${COPILOT_GUIDANCE_END}`;
+
+interface HarnessDefaults {
+  readonly modelSelector: string;
+  readonly providerUrl: string;
+}
+
+interface ManagedAction {
+  readonly action: string;
+  readonly managed: boolean;
+}
+
+function harnessManifestRel(id: HarnessIntegrationId): string {
+  if (id === "codex-readsubagent") return CODEX_MANIFEST_REL;
+  if (id === "claude-readsubagent") return CLAUDE_MANIFEST_REL;
+  return COPILOT_MANIFEST_REL;
+}
+
+function siblingUrl(sourceUrl: string, siblingPath: string): string {
+  const trimmed = sourceUrl.replace(/\/+$/u, "");
+  try {
+    const url = new URL(trimmed);
+    const parent = url.pathname.replace(/\/+$/u, "").replace(/\/[^/]*$/u, "");
+    url.pathname = `${parent}/${siblingPath}`.replace(/\/+/gu, "/");
+    return url.toString().replace(/\/+$/u, "");
+  } catch {
+    return trimmed.replace(/\/[^/]*$/u, `/${siblingPath}`);
+  }
+}
+
+function joinUrl(base: string, rel: string): string {
+  return `${base.replace(/\/+$/u, "")}/${rel.split("/").map(encodeURIComponent).join("/")}`;
+}
+
+async function fetchUrlBytes(url: string, signal?: AbortSignal): Promise<Buffer> {
+  const response = await fetch(url, { signal });
+  if (!response.ok) throw new Error(`GET ${url} failed: ${response.status} ${response.statusText}`);
+  return Buffer.from(await response.arrayBuffer());
+}
+
+function asOpenAiBaseUrl(endpoint: string): string {
+  const trimmed = endpoint.trim().replace(/\/+$/u, "");
+  if (trimmed.endsWith("/v1/chat/completions")) return trimmed.slice(0, -"/chat/completions".length);
+  if (trimmed.endsWith("/v1")) return trimmed;
+  return `${trimmed}/v1`;
+}
+
+function firstModelId(record: JsonRecord): string | undefined {
+  const models = record.models;
+  if (!Array.isArray(models)) return undefined;
+  for (const model of models) {
+    if (!isPlainRecord(model)) continue;
+    const id = asString(model.id);
+    if (id?.trim()) return id.trim();
+  }
+  return undefined;
+}
+
+async function readHarnessDefaults(cwd: string): Promise<HarnessDefaults> {
+  let provider = "lm-studio";
+  let model = "qwen/qwen3.6-35b-a3b";
+  let endpoint: string | undefined;
+
+  const zzLocalModels = await readJson(resolve(cwd, ".pi", "extensions", "zzLocalModels.config.jsonc"));
+  if (zzLocalModels) {
+    provider = asString(zzLocalModels.provider)?.trim() || provider;
+    model = firstModelId(zzLocalModels) ?? model;
+    endpoint = asString(zzLocalModels.endpoint) ?? asString(zzLocalModels.baseUrl) ?? asString(zzLocalModels.url);
+  }
+
+  if (!endpoint) {
+    const endpoints = await readJson(resolve(cwd, ".pi", "extensions", "local-model-endpoints.config.jsonc"));
+    if (endpoints) {
+      const active = (asString(endpoints.active) ?? "remoteLocal").trim().toLowerCase();
+      endpoint = ["truelocal", "true-local", "true_local", "localhost", "loopback"].includes(active)
+        ? asString(endpoints.trueLocalEndpoint) ?? asString(endpoints.localEndpoint)
+        : asString(endpoints.remoteLocalEndpoint) ??
+          asString(endpoints.lanEndpoint) ??
+          asString(endpoints.localNetworkEndpoint) ??
+          asString(endpoints.remoteEndpoint);
+    }
+  }
+
+  return {
+    modelSelector: `${provider}/${model}`,
+    providerUrl: endpoint ? asOpenAiBaseUrl(endpoint) : DEFAULT_LOCAL_PROVIDER_URL,
+  };
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
+}
+
+function replaceMarkedBlock(text: string, start: string, end: string, block: string): { replaced: boolean; text: string } {
+  const pattern = new RegExp(`${escapeRegExp(start)}[\\s\\S]*?${escapeRegExp(end)}`, "u");
+  if (pattern.test(text)) return { replaced: true, text: text.replace(pattern, block.trimEnd()) };
+  return { replaced: false, text: `${text.trimEnd()}${text.trim() ? "\n\n" : ""}${block.trimEnd()}` };
+}
+
+function removeMarkedBlock(text: string, start: string, end: string): { removed: boolean; text: string } {
+  const pattern = new RegExp(`\\n*${escapeRegExp(start)}[\\s\\S]*?${escapeRegExp(end)}\\n*`, "u");
+  if (!pattern.test(text)) return { removed: false, text };
+  const next = text.replace(pattern, "\n\n").replace(/\n{3,}/gu, "\n\n").trimEnd();
+  return { removed: true, text: next ? `${next}\n` : "" };
+}
+
+function manifestOwns(manifest: JsonRecord | undefined, rel: string): boolean {
+  const owned = manifest?.owned_files;
+  return Array.isArray(owned) && owned.includes(rel);
+}
+
+function manifestOwnedFiles(manifest: JsonRecord | undefined): string[] {
+  const owned = manifest?.owned_files;
+  return Array.isArray(owned) ? owned.filter((item): item is string => typeof item === "string") : [];
+}
+
+function manifestManagedBlocks(manifest: JsonRecord | undefined): string[] {
+  const blocks = manifest?.managed_blocks;
+  return Array.isArray(blocks) ? blocks.filter((item): item is string => typeof item === "string") : [];
+}
+
+function manifestManagedServers(manifest: JsonRecord | undefined): string[] {
+  const servers = manifest?.managed_servers;
+  return Array.isArray(servers) ? servers.filter((item): item is string => typeof item === "string") : [];
+}
+
+function manifestFileHashes(manifest: JsonRecord | undefined): Record<string, string> {
+  const hashes = manifest?.file_hashes;
+  if (!isPlainRecord(hashes)) return {};
+  return Object.fromEntries(Object.entries(hashes).filter((entry): entry is [string, string] => typeof entry[1] === "string"));
+}
+
+async function readHarnessManifest(cwd: string, rel: string): Promise<JsonRecord | undefined> {
+  return readJson(safeTarget(cwd, rel));
+}
+
+async function knownReadsubagentManifestOwns(cwd: string, rel: string, exceptManifestRel?: string): Promise<boolean> {
+  for (const manifestRel of [CODEX_MANIFEST_REL, CLAUDE_MANIFEST_REL, COPILOT_MANIFEST_REL, MCP_ONLY_MANIFEST_REL]) {
+    if (manifestRel === exceptManifestRel) continue;
+    const manifest = await readHarnessManifest(cwd, manifestRel);
+    if (manifestOwns(manifest, rel)) return true;
+  }
+  return false;
+}
+
+async function ensureHarnessFile(
+  cwd: string,
+  rel: string,
+  buffer: Buffer,
+  manifest: JsonRecord | undefined,
+  manifestRel: string,
+  force: boolean,
+): Promise<string> {
+  const target = safeTarget(cwd, rel);
+  const owned = manifestOwns(manifest, rel) || (await knownReadsubagentManifestOwns(cwd, rel, manifestRel));
+  if ((await fileExists(target)) && !owned && !force) {
+    if (!(await readFile(target)).equals(buffer)) {
+      throw new Error(`Refusing to overwrite existing unowned ${rel}. Use --force if you want zz-plugs to claim it.`);
+    }
+    return `unchanged existing matching ${rel}`;
+  }
+  await mkdir(dirname(target), { recursive: true });
+  await writeFile(target, buffer);
+  return `installed ${rel}`;
+}
+
+async function ensureMarkedBlockFile(
+  cwd: string,
+  rel: string,
+  defaultText: string,
+  start: string,
+  end: string,
+  block: string,
+): Promise<string> {
+  const target = safeTarget(cwd, rel);
+  const existing = (await fileExists(target)) ? await readFile(target, "utf8") : defaultText;
+  const result = replaceMarkedBlock(existing, start, end, block);
+  await mkdir(dirname(target), { recursive: true });
+  await writeFile(target, `${result.text.trimEnd()}\n`, "utf8");
+  return `${result.replaced ? "updated" : "added"} ${rel} read-planning block`;
+}
+
+async function removeMarkedBlockFile(cwd: string, rel: string, start: string, end: string): Promise<string | undefined> {
+  const target = safeTarget(cwd, rel);
+  if (!(await fileExists(target))) return undefined;
+  const result = removeMarkedBlock(await readFile(target, "utf8"), start, end);
+  if (!result.removed) return undefined;
+  await writeFile(target, result.text, "utf8");
+  return `removed ${rel} managed block`;
+}
+
+function codexConfigPath(manifest?: JsonRecord): string {
+  const provider = manifest?.provider;
+  if (isPlainRecord(provider) && typeof provider.config_path === "string") return provider.config_path;
+  const codexDir = process.env.CODEX_HOME ? resolve(process.env.CODEX_HOME) : resolve(homedir(), ".codex");
+  return resolve(codexDir, "config.toml");
+}
+
+async function ensureCodexProvider(providerUrl: string, manifest: JsonRecord | undefined, force: boolean): Promise<ManagedAction> {
+  const target = codexConfigPath(manifest);
+  const existing = (await fileExists(target)) ? await readFile(target, "utf8") : "";
+  const block = `${CODEX_PROVIDER_START}
+[model_providers.zz_lmstudio_read]
+name = "LM Studio readsubagent"
+base_url = "${providerUrl}"
+${CODEX_PROVIDER_END}`;
+
+  if (existing.includes(CODEX_PROVIDER_START) && existing.includes(CODEX_PROVIDER_END)) {
+    const result = replaceMarkedBlock(existing, CODEX_PROVIDER_START, CODEX_PROVIDER_END, block);
+    await mkdir(dirname(target), { recursive: true });
+    await writeFile(target, `${result.text.trimEnd()}\n`, "utf8");
+    return { action: `updated ${target}`, managed: true };
+  }
+  if (/^\[model_providers\.zz_lmstudio_read\]\s*$/mu.test(existing) && !force) {
+    return { action: `preserved existing unmanaged zz_lmstudio_read provider in ${target}`, managed: false };
+  }
+  const result = replaceMarkedBlock(existing, CODEX_PROVIDER_START, CODEX_PROVIDER_END, block);
+  await mkdir(dirname(target), { recursive: true });
+  await writeFile(target, `${result.text.trimEnd()}\n`, "utf8");
+  return { action: `added zz_lmstudio_read provider to ${target}`, managed: true };
+}
+
+async function removeCodexProvider(manifest: JsonRecord | undefined): Promise<string | undefined> {
+  const target = codexConfigPath(manifest);
+  if (!(await fileExists(target))) return undefined;
+  const result = removeMarkedBlock(await readFile(target, "utf8"), CODEX_PROVIDER_START, CODEX_PROVIDER_END);
+  if (!result.removed) return undefined;
+  await writeFile(target, result.text, "utf8");
+  return `removed zz_lmstudio_read provider block from ${target}`;
+}
+
+function serverEntry(model: string, piBin: string): JsonRecord {
+  const env: JsonRecord = { ZZ_READSUBAGENT_MODEL: model };
+  if (piBin !== "pi") env.ZZ_READSUBAGENT_PI_BIN = piBin;
+  return {
+    type: "stdio",
+    command: "python3",
+    args: [SERVER_ARGS_PATH],
+    env,
+  };
+}
+
+async function readJsonObjectForEdit(path: string, label: string): Promise<JsonRecord> {
+  if (!(await fileExists(path))) return {};
+  return parseJsoncRecord(await readFile(path, "utf8"), label);
+}
+
+async function ensureMcpServer(
+  cwd: string,
+  rel: string,
+  topKey: "mcpServers" | "servers",
+  model: string,
+  piBin: string,
+  manifest: JsonRecord | undefined,
+  force: boolean,
+): Promise<ManagedAction> {
+  const target = safeTarget(cwd, rel);
+  const data = await readJsonObjectForEdit(target, rel);
+  const currentServers = data[topKey];
+  const servers = isPlainRecord(currentServers) ? currentServers : {};
+  const existing = servers[SERVER_NAME];
+  const managed = manifestManagedServers(manifest).includes(SERVER_NAME);
+  if (isPlainRecord(existing) && !managed && !force) {
+    return { action: `preserved existing unmanaged ${SERVER_NAME} server in ${rel}`, managed: false };
+  }
+  servers[SERVER_NAME] = serverEntry(model, piBin);
+  data[topKey] = servers;
+  await mkdir(dirname(target), { recursive: true });
+  await writeFile(target, `${JSON.stringify(data, null, 2)}\n`, "utf8");
+  return { action: `registered ${SERVER_NAME} server in ${rel}`, managed: true };
+}
+
+async function removeMcpServer(cwd: string, rel: string, topKey: "mcpServers" | "servers"): Promise<string | undefined> {
+  const target = safeTarget(cwd, rel);
+  if (!(await fileExists(target))) return undefined;
+  const data = await readJsonObjectForEdit(target, rel);
+  const servers = data[topKey];
+  if (!isPlainRecord(servers) || !isPlainRecord(servers[SERVER_NAME])) return undefined;
+  delete servers[SERVER_NAME];
+  if (Object.keys(servers).length === 0) delete data[topKey];
+  else data[topKey] = servers;
+  if (Object.keys(data).length === 0) await unlink(target);
+  else await writeFile(target, `${JSON.stringify(data, null, 2)}\n`, "utf8");
+  return `removed ${SERVER_NAME} server from ${rel}`;
+}
+
+async function writeHarnessManifest(cwd: string, rel: string, state: JsonRecord): Promise<void> {
+  const target = safeTarget(cwd, rel);
+  await mkdir(dirname(target), { recursive: true });
+  await writeFile(target, `${JSON.stringify(state, null, 2)}\n`, "utf8");
+}
+
+async function hashExistingHarnessFiles(cwd: string, rels: string[]): Promise<Record<string, string>> {
+  const hashes: Record<string, string> = {};
+  for (const rel of rels) {
+    const target = safeTarget(cwd, rel);
+    if (await fileExists(target)) hashes[rel] = await hashFile(target);
+  }
+  return hashes;
+}
+
+async function installCodexIntegration(cwd: string, sourceUrl: string, options: ApplyOptions, signal?: AbortSignal): Promise<string[]> {
+  const sourceBase = siblingUrl(sourceUrl, "codex-readsubagent");
+  const manifest = await readHarnessManifest(cwd, CODEX_MANIFEST_REL);
+  const defaults = await readHarnessDefaults(cwd);
+  const providerUrl = process.env.ZZ_CODEX_READSUBAGENT_PROVIDER_URL || defaults.providerUrl;
+  const skipProvider = truthy(process.env.ZZ_CODEX_READSUBAGENT_SKIP_PROVIDER);
+  const skipAgentsMd = truthy(process.env.ZZ_CODEX_READSUBAGENT_SKIP_AGENTS_MD);
+
+  if (options.dryRun) {
+    return [
+      `would install/update ${CODEX_AGENT_REL}`,
+      skipAgentsMd ? "would skip AGENTS.md guidance" : "would add/update AGENTS.md guidance",
+      skipProvider ? "would skip Codex provider" : `would add/update Codex provider ${providerUrl}`,
+    ];
+  }
+
+  const actions: string[] = [];
+  const agent = await fetchUrlBytes(joinUrl(sourceBase, "readsubagent.toml"), signal);
+  actions.push(await ensureHarnessFile(cwd, CODEX_AGENT_REL, agent, manifest, CODEX_MANIFEST_REL, options.force));
+  if (skipAgentsMd) actions.push("skipped AGENTS.md guidance");
+  else actions.push(await ensureMarkedBlockFile(cwd, "AGENTS.md", "# Codex Guidance\n", CODEX_AGENTS_START, CODEX_AGENTS_END, CODEX_AGENTS_BLOCK));
+
+  let providerManaged = false;
+  if (skipProvider) actions.push("skipped user-level Codex provider");
+  else {
+    const provider = await ensureCodexProvider(providerUrl, manifest, options.force);
+    providerManaged = provider.managed;
+    actions.push(provider.action);
+  }
+
+  await writeHarnessManifest(cwd, CODEX_MANIFEST_REL, {
+    installer: "zz-codex-readsubagent",
+    schemaVersion: 1,
+    source_url: sourceBase,
+    owned_files: [CODEX_AGENT_REL],
+    managed_blocks: [
+      ...(skipAgentsMd ? [] : ["AGENTS.md:zz-codex-readsubagent"]),
+      ...(providerManaged ? ["~/.codex/config.toml:zz-codex-readsubagent"] : []),
+    ],
+    file_hashes: await hashExistingHarnessFiles(cwd, [CODEX_AGENT_REL]),
+    provider: {
+      name: "zz_lmstudio_read",
+      base_url: providerUrl,
+      config_path: codexConfigPath(manifest),
+      managed: providerManaged,
+    },
+  });
+  return actions;
+}
+
+async function installClaudeIntegration(cwd: string, sourceUrl: string, options: ApplyOptions, signal?: AbortSignal): Promise<string[]> {
+  const sourceBase = siblingUrl(sourceUrl, "claude-readsubagent");
+  const mcpBase = siblingUrl(sourceUrl, "zz-readsubagent-mcp");
+  const manifest = await readHarnessManifest(cwd, CLAUDE_MANIFEST_REL);
+  const defaults = await readHarnessDefaults(cwd);
+  const model = process.env.ZZ_CLAUDE_READSUBAGENT_MODEL || defaults.modelSelector || DEFAULT_LOCAL_MODEL_SELECTOR;
+  const piBin = process.env.ZZ_CLAUDE_READSUBAGENT_PI_BIN || "pi";
+  const skipMcp = truthy(process.env.ZZ_CLAUDE_READSUBAGENT_SKIP_MCP);
+  const skipClaudeMd = truthy(process.env.ZZ_CLAUDE_READSUBAGENT_SKIP_CLAUDE_MD);
+
+  if (options.dryRun) {
+    return [
+      `would install/update ${CLAUDE_AGENT_REL}`,
+      `would install/update ${READSUBAGENT_SERVER_REL}`,
+      skipMcp ? "would skip .mcp.json registration" : `would register ${SERVER_NAME} in .mcp.json using ${model}`,
+      skipClaudeMd ? "would skip CLAUDE.md guidance" : "would add/update CLAUDE.md guidance",
+    ];
+  }
+
+  const actions: string[] = [];
+  const agent = await fetchUrlBytes(joinUrl(sourceBase, "readsubagent.md"), signal);
+  const server = await fetchUrlBytes(joinUrl(mcpBase, "zz-readsubagent-mcp.py"), signal);
+  actions.push(await ensureHarnessFile(cwd, CLAUDE_AGENT_REL, agent, manifest, CLAUDE_MANIFEST_REL, options.force));
+  actions.push(await ensureHarnessFile(cwd, READSUBAGENT_SERVER_REL, server, manifest, CLAUDE_MANIFEST_REL, options.force));
+
+  let serverManaged = false;
+  if (skipMcp) actions.push("skipped .mcp.json registration");
+  else {
+    const registration = await ensureMcpServer(cwd, ".mcp.json", "mcpServers", model, piBin, manifest, options.force);
+    serverManaged = registration.managed;
+    actions.push(registration.action);
+  }
+
+  if (skipClaudeMd) actions.push("skipped CLAUDE.md guidance");
+  else actions.push(await ensureMarkedBlockFile(cwd, "CLAUDE.md", "# Project Guidance\n", CLAUDE_GUIDANCE_START, CLAUDE_GUIDANCE_END, CLAUDE_GUIDANCE_BLOCK));
+
+  await writeHarnessManifest(cwd, CLAUDE_MANIFEST_REL, {
+    installer: "zz-claude-readsubagent",
+    schemaVersion: 1,
+    source_url: sourceBase,
+    mcp_source_url: mcpBase,
+    owned_files: [CLAUDE_AGENT_REL, READSUBAGENT_SERVER_REL],
+    managed_blocks: skipClaudeMd ? [] : ["CLAUDE.md:zz-claude-readsubagent"],
+    managed_servers: serverManaged ? [SERVER_NAME] : [],
+    file_hashes: await hashExistingHarnessFiles(cwd, [CLAUDE_AGENT_REL, READSUBAGENT_SERVER_REL]),
+    server: { name: SERVER_NAME, model, pi_bin: piBin, config_path: safeTarget(cwd, ".mcp.json"), managed: serverManaged },
+  });
+  return actions;
+}
+
+async function installCopilotIntegration(cwd: string, sourceUrl: string, options: ApplyOptions, signal?: AbortSignal): Promise<string[]> {
+  const mcpBase = siblingUrl(sourceUrl, "zz-readsubagent-mcp");
+  const manifest = await readHarnessManifest(cwd, COPILOT_MANIFEST_REL);
+  const defaults = await readHarnessDefaults(cwd);
+  const model = process.env.ZZ_COPILOT_READSUBAGENT_MODEL || defaults.modelSelector || DEFAULT_LOCAL_MODEL_SELECTOR;
+  const piBin = process.env.ZZ_COPILOT_READSUBAGENT_PI_BIN || "pi";
+  const skipMcp = truthy(process.env.ZZ_COPILOT_READSUBAGENT_SKIP_MCP);
+  const skipInstructions = truthy(process.env.ZZ_COPILOT_READSUBAGENT_SKIP_INSTRUCTIONS);
+
+  if (options.dryRun) {
+    return [
+      `would install/update ${READSUBAGENT_SERVER_REL}`,
+      skipMcp ? "would skip .vscode/mcp.json registration" : `would register ${SERVER_NAME} in .vscode/mcp.json using ${model}`,
+      skipInstructions ? "would skip Copilot instructions" : "would add/update .github/copilot-instructions.md guidance",
+    ];
+  }
+
+  const actions: string[] = [];
+  const server = await fetchUrlBytes(joinUrl(mcpBase, "zz-readsubagent-mcp.py"), signal);
+  actions.push(await ensureHarnessFile(cwd, READSUBAGENT_SERVER_REL, server, manifest, COPILOT_MANIFEST_REL, options.force));
+
+  let serverManaged = false;
+  if (skipMcp) actions.push("skipped .vscode/mcp.json registration");
+  else {
+    const registration = await ensureMcpServer(cwd, ".vscode/mcp.json", "servers", model, piBin, manifest, options.force);
+    serverManaged = registration.managed;
+    actions.push(registration.action);
+  }
+
+  if (skipInstructions) actions.push("skipped .github/copilot-instructions.md guidance");
+  else {
+    actions.push(
+      await ensureMarkedBlockFile(
+        cwd,
+        ".github/copilot-instructions.md",
+        "# Copilot Instructions\n",
+        COPILOT_GUIDANCE_START,
+        COPILOT_GUIDANCE_END,
+        COPILOT_GUIDANCE_BLOCK,
+      ),
+    );
+  }
+
+  await writeHarnessManifest(cwd, COPILOT_MANIFEST_REL, {
+    installer: "zz-copilot-readsubagent",
+    schemaVersion: 1,
+    source_url: mcpBase,
+    owned_files: [READSUBAGENT_SERVER_REL],
+    managed_blocks: skipInstructions ? [] : [".github/copilot-instructions.md:zz-copilot-readsubagent"],
+    managed_servers: serverManaged ? [SERVER_NAME] : [],
+    file_hashes: await hashExistingHarnessFiles(cwd, [READSUBAGENT_SERVER_REL]),
+    server: { name: SERVER_NAME, model, pi_bin: piBin, config_path: safeTarget(cwd, ".vscode/mcp.json"), managed: serverManaged },
+  });
+  return actions;
+}
+
+async function installHarnessIntegration(
+  cwd: string,
+  sourceUrl: string,
+  id: HarnessIntegrationId,
+  options: ApplyOptions,
+  signal?: AbortSignal,
+): Promise<string[]> {
+  if (id === "codex-readsubagent") return installCodexIntegration(cwd, sourceUrl, options, signal);
+  if (id === "claude-readsubagent") return installClaudeIntegration(cwd, sourceUrl, options, signal);
+  return installCopilotIntegration(cwd, sourceUrl, options, signal);
+}
+
+async function removeOwnedHarnessFile(
+  cwd: string,
+  rel: string,
+  manifest: JsonRecord | undefined,
+  manifestRel: string,
+  options: ApplyOptions,
+): Promise<string | undefined> {
+  const target = safeTarget(cwd, rel);
+  if (!(await fileExists(target))) return undefined;
+  if (await knownReadsubagentManifestOwns(cwd, rel, manifestRel)) return `kept ${rel} because another readsubagent integration owns it`;
+  if (options.dryRun) return `would remove ${rel}`;
+  const previousHash = manifestFileHashes(manifest)[rel];
+  if (previousHash && (await hashFile(target)) !== previousHash) return `kept modified ${rel}`;
+  await unlink(target);
+  return `removed ${rel}`;
+}
+
+async function removeHarnessIntegration(cwd: string, id: HarnessIntegrationId, options: ApplyOptions): Promise<string[]> {
+  const manifestRel = harnessManifestRel(id);
+  const manifest = await readHarnessManifest(cwd, manifestRel);
+  if (!manifest) return options.dryRun ? [`would remove ${id} if installed`] : [];
+
+  const actions: string[] = [];
+  for (const rel of manifestOwnedFiles(manifest)) {
+    const action = await removeOwnedHarnessFile(cwd, rel, manifest, manifestRel, options);
+    if (action) actions.push(action);
+  }
+
+  if (id === "codex-readsubagent") {
+    if (manifestManagedBlocks(manifest).includes("AGENTS.md:zz-codex-readsubagent")) {
+      if (options.dryRun) actions.push("would remove AGENTS.md guidance block");
+      else {
+        const action = await removeMarkedBlockFile(cwd, "AGENTS.md", CODEX_AGENTS_START, CODEX_AGENTS_END);
+        if (action) actions.push(action);
+      }
+    }
+    if (manifestManagedBlocks(manifest).includes("~/.codex/config.toml:zz-codex-readsubagent")) {
+      if (options.dryRun) actions.push("would remove Codex provider block");
+      else {
+        const action = await removeCodexProvider(manifest);
+        if (action) actions.push(action);
+      }
+    }
+  }
+
+  if (id === "claude-readsubagent") {
+    if (manifestManagedServers(manifest).includes(SERVER_NAME)) {
+      if (options.dryRun) actions.push(`would remove ${SERVER_NAME} from .mcp.json`);
+      else {
+        const action = await removeMcpServer(cwd, ".mcp.json", "mcpServers");
+        if (action) actions.push(action);
+      }
+    }
+    if (manifestManagedBlocks(manifest).includes("CLAUDE.md:zz-claude-readsubagent")) {
+      if (options.dryRun) actions.push("would remove CLAUDE.md guidance block");
+      else {
+        const action = await removeMarkedBlockFile(cwd, "CLAUDE.md", CLAUDE_GUIDANCE_START, CLAUDE_GUIDANCE_END);
+        if (action) actions.push(action);
+      }
+    }
+  }
+
+  if (id === "copilot-readsubagent") {
+    if (manifestManagedServers(manifest).includes(SERVER_NAME)) {
+      if (options.dryRun) actions.push(`would remove ${SERVER_NAME} from .vscode/mcp.json`);
+      else {
+        const action = await removeMcpServer(cwd, ".vscode/mcp.json", "servers");
+        if (action) actions.push(action);
+      }
+    }
+    if (manifestManagedBlocks(manifest).includes(".github/copilot-instructions.md:zz-copilot-readsubagent")) {
+      if (options.dryRun) actions.push("would remove Copilot instructions block");
+      else {
+        const action = await removeMarkedBlockFile(cwd, ".github/copilot-instructions.md", COPILOT_GUIDANCE_START, COPILOT_GUIDANCE_END);
+        if (action) actions.push(action);
+      }
+    }
+  }
+
+  if (options.dryRun) actions.push(`would remove ${manifestRel}`);
+  else {
+    const manifestPath = safeTarget(cwd, manifestRel);
+    if (await fileExists(manifestPath)) await unlink(manifestPath);
+    actions.push(`removed ${manifestRel}`);
+    for (const dir of [".codex", ".claude", ".github", ".vscode", ".zz-mcp"]) {
+      await removeEmptyDirs(safeTarget(cwd, dir));
+    }
+  }
+  return actions;
+}
+
+async function applyHarnessIntegrations(
+  cwd: string,
+  sourceUrl: string,
+  state: InstallState,
+  plan: ResolvedPlan,
+  options: ApplyOptions,
+  signal?: AbortSignal,
+): Promise<string[]> {
+  const previousSelected = asStringArray(state.selected_plugins).filter(isHarnessIntegrationId);
+  const previousInstalled = asStringArray(state.installed_plugins).filter(isHarnessIntegrationId);
+  const previous = previousSelected.length > 0 ? previousSelected : previousInstalled;
+  const next = plan.selected.filter(isHarnessIntegrationId);
+  const nextSet = new Set(next);
+  const actions: string[] = [];
+
+  for (const id of previous) {
+    if (nextSet.has(id)) continue;
+    for (const action of await removeHarnessIntegration(cwd, id, options)) actions.push(`${id}: ${action}`);
+  }
+  for (const id of next) {
+    for (const action of await installHarnessIntegration(cwd, sourceUrl, id, options, signal)) actions.push(`${id}: ${action}`);
+  }
+  return actions;
+}
+
 async function removeEmptyDirs(root: string): Promise<void> {
   if (!existsSync(root)) return;
   const entries = await readdir(root, { withFileTypes: true });
@@ -643,7 +1368,10 @@ async function applySelection(
     );
   }
 
-  if (options.dryRun) return { ensuredSharedLibs: [], mergedConfigs: [], plan, preservedConfigs: [], removed: [], warnings: [] };
+  if (options.dryRun) {
+    const harnessActions = await applyHarnessIntegrations(cwd, sourceUrl, state, plan, options, signal);
+    return { ensuredSharedLibs: [], harnessActions, mergedConfigs: [], plan, preservedConfigs: [], removed: [], warnings: [] };
+  }
 
   const ensuredSharedLibs = await ensureSharedLibs(cwd, zzLibUrl, plan.requiredSharedLibs, options.force, signal);
 
@@ -689,6 +1417,8 @@ async function applySelection(
     await writeFile(target, buffer);
   }
 
+  const harnessActions = await applyHarnessIntegrations(cwd, sourceUrl, state, plan, options, signal);
+
   const fileHashes: Record<string, string> = {};
   for (const rel of [...newOwned].sort()) {
     const target = safeTarget(piDir, rel);
@@ -710,7 +1440,7 @@ async function applySelection(
     file_hashes: fileHashes,
   };
   await writeFile(resolve(cwd, STATE_FILE), `${JSON.stringify(nextState, null, 2)}\n`, "utf8");
-  return { ensuredSharedLibs, mergedConfigs, plan, preservedConfigs, removed, warnings };
+  return { ensuredSharedLibs, harnessActions, mergedConfigs, plan, preservedConfigs, removed, warnings };
 }
 
 function parseFlags(parts: string[]): { flags: ApplyOptions; values: string[] } {
@@ -745,6 +1475,7 @@ function helpText(): string {
     "  /zz-plugs update [--force] [--reset-config] [--dry-run]",
     "",
     "Hard dependencies are installed automatically. Existing config files get missing defaults merged in; --reset-config overwrites them.",
+    "Codex/Claude/Copilot readsubagent harness integrations appear in list/select and are installed outside .pi with their own manifests.",
   ].join("\n");
 }
 
@@ -785,6 +1516,10 @@ function applyResultText(result: ApplyResult, dryRun: boolean): string {
   if (result.mergedConfigs.length > 0) lines.push(`  updated configs: ${result.mergedConfigs.length}`);
   if (result.preservedConfigs.length > 0) lines.push(`  preserved configs: ${result.preservedConfigs.length}`);
   if (result.removed.length > 0) lines.push(`  removed stale files: ${result.removed.length}`);
+  if (result.harnessActions.length > 0) {
+    lines.push("  harness integrations:");
+    for (const action of result.harnessActions) lines.push(`    - ${action}`);
+  }
   for (const warning of result.warnings) lines.push(`  warning: ${warning}`);
   if (!dryRun) lines.push("", "Reloading pi so changes take effect...");
   return lines.join("\n");

@@ -116,7 +116,7 @@ const MAIN_READSUBAGENT_PROMPT = [
 ].join("\n");
 
 const DEFAULT_READSUBAGENT_CONFIG: ChildPiAgentConfig = {
-  contextWindow: 262_144,
+  contextWindow: 127_000,
   endpoint: "http://127.0.0.1:11444",
   maxOutputTokens: 32_768,
   model: "qwen/qwen3.6-35b-a3b",
