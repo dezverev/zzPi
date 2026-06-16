@@ -29,9 +29,9 @@ Useful options:
 
 The installer writes project-local files under `./.pi/` in the directory where you run it.
 
-## Codex and Claude readsubagent
+## Codex, Claude, and Copilot readsubagent
 
-The same read-only **readsubagent** (a scout that runs on a local model and returns a cited read plan) is published here for Codex and Claude Code too. Run from a target repo root.
+The same read-only **readsubagent** (a scout that runs on a local model and returns a cited read plan) is published here for Codex, Claude Code, and Copilot/VS Code too. Run from a target repo root.
 
 Codex (custom agent + user-level LM Studio provider):
 
@@ -51,13 +51,22 @@ curl -fsSL https://raw.githubusercontent.com/dezverev/zzPi/main/install-claude-r
 irm https://raw.githubusercontent.com/dezverev/zzPi/main/install-claude-readsubagent.ps1 | iex
 ```
 
+Copilot / VS Code (workspace MCP server + Copilot instructions):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/dezverev/zzPi/main/install-copilot-readsubagent.sh | bash
+```
+```powershell
+irm https://raw.githubusercontent.com/dezverev/zzPi/main/install-copilot-readsubagent.ps1 | iex
+```
+
 MCP server only (any MCP-capable harness):
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/dezverev/zzPi/main/install-zz-readsubagent-mcp.sh | bash
 ```
 
-The Claude/MCP readsubagent spawns a headless `pi` child on a local model, so it needs `pi` on PATH with a local-model provider — install the `zz-local-models` plug from this repo (`./install.sh --plugins zz-local-models`) or define your own Pi provider — and a local OpenAI-compatible server (e.g. LM Studio) reachable. Endpoints default to `127.0.0.1` in this public export; override with the documented `ZZ_*` env vars.
+The Claude/Copilot/MCP readsubagent spawns a headless `pi` child on a local model, so it needs `pi` on PATH with a local-model provider — install the `zz-local-models` plug from this repo (`./install.sh --plugins zz-local-models`) or define your own Pi provider — and a local OpenAI-compatible server (e.g. LM Studio) reachable. Endpoints default to `127.0.0.1` in this public export; override with the documented `ZZ_*` env vars.
 
 ## Repository layout
 
@@ -72,6 +81,7 @@ The Claude/MCP readsubagent spawns a headless `pi` child on a local model, so it
 - `pi-plugs/files/WORKFLOWMODE.md` — exported workflow mode documentation.
 - `install-codex-readsubagent.{sh,ps1}` + `codex-readsubagent/readsubagent.toml` — Codex readsubagent installer + agent.
 - `install-claude-readsubagent.{sh,ps1}` + `claude-readsubagent/readsubagent.md` — Claude Code readsubagent installer + subagent.
+- `install-copilot-readsubagent.{sh,ps1}` — Copilot/VS Code readsubagent installer + workspace MCP instructions.
 - `install-zz-readsubagent-mcp.{sh,ps1}` + `zz-readsubagent-mcp/` — harness-neutral readsubagent MCP server.
 
 ## Related docs

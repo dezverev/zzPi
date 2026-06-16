@@ -152,12 +152,14 @@ find bugs, judge correctness, or validate type/control-flow safety. For those
 tasks, do direct focused reads in the main thread or use a review-focused agent
 when one is available.
 
-Exceptions:
+When to skip readsubagent (Exceptions):
 
+- You already know the exact files and lines you need to read (no ambiguity).
 - The user names exact files or asks for an immediate direct read.
-- The task is a trivial single-file edit or question.
 - The needed context is already in the current thread.
 - A tool or environment limitation prevents using the custom agent.
+
+**Crucial rule for ambiguity:** The decision to use `readsubagent` is about *knowledge*, not tool-call count. If there is *any ambiguity* about where to look or what to read, do NOT do exploratory manual reads (like `find`, `ls`, or `grep` to hunt around). Instead, use `readsubagent` by asking it a targeted question to clear the ambiguity and tell you exactly where and what to read.
 
 When an exception applies, mention it briefly and continue with the smallest
 reasonable focused read.

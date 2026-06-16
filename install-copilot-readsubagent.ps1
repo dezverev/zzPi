@@ -1,12 +1,12 @@
-# zz Claude readsubagent - repo-local installer for Windows.
+# zz Copilot readsubagent - repo-local installer for Windows.
 #   cd C:\path\to\repo
-#   irm https://raw.githubusercontent.com/dezverev/zzPi/main/install-claude-readsubagent.ps1 | iex
+#   irm https://raw.githubusercontent.com/dezverev/zzPi/main/install-copilot-readsubagent.ps1 | iex
 #
-# Thin Claude Code wrapper around the harness-neutral zz-readsubagent-mcp server.
+# Copilot/VS Code wrapper around the harness-neutral zz-readsubagent-mcp server.
 # Installs the MCP server at .\.zz-mcp\zz-readsubagent-mcp.py, registers the
-# zz_readsubagent server in .\.mcp.json, writes .\.claude\agents\readsubagent.md
-# (restricted to that one MCP tool), and adds repo CLAUDE.md guidance. The MCP
-# server spawns a headless `pi` child on a local Qwen model (via LM Studio).
+# zz_readsubagent server in .\.vscode\mcp.json, and adds repo
+# .\.github\copilot-instructions.md guidance. The MCP server spawns a headless
+# `pi` child on a local Qwen model (via LM Studio).
 
 $ErrorActionPreference = 'Stop'
 
@@ -17,47 +17,48 @@ function Test-Truthy($value) {
 
 function Show-Usage {
   @'
-install-claude-readsubagent.ps1 [options]
+install-copilot-readsubagent.ps1 [options]
 
 Options:
-  --project-dir DIR       Target repo/project dir (default: current directory).
-  --model SELECTOR        pi model selector (default: lm-studio/qwen/qwen3.6-35b-a3b).
-  --pi-bin NAME           pi executable name/path for the MCP server (default: pi).
-  --skip-mcp              Do not add/update the zz_readsubagent server in .mcp.json.
-  --skip-claude-md        Do not add/update the repo CLAUDE.md guidance block.
-  --force                 Claim/overwrite existing unowned readsubagent files.
-  --dry-run               Show the install plan without writing files.
-  -h, --help              Show this help.
+  --project-dir DIR          Target repo/project dir (default: current directory).
+  --model SELECTOR           pi model selector (default: lm-studio/qwen/qwen3.6-35b-a3b).
+  --pi-bin NAME              pi executable name/path for the MCP server (default: pi).
+  --skip-mcp                 Do not add/update the zz_readsubagent server in .vscode/mcp.json.
+  --skip-instructions        Do not add/update .github/copilot-instructions.md guidance.
+  --skip-copilot-instructions
+                              Alias for --skip-instructions.
+  --force                    Claim/overwrite existing unowned readsubagent files/entries.
+  --dry-run                  Show the install plan without writing files.
+  -h, --help                 Show this help.
 
 Environment:
-  ZZ_DASH_URL                          Website host (default: https://raw.githubusercontent.com/dezverev/zzPi/main)
-  ZZ_CLAUDE_READSUBAGENT_URL           Subagent source URL (default: $ZZ_DASH_URL/claude-readsubagent)
-  ZZ_READSUBAGENT_MCP_URL              MCP server source URL (default: $ZZ_DASH_URL/zz-readsubagent-mcp)
-  ZZ_CLAUDE_READSUBAGENT_PROJECT_DIR   Target repo/project dir
-  ZZ_CLAUDE_READSUBAGENT_MODEL         pi model selector
-  ZZ_CLAUDE_READSUBAGENT_PI_BIN        pi executable name/path
-  ZZ_CLAUDE_READSUBAGENT_SKIP_MCP=1
-  ZZ_CLAUDE_READSUBAGENT_SKIP_CLAUDE_MD=1
-  ZZ_CLAUDE_READSUBAGENT_FORCE=1
-  ZZ_CLAUDE_READSUBAGENT_DRY_RUN=1
-  ZZ_CLAUDE_READSUBAGENT_ALLOW_SUBDIR=1
+  ZZ_DASH_URL                           Website host (default: https://raw.githubusercontent.com/dezverev/zzPi/main)
+  ZZ_READSUBAGENT_MCP_URL               MCP server source URL (default: $ZZ_DASH_URL/zz-readsubagent-mcp)
+  ZZ_COPILOT_READSUBAGENT_PROJECT_DIR   Target repo/project dir
+  ZZ_COPILOT_READSUBAGENT_MODEL         pi model selector
+  ZZ_COPILOT_READSUBAGENT_PI_BIN        pi executable name/path
+  ZZ_COPILOT_READSUBAGENT_SKIP_MCP=1
+  ZZ_COPILOT_READSUBAGENT_SKIP_INSTRUCTIONS=1
+  ZZ_COPILOT_READSUBAGENT_FORCE=1
+  ZZ_COPILOT_READSUBAGENT_DRY_RUN=1
+  ZZ_COPILOT_READSUBAGENT_ALLOW_SUBDIR=1
 
 Requires `pi` on PATH with the LM Studio (lm-studio) provider available so the
-model selector resolves, and LM Studio reachable.
+model selector resolves, and LM Studio reachable. In VS Code/Copilot, approve or
+enable the workspace MCP server if prompted.
 '@
 }
 
 $defaultHost = 'https://raw.githubusercontent.com/dezverev/zzPi/main'
 $hostBase = if ($env:ZZ_DASH_URL) { $env:ZZ_DASH_URL.TrimEnd('/') } else { $defaultHost }
-$agentSourceBase = if ($env:ZZ_CLAUDE_READSUBAGENT_URL) { $env:ZZ_CLAUDE_READSUBAGENT_URL.TrimEnd('/') } else { "$hostBase/claude-readsubagent" }
 $mcpSourceBase = if ($env:ZZ_READSUBAGENT_MCP_URL) { $env:ZZ_READSUBAGENT_MCP_URL.TrimEnd('/') } else { "$hostBase/zz-readsubagent-mcp" }
-$projectDir = if ($env:ZZ_CLAUDE_READSUBAGENT_PROJECT_DIR) { $env:ZZ_CLAUDE_READSUBAGENT_PROJECT_DIR } else { (Get-Location).Path }
-$model = if ($env:ZZ_CLAUDE_READSUBAGENT_MODEL) { $env:ZZ_CLAUDE_READSUBAGENT_MODEL } else { 'lm-studio/qwen/qwen3.6-35b-a3b' }
-$piBin = if ($env:ZZ_CLAUDE_READSUBAGENT_PI_BIN) { $env:ZZ_CLAUDE_READSUBAGENT_PI_BIN } else { 'pi' }
-$skipMcp = Test-Truthy $env:ZZ_CLAUDE_READSUBAGENT_SKIP_MCP
-$skipClaudeMd = Test-Truthy $env:ZZ_CLAUDE_READSUBAGENT_SKIP_CLAUDE_MD
-$force = Test-Truthy $env:ZZ_CLAUDE_READSUBAGENT_FORCE
-$dryRun = Test-Truthy $env:ZZ_CLAUDE_READSUBAGENT_DRY_RUN
+$projectDir = if ($env:ZZ_COPILOT_READSUBAGENT_PROJECT_DIR) { $env:ZZ_COPILOT_READSUBAGENT_PROJECT_DIR } else { (Get-Location).Path }
+$model = if ($env:ZZ_COPILOT_READSUBAGENT_MODEL) { $env:ZZ_COPILOT_READSUBAGENT_MODEL } else { 'lm-studio/qwen/qwen3.6-35b-a3b' }
+$piBin = if ($env:ZZ_COPILOT_READSUBAGENT_PI_BIN) { $env:ZZ_COPILOT_READSUBAGENT_PI_BIN } else { 'pi' }
+$skipMcp = Test-Truthy $env:ZZ_COPILOT_READSUBAGENT_SKIP_MCP
+$skipInstructions = Test-Truthy $env:ZZ_COPILOT_READSUBAGENT_SKIP_INSTRUCTIONS
+$force = Test-Truthy $env:ZZ_COPILOT_READSUBAGENT_FORCE
+$dryRun = Test-Truthy $env:ZZ_COPILOT_READSUBAGENT_DRY_RUN
 
 for ($i = 0; $i -lt $args.Count; $i++) {
   switch -Regex ($args[$i]) {
@@ -68,7 +69,8 @@ for ($i = 0; $i -lt $args.Count; $i++) {
     '^--pi-bin$' { if ($i + 1 -ge $args.Count) { throw '--pi-bin needs a value' }; $i++; $piBin = $args[$i]; continue }
     '^--pi-bin=' { $piBin = $args[$i].Substring('--pi-bin='.Length); continue }
     '^--skip-mcp$' { $skipMcp = $true; continue }
-    '^--skip-claude-md$' { $skipClaudeMd = $true; continue }
+    '^--skip-instructions$' { $skipInstructions = $true; continue }
+    '^--skip-copilot-instructions$' { $skipInstructions = $true; continue }
     '^--force$' { $force = $true; continue }
     '^--dry-run$' { $dryRun = $true; continue }
     '^(-h|--help)$' { Show-Usage; exit 0 }
@@ -78,7 +80,7 @@ for ($i = 0; $i -lt $args.Count; $i++) {
 
 $projectDir = [System.IO.Path]::GetFullPath($projectDir)
 
-if (-not (Test-Truthy $env:ZZ_CLAUDE_READSUBAGENT_ALLOW_SUBDIR)) {
+if (-not (Test-Truthy $env:ZZ_COPILOT_READSUBAGENT_ALLOW_SUBDIR)) {
   $git = Get-Command git -ErrorAction SilentlyContinue
   if ($git) {
     $inside = & git -C $projectDir rev-parse --is-inside-work-tree 2>$null
@@ -86,7 +88,7 @@ if (-not (Test-Truthy $env:ZZ_CLAUDE_READSUBAGENT_ALLOW_SUBDIR)) {
       $gitRoot = (& git -C $projectDir rev-parse --show-toplevel).Trim()
       $gitRoot = [System.IO.Path]::GetFullPath($gitRoot)
       if ($projectDir.TrimEnd('\') -ne $gitRoot.TrimEnd('\')) {
-        throw "Refusing to install into a git subdirectory: current=$projectDir repo root=$gitRoot. Run from the repo root or set ZZ_CLAUDE_READSUBAGENT_PROJECT_DIR."
+        throw "Refusing to install into a git subdirectory: current=$projectDir repo root=$gitRoot. Run from the repo root or set ZZ_COPILOT_READSUBAGENT_PROJECT_DIR."
       }
     }
   }
@@ -97,33 +99,30 @@ if (-not (Get-Command $piBin -ErrorAction SilentlyContinue)) {
   $piWarning = "WARNING: '$piBin' not found on PATH. The readsubagent MCP tool needs pi with the LM Studio (lm-studio) provider available."
 }
 
-$tmpDir = Join-Path ([System.IO.Path]::GetTempPath()) "zz-claude-readsubagent-$([System.Guid]::NewGuid().ToString('N'))"
+$tmpDir = Join-Path ([System.IO.Path]::GetTempPath()) "zz-copilot-readsubagent-$([System.Guid]::NewGuid().ToString('N'))"
 New-Item -ItemType Directory -Force -Path $tmpDir | Out-Null
 try {
-  $agentTmp = Join-Path $tmpDir 'readsubagent.md'
   $serverTmp = Join-Path $tmpDir 'zz-readsubagent-mcp.py'
-  Invoke-WebRequest -UseBasicParsing -Uri "$agentSourceBase/readsubagent.md" -OutFile $agentTmp
   Invoke-WebRequest -UseBasicParsing -Uri "$mcpSourceBase/zz-readsubagent-mcp.py" -OutFile $serverTmp
 
   $serverName = 'zz_readsubagent'
   $serverArgsPath = '.zz-mcp/zz-readsubagent-mcp.py'
-  $relAgent = '.claude/agents/readsubagent.md'
   $relServer = '.zz-mcp/zz-readsubagent-mcp.py'
-  $agentTarget = Join-Path $projectDir '.claude\agents\readsubagent.md'
   $serverTarget = Join-Path $projectDir '.zz-mcp\zz-readsubagent-mcp.py'
-  $mcpJson = Join-Path $projectDir '.mcp.json'
-  $claudeMd = Join-Path $projectDir 'CLAUDE.md'
-  $manifestPath = Join-Path $projectDir '.claude\zz-claude-readsubagent-manifest.json'
+  $mcpJson = Join-Path $projectDir '.vscode\mcp.json'
+  $instructionsMd = Join-Path $projectDir '.github\copilot-instructions.md'
+  $manifestPath = Join-Path $projectDir '.github\zz-copilot-readsubagent-manifest.json'
 
-  $markerStart = '<!-- zz-claude-readsubagent:start -->'
-  $markerEnd = '<!-- zz-claude-readsubagent:end -->'
-  $claudeBlock = @'
-<!-- zz-claude-readsubagent:start -->
+  $markerStart = '<!-- zz-copilot-readsubagent:start -->'
+  $markerEnd = '<!-- zz-copilot-readsubagent:end -->'
+  $copilotBlock = @'
+<!-- zz-copilot-readsubagent:start -->
 ## Read Planning
 
-Before doing focused reads of specific implementation files, start with a
-read-planning pass through the `readsubagent` subagent, which delegates to a
-local model via the `mcp__zz_readsubagent__readsubagent` MCP tool.
+Before doing focused reads of specific implementation files, ask Copilot to use
+the `readsubagent` tool from the `zz_readsubagent` MCP server to get a
+read-planning pass. The tool delegates to a local model via `pi` and returns a
+concise factual report with paths and line ranges.
 
 Use `readsubagent` to get:
 
@@ -151,13 +150,13 @@ When to skip readsubagent (Exceptions):
 - You already know the exact files and lines you need to read (no ambiguity).
 - The user names exact files or asks for an immediate direct read.
 - The needed context is already in the current thread.
-- A tool or environment limitation prevents using the subagent.
+- A tool or environment limitation prevents using the MCP tool.
 
-**Crucial rule for ambiguity:** The decision to use `readsubagent` is about *knowledge*, not tool-call count. If there is *any ambiguity* about where to look or what to read, do NOT do exploratory manual reads (like `find`, `ls`, or `grep` to hunt around). Instead, use `readsubagent` by asking it a targeted question to clear the ambiguity and tell you exactly where and what to read.
+**Crucial rule for ambiguity:** The decision to use `readsubagent` is about *knowledge*, not tool-call count. If there is *any ambiguity* about where to look or what to read, do NOT do exploratory manual reads (like `find`, `ls`, or `grep` to hunt around). Instead, ask Copilot to call the `readsubagent` MCP tool with a targeted question to clear the ambiguity and tell you exactly where and what to read.
 
 When an exception applies, mention it briefly and continue with the smallest
 reasonable focused read.
-<!-- zz-claude-readsubagent:end -->
+<!-- zz-copilot-readsubagent:end -->
 '@
 
   function Get-ManifestOwns([string]$rel) {
@@ -208,27 +207,26 @@ reasonable focused read.
   }
 
   $actions = New-Object System.Collections.Generic.List[string]
-  $actions.Add((Install-OwnedFile $relAgent $agentTarget $agentTmp))
   $actions.Add((Install-OwnedFile $relServer $serverTarget $serverTmp))
 
   if ($skipMcp) {
-    $actions.Add('skipped .mcp.json registration')
+    $actions.Add('skipped .vscode/mcp.json registration')
   } else {
     $data = $null
     if (Test-Path $mcpJson) {
-      try { $data = Get-Content $mcpJson -Raw | ConvertFrom-Json } catch { throw "Refusing to edit malformed .mcp.json: $_" }
+      try { $data = Get-Content $mcpJson -Raw | ConvertFrom-Json } catch { throw "Refusing to edit malformed .vscode/mcp.json: $_" }
     }
     if ($null -eq $data) { $data = [pscustomobject]@{} }
-    if (-not ($data.PSObject.Properties.Name -contains 'mcpServers') -or $null -eq $data.mcpServers) {
-      $data | Add-Member -NotePropertyName mcpServers -NotePropertyValue ([pscustomobject]@{}) -Force
+    if (-not ($data.PSObject.Properties.Name -contains 'servers') -or $null -eq $data.servers) {
+      $data | Add-Member -NotePropertyName servers -NotePropertyValue ([pscustomobject]@{}) -Force
     }
-    $existing = $data.mcpServers.PSObject.Properties.Name -contains $serverName
+    $existing = $data.servers.PSObject.Properties.Name -contains $serverName
     $managed = Get-ManagedServer $serverName
     if ($existing -and -not $managed -and -not $force) {
-      $actions.Add("preserved existing unmanaged $serverName server in .mcp.json")
+      $actions.Add("preserved existing unmanaged $serverName server in .vscode/mcp.json")
     } elseif ($dryRun) {
       $verb = if ($existing) { 'update' } else { 'add' }
-      $actions.Add("would $verb $serverName server in .mcp.json")
+      $actions.Add("would $verb $serverName server in .vscode/mcp.json")
     } else {
       $envBlock = [ordered]@{ ZZ_READSUBAGENT_MODEL = $model }
       if ($piBin -ne 'pi') { $envBlock['ZZ_READSUBAGENT_PI_BIN'] = $piBin }
@@ -238,36 +236,38 @@ reasonable focused read.
         args    = @($serverArgsPath)
         env     = $envBlock
       }
-      $data.mcpServers | Add-Member -NotePropertyName $serverName -NotePropertyValue $entry -Force
+      $data.servers | Add-Member -NotePropertyName $serverName -NotePropertyValue $entry -Force
+      New-Item -ItemType Directory -Force -Path (Split-Path $mcpJson -Parent) | Out-Null
       [System.IO.File]::WriteAllText($mcpJson, ($data | ConvertTo-Json -Depth 10) + "`n")
-      $actions.Add("registered $serverName server in .mcp.json")
+      $actions.Add("registered $serverName server in .vscode/mcp.json")
     }
   }
 
-  if ($skipClaudeMd) {
-    $actions.Add('skipped CLAUDE.md guidance')
+  if ($skipInstructions) {
+    $actions.Add('skipped .github/copilot-instructions.md guidance')
   } elseif ($dryRun) {
-    $actions.Add('would add/update CLAUDE.md read-planning block')
+    $actions.Add('would add/update .github/copilot-instructions.md read-planning block')
   } else {
-    $existingMd = if (Test-Path $claudeMd) { Get-Content $claudeMd -Raw } else { "# Project Guidance`n" }
-    $updatedMd = Set-MarkedBlock $existingMd $markerStart $markerEnd $claudeBlock
-    [System.IO.File]::WriteAllText($claudeMd, $updatedMd.TrimEnd() + "`n")
-    $actions.Add('added/updated CLAUDE.md read-planning block')
+    $existingMd = if (Test-Path $instructionsMd) { Get-Content $instructionsMd -Raw } else { "# Copilot Instructions`n" }
+    $updatedMd = Set-MarkedBlock $existingMd $markerStart $markerEnd $copilotBlock
+    New-Item -ItemType Directory -Force -Path (Split-Path $instructionsMd -Parent) | Out-Null
+    [System.IO.File]::WriteAllText($instructionsMd, $updatedMd.TrimEnd() + "`n")
+    $actions.Add('added/updated .github/copilot-instructions.md read-planning block')
   }
 
   if (-not $dryRun) {
     $managedBlocks = @()
-    if (-not $skipClaudeMd) { $managedBlocks += 'CLAUDE.md:zz-claude-readsubagent' }
+    if (-not $skipInstructions) { $managedBlocks += '.github/copilot-instructions.md:zz-copilot-readsubagent' }
     $managedServers = @()
     if (-not $skipMcp) { $managedServers += $serverName }
     $state = [ordered]@{
-      installer       = 'zz-claude-readsubagent'
+      installer       = 'zz-copilot-readsubagent'
       schemaVersion   = 1
-      source_url      = $agentSourceBase
-      owned_files     = @($relAgent, $relServer)
+      source_url      = $mcpSourceBase
+      owned_files     = @($relServer)
       managed_blocks  = $managedBlocks
       managed_servers = $managedServers
-      file_hashes     = [ordered]@{ $relAgent = Get-FileSha256 $agentTarget; $relServer = Get-FileSha256 $serverTarget }
+      file_hashes     = [ordered]@{ $relServer = Get-FileSha256 $serverTarget }
       server          = [ordered]@{
         name        = $serverName
         model       = $model
@@ -282,16 +282,16 @@ reasonable focused read.
 
   Write-Host ''
   if ($dryRun) {
-    Write-Host '  zz Claude readsubagent install plan' -ForegroundColor Cyan
+    Write-Host '  zz Copilot readsubagent install plan' -ForegroundColor Cyan
   } else {
-    Write-Host '  zz Claude readsubagent installed' -ForegroundColor Green
+    Write-Host '  zz Copilot readsubagent installed' -ForegroundColor Green
   }
   foreach ($action in $actions) { Write-Host "  -> $action" }
   Write-Host "  -> model: $model"
   Write-Host "  -> target repo: $projectDir"
-  Write-Host "  -> sources: $agentSourceBase + zz-readsubagent-mcp"
+  Write-Host "  -> source: $mcpSourceBase"
   if (-not $dryRun) {
-    Write-Host '  -> open Claude Code in this repo and approve the zz_readsubagent MCP server when prompted'
+    Write-Host '  -> open VS Code/Copilot Chat in this repo and approve or enable the zz_readsubagent MCP server when prompted'
   }
   if ($piWarning) { Write-Host "  -> $piWarning" -ForegroundColor Yellow }
 } finally {

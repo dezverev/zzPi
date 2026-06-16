@@ -5,11 +5,12 @@
 child running on a **local model** (Qwen via LM Studio) and returns its concise,
 cited factual report.
 
-This is the reusable core. Any MCP-capable harness (Claude Code, Codex, Cursor,
-Zed, your own client) can register this one server and consume it — directly, or
-wrapped in that harness's own subagent / instructions. The Claude Code wrapper
-that ships in this repo (`clients/install-claude-readsubagent.*`) is just one such
-consumer.
+This is the reusable core. Any MCP-capable harness (Claude Code, Copilot/VS
+Code, Codex, Cursor, Zed, your own client) can register this one server and
+consume it — directly, or wrapped in that harness's own subagent / instructions.
+The Claude Code and Copilot wrappers that ship in this repo
+(`clients/install-claude-readsubagent.*`, `clients/install-copilot-readsubagent.*`)
+are examples.
 
 ## What the tool does
 
@@ -105,8 +106,18 @@ claude mcp add --scope project --transport stdio \
   -- zz_readsubagent python3 ./.zz-mcp/zz-readsubagent-mcp.py
 ```
 
+**Copilot / VS Code** — workspace `.vscode/mcp.json`:
+
+```json
+{ "servers": { "zz_readsubagent": { "type": "stdio",
+  "command": "python3",
+  "args": [".zz-mcp/zz-readsubagent-mcp.py"],
+  "env": { "ZZ_READSUBAGENT_MODEL": "lm-studio/qwen/qwen3.6-35b-a3b" } } } }
+```
+
 Then wrap it however your harness prefers — a dedicated subagent restricted to
 `mcp__zz_readsubagent__readsubagent`, or a directive in your project/system
 instructions telling the main agent to use it for read planning before focused
-reads. The Claude Code wrapper here does the former; see
-`clients/CLAUDE_READSUBAGENT_INSTALL.md`.
+reads. The Claude Code wrapper here does the former; the Copilot wrapper writes
+project instructions for the latter. See `clients/CLAUDE_READSUBAGENT_INSTALL.md`
+and `clients/COPILOT_READSUBAGENT_INSTALL.md`.

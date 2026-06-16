@@ -955,7 +955,7 @@
   ],
   "schemaVersion": 2,
   "source": "zzPi git export",
-  "updated_at": "2026-06-15T08:56:23.158683+00:00",
+  "updated_at": "2026-06-15T22:55:58.377969+00:00",
   "visiblePlugins": [
     "zz-local-models",
     "context-tools",
