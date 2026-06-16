@@ -10,6 +10,8 @@ This shines when paired with capable local agents: local models handle scouting,
 
 This repository is generated from `zzHostWebsite`. Do not edit generated `pi-plugs/` or `zz-lib/` artifacts directly; regenerate the export from the source checkout instead.
 
+> **Early-state note:** This repo is still early. Install commands for your own LM Studio setup are provided, but they are a WIP. Until the setup flow is stable, please ask your own model/harness to help fix any setup issues you hit.
+
 ## Core idea
 
 Most coding-agent waste starts with reads:
