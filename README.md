@@ -6,6 +6,8 @@ Built on [Pi](https://pi.dev) — huge thanks to Pi's creator for making a flexi
 
 The goal is simple: **keep the main thread's context small and valuable**. Do not make the expensive/remote/main model explore every file, scan every directory, or carry raw repo noise forever. Send that work to local agents, then give the main model a compact map of what actually matters.
 
+This shines when paired with capable local agents: local models handle scouting, repo archaeology, read planning, and other high-volume context work while the main model focuses on decisions and edits. That is not just a context-quality win; it also reduces the paid tokens spent on exploration and repeated raw-file reads.
+
 This repository is generated from `zzHostWebsite`. Do not edit generated `pi-plugs/` or `zz-lib/` artifacts directly; regenerate the export from the source checkout instead.
 
 ## Core idea
