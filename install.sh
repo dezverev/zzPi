@@ -184,9 +184,13 @@ force = truthy(os.environ.get("ZZ_PI_PLUGS_FORCE"))
 dry_run = truthy(os.environ.get("ZZ_PI_PLUGS_DRY_RUN"))
 
 
+def strip_utf8_bom(text: str) -> str:
+    # Accept state/config files produced by Windows PowerShell 5.1 UTF8 writes.
+    return text[1:] if text.startswith("\ufeff") else text
+
+
 def load_json(path: Path) -> dict[str, Any]:
-    with path.open("r", encoding="utf-8") as fh:
-        return json.load(fh)
+    return json.loads(strip_utf8_bom(path.read_text(encoding="utf-8")))
 
 
 manifest = load_json(manifest_path)
@@ -461,7 +465,7 @@ def download_bytes(url: str) -> bytes:
 
 
 def download_json(url: str) -> dict[str, Any]:
-    parsed = json.loads(download_bytes(url).decode("utf-8"))
+    parsed = json.loads(strip_utf8_bom(download_bytes(url).decode("utf-8")))
     if not isinstance(parsed, dict):
         raise SystemExit(f"bad JSON response from {url}")
     return parsed
@@ -630,7 +634,7 @@ def strip_json_trailing_commas(text: str) -> str:
 
 
 def parse_jsonc_object(text: str, label: str) -> dict[str, Any]:
-    parsed = json.loads(strip_json_trailing_commas(strip_json_comments(text)))
+    parsed = json.loads(strip_json_trailing_commas(strip_json_comments(strip_utf8_bom(text))))
     if not isinstance(parsed, dict):
         raise ValueError(f"{label} must contain a JSON object")
     return parsed

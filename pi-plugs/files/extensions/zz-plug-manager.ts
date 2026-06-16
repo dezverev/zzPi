@@ -130,7 +130,13 @@ function truthy(value: unknown): boolean {
   return ["1", "true", "yes", "on"].includes(String(value ?? "").trim().toLowerCase());
 }
 
+function stripUtf8Bom(text: string): string {
+  // Windows PowerShell 5.1 writes a BOM for `Set-Content -Encoding UTF8`.
+  return text.charCodeAt(0) === 0xfeff ? text.slice(1) : text;
+}
+
 function stripJsonc(text: string): string {
+  text = stripUtf8Bom(text);
   let output = "";
   let inString = false;
   let quote = "";
