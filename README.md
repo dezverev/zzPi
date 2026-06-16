@@ -30,6 +30,25 @@ Most coding-agent waste starts with reads:
 
 The current system is built around read and discovery scenarios (`readsubagent`, `explorationsubagent`, review/test/workflow helpers), but the broader design is **token/context flow control**: decide which work belongs in the main thread and which work should be delegated.
 
+<figure>
+     <img src="repoAssets/fullview.png" alt="Full view screenshot" width="80%">
+ </figure>
+
+<figure>
+  <figcaption>Built in Extension manager</figcaption>
+  <img src="repoAssets/RecPluginSet.png" alt="Extension Manager" width="80%">
+ </figure>
+
+<figure>
+  <figcaption>Context Tree and Git Tree, know what is going on</figcaption>
+  <img src="repoAssets/tiles.png" alt="Git and Context" width="50%">
+ </figure>
+
+<figure>
+  <figcaption>Granular model provider setup per subagent</figcaption>
+  <img src="repoAssets/custommodels.png" alt="Custom Models" width="80%">
+ </figure>
+
 ## Why Pi is the runner
 
 Pi is flexible enough to act as a local, harness-agnostic subagent runner:
