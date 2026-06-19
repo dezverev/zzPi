@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
-import { mkdir, readdir, readFile, rm, stat, unlink, writeFile } from "node:fs/promises";
+import { chmod, mkdir, readdir, readFile, rm, stat, unlink, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, resolve, sep } from "node:path";
 
@@ -671,6 +671,12 @@ async function ensureSharedLibs(
 const CODEX_AGENT_REL = ".codex/agents/readsubagent.toml";
 const CODEX_MANIFEST_REL = ".codex/zz-codex-readsubagent-manifest.json";
 const CLAUDE_AGENT_REL = ".claude/agents/readsubagent.md";
+const CLAUDE_HOOK_NUDGE_SH_REL = ".claude/hooks/readsubagent-nudge.sh";
+const CLAUDE_HOOK_BLOCK_EXPLORE_SH_REL = ".claude/hooks/block-explore-subagent.sh";
+const CLAUDE_HOOK_NUDGE_PS1_REL = ".claude/hooks/readsubagent-nudge.ps1";
+const CLAUDE_HOOK_BLOCK_EXPLORE_PS1_REL = ".claude/hooks/block-explore-subagent.ps1";
+const CLAUDE_SKILL_REL = ".claude/skills/readsubagent/SKILL.md";
+const CLAUDE_SETTINGS_REL = ".claude/settings.json";
 const CLAUDE_MANIFEST_REL = ".claude/zz-claude-readsubagent-manifest.json";
 const COPILOT_MANIFEST_REL = ".github/zz-copilot-readsubagent-manifest.json";
 const MCP_ONLY_MANIFEST_REL = ".zz-mcp/zz-readsubagent-mcp-manifest.json";
@@ -718,12 +724,25 @@ const CLAUDE_GUIDANCE_BLOCK = `${CLAUDE_GUIDANCE_START}
 ## Read Planning
 
 Before doing focused reads of specific implementation files, start with a
-read-planning pass through the \`readsubagent\` subagent, which delegates to a
-local model via the \`mcp__zz_readsubagent__readsubagent\` MCP tool.
+read-planning pass through \`readsubagent\`, which delegates to a local model
+(Qwen via LM Studio, through a headless \`pi\` child).
 
-Use \`readsubagent\` to get a short subsystem map, candidate files, the smallest
-focused read list, useful search terms/line anchors, areas to avoid, and
-uncertainty or follow-up questions.
+\`readsubagent\` is reachable three equivalent ways — use whichever fits:
+
+- the **\`readsubagent\` skill** (via the Skill tool),
+- the **\`readsubagent\` subagent** (\`Agent(subagent_type="readsubagent")\`), and
+- the **direct MCP tool \`mcp__zz_readsubagent__readsubagent\`**, served by
+  \`.zz-mcp/zz-readsubagent-mcp.py\`.
+
+Prefer the **direct MCP tool** when you already know the targets: it is the
+lowest-overhead path and gives the most control. Pass \`question\` (required) plus
+any of \`path\`/\`paths\`, \`symbols\`, \`searchTerms\`, \`lineRanges\`, \`output\`, and
+\`maxReportChars\` to scope the inspection. Reach for the skill or subagent when
+you want the wrapped read-planning workflow instead.
+
+Use \`readsubagent\` (any entry point) to get a short subsystem map, candidate
+files, the smallest focused read list, useful search terms/line anchors, areas
+to avoid, and uncertainty or follow-up questions.
 
 The local model can be slow. Allow a long wait for \`readsubagent\`; prefer
 waiting over assuming it stalled. Use it only for factual read planning and file
@@ -868,6 +887,11 @@ function manifestManagedServers(manifest: JsonRecord | undefined): string[] {
   return Array.isArray(servers) ? servers.filter((item): item is string => typeof item === "string") : [];
 }
 
+function manifestManagedSettings(manifest: JsonRecord | undefined): string[] {
+  const settings = manifest?.managed_settings;
+  return Array.isArray(settings) ? settings.filter((item): item is string => typeof item === "string") : [];
+}
+
 function manifestFileHashes(manifest: JsonRecord | undefined): Record<string, string> {
   const hashes = manifest?.file_hashes;
   if (!isPlainRecord(hashes)) return {};
@@ -894,6 +918,7 @@ async function ensureHarnessFile(
   manifest: JsonRecord | undefined,
   manifestRel: string,
   force: boolean,
+  executable = false,
 ): Promise<string> {
   const target = safeTarget(cwd, rel);
   const owned = manifestOwns(manifest, rel) || (await knownReadsubagentManifestOwns(cwd, rel, manifestRel));
@@ -901,10 +926,12 @@ async function ensureHarnessFile(
     if (!(await readFile(target)).equals(buffer)) {
       throw new Error(`Refusing to overwrite existing unowned ${rel}. Use --force if you want zz-plugs to claim it.`);
     }
+    if (executable) await chmod(target, 0o755);
     return `unchanged existing matching ${rel}`;
   }
   await mkdir(dirname(target), { recursive: true });
   await writeFile(target, buffer);
+  if (executable) await chmod(target, 0o755);
   return `installed ${rel}`;
 }
 
@@ -931,6 +958,140 @@ async function removeMarkedBlockFile(cwd: string, rel: string, start: string, en
   if (!result.removed) return undefined;
   await writeFile(target, result.text, "utf8");
   return `removed ${rel} managed block`;
+}
+
+interface ClaudeHookSpec {
+  readonly event: "PreToolUse" | "UserPromptSubmit";
+  readonly entry: JsonRecord;
+  readonly markers: string[];
+}
+
+function commandHook(command: string, args?: string[]): JsonRecord {
+  const hook: JsonRecord = { type: "command", command, timeout: 5 };
+  if (args) hook.args = args;
+  return hook;
+}
+
+function claudeHookEntry(hook: JsonRecord, matcher?: string): JsonRecord {
+  const entry: JsonRecord = { hooks: [hook] };
+  if (matcher) entry.matcher = matcher;
+  return entry;
+}
+
+function claudeHookSpecs(): ClaudeHookSpec[] {
+  if (process.platform === "win32") {
+    const psArgs = (scriptRel: string, arg?: string): string[] => {
+      const args = ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", `\${CLAUDE_PROJECT_DIR}/${scriptRel}`];
+      if (arg) args.push(arg);
+      return args;
+    };
+    return [
+      {
+        event: "PreToolUse",
+        entry: claudeHookEntry(commandHook("powershell.exe", psArgs(CLAUDE_HOOK_NUDGE_PS1_REL, "nudge")), "Read"),
+        markers: ["readsubagent-nudge.ps1", "nudge"],
+      },
+      {
+        event: "PreToolUse",
+        entry: claudeHookEntry(commandHook("powershell.exe", psArgs(CLAUDE_HOOK_BLOCK_EXPLORE_PS1_REL)), "Agent|Task"),
+        markers: ["block-explore-subagent.ps1"],
+      },
+      {
+        event: "UserPromptSubmit",
+        entry: claudeHookEntry(commandHook("powershell.exe", psArgs(CLAUDE_HOOK_NUDGE_PS1_REL, "reset"))),
+        markers: ["readsubagent-nudge.ps1", "reset"],
+      },
+    ];
+  }
+  return [
+    {
+      event: "PreToolUse",
+      entry: claudeHookEntry(commandHook(`"\${CLAUDE_PROJECT_DIR}/${CLAUDE_HOOK_NUDGE_SH_REL}" nudge`), "Read"),
+      markers: ["readsubagent-nudge.sh", "nudge"],
+    },
+    {
+      event: "PreToolUse",
+      entry: claudeHookEntry(commandHook(`"\${CLAUDE_PROJECT_DIR}/${CLAUDE_HOOK_BLOCK_EXPLORE_SH_REL}"`), "Agent|Task"),
+      markers: ["block-explore-subagent.sh"],
+    },
+    {
+      event: "UserPromptSubmit",
+      entry: claudeHookEntry(commandHook(`"\${CLAUDE_PROJECT_DIR}/${CLAUDE_HOOK_NUDGE_SH_REL}" reset`)),
+      markers: ["readsubagent-nudge.sh", "reset"],
+    },
+  ];
+}
+
+function entryHasMarkers(entry: unknown, markers: string[]): boolean {
+  const text = JSON.stringify(entry) ?? "";
+  return markers.every((marker) => text.includes(marker));
+}
+
+async function readSettingsJson(cwd: string): Promise<JsonRecord> {
+  const target = safeTarget(cwd, CLAUDE_SETTINGS_REL);
+  if (!(await fileExists(target))) return {};
+  const parsed = JSON.parse(stripJsonc(await readFile(target, "utf8")));
+  if (!isPlainRecord(parsed)) throw new Error(`Refusing to edit ${CLAUDE_SETTINGS_REL} because root is not an object.`);
+  return parsed;
+}
+
+async function writeSettingsJson(cwd: string, data: JsonRecord): Promise<void> {
+  const target = safeTarget(cwd, CLAUDE_SETTINGS_REL);
+  await mkdir(dirname(target), { recursive: true });
+  await writeFile(target, `${JSON.stringify(data, null, 2)}\n`, "utf8");
+}
+
+async function ensureClaudeSettingsHooks(cwd: string): Promise<string> {
+  const data = await readSettingsJson(cwd);
+  const hooks = data.hooks ?? {};
+  if (!isPlainRecord(hooks)) throw new Error(`Refusing to edit ${CLAUDE_SETTINGS_REL} because hooks is not an object.`);
+  data.hooks = hooks;
+  let changed = false;
+  for (const spec of claudeHookSpecs()) {
+    const existing = hooks[spec.event];
+    if (existing !== undefined && !Array.isArray(existing)) {
+      throw new Error(`Refusing to edit ${CLAUDE_SETTINGS_REL} because hooks.${spec.event} is not a list.`);
+    }
+    const entries = Array.isArray(existing) ? [...existing] : [];
+    if (!entries.some((entry) => entryHasMarkers(entry, spec.markers))) {
+      entries.push(spec.entry);
+      changed = true;
+    }
+    hooks[spec.event] = entries;
+  }
+  await writeSettingsJson(cwd, data);
+  return changed ? `merged readsubagent hooks into ${CLAUDE_SETTINGS_REL}` : `readsubagent hooks already present in ${CLAUDE_SETTINGS_REL}`;
+}
+
+function entryHasReadsubagentHook(entry: unknown): boolean {
+  const text = JSON.stringify(entry) ?? "";
+  return ["readsubagent-nudge.sh", "block-explore-subagent.sh", "readsubagent-nudge.ps1", "block-explore-subagent.ps1"].some((marker) =>
+    text.includes(marker),
+  );
+}
+
+async function removeClaudeSettingsHooks(cwd: string): Promise<string | undefined> {
+  const target = safeTarget(cwd, CLAUDE_SETTINGS_REL);
+  if (!(await fileExists(target))) return undefined;
+  const data = await readSettingsJson(cwd);
+  const hooks = data.hooks;
+  if (!isPlainRecord(hooks)) return undefined;
+  let removed = false;
+  for (const event of ["PreToolUse", "UserPromptSubmit"] as const) {
+    const existing = hooks[event];
+    if (!Array.isArray(existing)) continue;
+    const next = existing.filter((entry) => !entryHasReadsubagentHook(entry));
+    if (next.length !== existing.length) {
+      removed = true;
+      if (next.length) hooks[event] = next;
+      else delete hooks[event];
+    }
+  }
+  if (!removed) return undefined;
+  if (Object.keys(hooks).length === 0) delete data.hooks;
+  if (Object.keys(data).length === 0) await unlink(target);
+  else await writeSettingsJson(cwd, data);
+  return `removed readsubagent hooks from ${CLAUDE_SETTINGS_REL}`;
 }
 
 function codexConfigPath(manifest?: JsonRecord): string {
@@ -1102,11 +1263,15 @@ async function installClaudeIntegration(cwd: string, sourceUrl: string, options:
   const piBin = process.env.ZZ_CLAUDE_READSUBAGENT_PI_BIN || "pi";
   const skipMcp = truthy(process.env.ZZ_CLAUDE_READSUBAGENT_SKIP_MCP);
   const skipClaudeMd = truthy(process.env.ZZ_CLAUDE_READSUBAGENT_SKIP_CLAUDE_MD);
+  const skipHooks = truthy(process.env.ZZ_CLAUDE_READSUBAGENT_SKIP_HOOKS);
+  const skipSkill = truthy(process.env.ZZ_CLAUDE_READSUBAGENT_SKIP_SKILL);
 
   if (options.dryRun) {
     return [
       `would install/update ${CLAUDE_AGENT_REL}`,
       `would install/update ${READSUBAGENT_SERVER_REL}`,
+      skipHooks ? "would skip Claude readsubagent hooks" : `would install/update Claude hooks and merge ${CLAUDE_SETTINGS_REL}`,
+      skipSkill ? "would skip Claude readsubagent skill" : `would install/update ${CLAUDE_SKILL_REL}`,
       skipMcp ? "would skip .mcp.json registration" : `would register ${SERVER_NAME} in .mcp.json using ${model}`,
       skipClaudeMd ? "would skip CLAUDE.md guidance" : "would add/update CLAUDE.md guidance",
     ];
@@ -1117,6 +1282,28 @@ async function installClaudeIntegration(cwd: string, sourceUrl: string, options:
   const server = await fetchUrlBytes(joinUrl(mcpBase, "zz-readsubagent-mcp.py"), signal);
   actions.push(await ensureHarnessFile(cwd, CLAUDE_AGENT_REL, agent, manifest, CLAUDE_MANIFEST_REL, options.force));
   actions.push(await ensureHarnessFile(cwd, READSUBAGENT_SERVER_REL, server, manifest, CLAUDE_MANIFEST_REL, options.force));
+
+  const ownedFiles = [CLAUDE_AGENT_REL, READSUBAGENT_SERVER_REL];
+  if (skipHooks) actions.push("skipped Claude readsubagent hook files");
+  else {
+    const hookNudgeSh = await fetchUrlBytes(joinUrl(sourceBase, "hooks/readsubagent-nudge.sh"), signal);
+    const hookBlockExploreSh = await fetchUrlBytes(joinUrl(sourceBase, "hooks/block-explore-subagent.sh"), signal);
+    const hookNudgePs1 = await fetchUrlBytes(joinUrl(sourceBase, "hooks/readsubagent-nudge.ps1"), signal);
+    const hookBlockExplorePs1 = await fetchUrlBytes(joinUrl(sourceBase, "hooks/block-explore-subagent.ps1"), signal);
+    actions.push(await ensureHarnessFile(cwd, CLAUDE_HOOK_NUDGE_SH_REL, hookNudgeSh, manifest, CLAUDE_MANIFEST_REL, options.force, true));
+    actions.push(await ensureHarnessFile(cwd, CLAUDE_HOOK_BLOCK_EXPLORE_SH_REL, hookBlockExploreSh, manifest, CLAUDE_MANIFEST_REL, options.force, true));
+    actions.push(await ensureHarnessFile(cwd, CLAUDE_HOOK_NUDGE_PS1_REL, hookNudgePs1, manifest, CLAUDE_MANIFEST_REL, options.force));
+    actions.push(await ensureHarnessFile(cwd, CLAUDE_HOOK_BLOCK_EXPLORE_PS1_REL, hookBlockExplorePs1, manifest, CLAUDE_MANIFEST_REL, options.force));
+    actions.push(await ensureClaudeSettingsHooks(cwd));
+    ownedFiles.push(CLAUDE_HOOK_NUDGE_SH_REL, CLAUDE_HOOK_BLOCK_EXPLORE_SH_REL, CLAUDE_HOOK_NUDGE_PS1_REL, CLAUDE_HOOK_BLOCK_EXPLORE_PS1_REL);
+  }
+
+  if (skipSkill) actions.push("skipped Claude readsubagent skill");
+  else {
+    const skill = await fetchUrlBytes(joinUrl(sourceBase, "skills/readsubagent/SKILL.md"), signal);
+    actions.push(await ensureHarnessFile(cwd, CLAUDE_SKILL_REL, skill, manifest, CLAUDE_MANIFEST_REL, options.force));
+    ownedFiles.push(CLAUDE_SKILL_REL);
+  }
 
   let serverManaged = false;
   if (skipMcp) actions.push("skipped .mcp.json registration");
@@ -1134,10 +1321,11 @@ async function installClaudeIntegration(cwd: string, sourceUrl: string, options:
     schemaVersion: 1,
     source_url: sourceBase,
     mcp_source_url: mcpBase,
-    owned_files: [CLAUDE_AGENT_REL, READSUBAGENT_SERVER_REL],
+    owned_files: ownedFiles,
     managed_blocks: skipClaudeMd ? [] : ["CLAUDE.md:zz-claude-readsubagent"],
+    managed_settings: skipHooks ? [] : [`${CLAUDE_SETTINGS_REL}:readsubagent-hooks`],
     managed_servers: serverManaged ? [SERVER_NAME] : [],
-    file_hashes: await hashExistingHarnessFiles(cwd, [CLAUDE_AGENT_REL, READSUBAGENT_SERVER_REL]),
+    file_hashes: await hashExistingHarnessFiles(cwd, ownedFiles),
     server: { name: SERVER_NAME, model, pi_bin: piBin, config_path: safeTarget(cwd, ".mcp.json"), managed: serverManaged },
   });
   return actions;
@@ -1268,6 +1456,13 @@ async function removeHarnessIntegration(cwd: string, id: HarnessIntegrationId, o
       if (options.dryRun) actions.push("would remove CLAUDE.md guidance block");
       else {
         const action = await removeMarkedBlockFile(cwd, "CLAUDE.md", CLAUDE_GUIDANCE_START, CLAUDE_GUIDANCE_END);
+        if (action) actions.push(action);
+      }
+    }
+    if (manifestManagedSettings(manifest).includes(`${CLAUDE_SETTINGS_REL}:readsubagent-hooks`)) {
+      if (options.dryRun) actions.push("would remove readsubagent hooks from .claude/settings.json");
+      else {
+        const action = await removeClaudeSettingsHooks(cwd);
         if (action) actions.push(action);
       }
     }

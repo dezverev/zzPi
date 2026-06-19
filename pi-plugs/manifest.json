@@ -234,9 +234,9 @@
       "sha256": "bf53a2a78af53602abf4a86f6b81a0cb6f4c3a8daa213465be51995c72d3c9f4"
     },
     {
-      "bytes": 71258,
+      "bytes": 80425,
       "path": "extensions/zz-plug-manager.ts",
-      "sha256": "c3a80e3d7dd13f51e53953948b12a443ca75143ff6a3aab9addfd59073e7220e"
+      "sha256": "54119705b3d1fb5d6d66543a8b5f7a20571a85851be7a4ebf52a6e8a2e376901"
     },
     {
       "bytes": 851,
@@ -955,7 +955,7 @@
   ],
   "schemaVersion": 2,
   "source": "zzPi git export",
-  "updated_at": "2026-06-16T06:35:53.754075+00:00",
+  "updated_at": "2026-06-19T19:43:53.957508+00:00",
   "visiblePlugins": [
     "zz-local-models",
     "context-tools",

@@ -1,9 +1,10 @@
 # zz-readsubagent-mcp — a harness-neutral pi readsubagent bridge
 
 `zz-readsubagent-mcp.py` is a single, zero-dependency (pure stdlib Python) stdio
-**MCP server**. It exposes one tool, `readsubagent`, that spawns a headless `pi`
-child running on a **local model** (Qwen via LM Studio) and returns its concise,
-cited factual report.
+**MCP server**. It supports normal Content-Length-framed MCP messages and the
+newline-delimited JSON fallback used by some harnesses. It exposes one tool,
+`readsubagent`, that spawns a headless `pi` child running on a **local model**
+(Qwen via LM Studio) and returns its concise, cited factual report.
 
 This is the reusable core. Any MCP-capable harness (Claude Code, Copilot/VS
 Code, Codex, Cursor, Zed, your own client) can register this one server and

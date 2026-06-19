@@ -5,8 +5,9 @@
 # Thin Claude Code wrapper around the harness-neutral zz-readsubagent-mcp server.
 # Installs the MCP server at .\.zz-mcp\zz-readsubagent-mcp.py, registers the
 # zz_readsubagent server in .\.mcp.json, writes .\.claude\agents\readsubagent.md
-# (restricted to that one MCP tool), and adds repo CLAUDE.md guidance. The MCP
-# server spawns a headless `pi` child on a local Qwen model (via LM Studio).
+# (restricted to that one MCP tool), installs the readsubagent skill and hooks,
+# merges .\.claude\settings.json hook entries, and adds repo CLAUDE.md guidance.
+# The MCP server spawns a headless `pi` child on a local Qwen model (via LM Studio).
 
 $ErrorActionPreference = 'Stop'
 
@@ -25,6 +26,8 @@ Options:
   --pi-bin NAME           pi executable name/path for the MCP server (default: pi).
   --skip-mcp              Do not add/update the zz_readsubagent server in .mcp.json.
   --skip-claude-md        Do not add/update the repo CLAUDE.md guidance block.
+  --skip-hooks            Do not install hooks or merge .claude/settings.json.
+  --skip-skill            Do not install the readsubagent Claude skill.
   --force                 Claim/overwrite existing unowned readsubagent files.
   --dry-run               Show the install plan without writing files.
   -h, --help              Show this help.
@@ -38,6 +41,8 @@ Environment:
   ZZ_CLAUDE_READSUBAGENT_PI_BIN        pi executable name/path
   ZZ_CLAUDE_READSUBAGENT_SKIP_MCP=1
   ZZ_CLAUDE_READSUBAGENT_SKIP_CLAUDE_MD=1
+  ZZ_CLAUDE_READSUBAGENT_SKIP_HOOKS=1
+  ZZ_CLAUDE_READSUBAGENT_SKIP_SKILL=1
   ZZ_CLAUDE_READSUBAGENT_FORCE=1
   ZZ_CLAUDE_READSUBAGENT_DRY_RUN=1
   ZZ_CLAUDE_READSUBAGENT_ALLOW_SUBDIR=1
@@ -56,6 +61,8 @@ $model = if ($env:ZZ_CLAUDE_READSUBAGENT_MODEL) { $env:ZZ_CLAUDE_READSUBAGENT_MO
 $piBin = if ($env:ZZ_CLAUDE_READSUBAGENT_PI_BIN) { $env:ZZ_CLAUDE_READSUBAGENT_PI_BIN } else { 'pi' }
 $skipMcp = Test-Truthy $env:ZZ_CLAUDE_READSUBAGENT_SKIP_MCP
 $skipClaudeMd = Test-Truthy $env:ZZ_CLAUDE_READSUBAGENT_SKIP_CLAUDE_MD
+$skipHooks = Test-Truthy $env:ZZ_CLAUDE_READSUBAGENT_SKIP_HOOKS
+$skipSkill = Test-Truthy $env:ZZ_CLAUDE_READSUBAGENT_SKIP_SKILL
 $force = Test-Truthy $env:ZZ_CLAUDE_READSUBAGENT_FORCE
 $dryRun = Test-Truthy $env:ZZ_CLAUDE_READSUBAGENT_DRY_RUN
 
@@ -69,6 +76,8 @@ for ($i = 0; $i -lt $args.Count; $i++) {
     '^--pi-bin=' { $piBin = $args[$i].Substring('--pi-bin='.Length); continue }
     '^--skip-mcp$' { $skipMcp = $true; continue }
     '^--skip-claude-md$' { $skipClaudeMd = $true; continue }
+    '^--skip-hooks$' { $skipHooks = $true; continue }
+    '^--skip-skill$' { $skipSkill = $true; continue }
     '^--force$' { $force = $true; continue }
     '^--dry-run$' { $dryRun = $true; continue }
     '^(-h|--help)$' { Show-Usage; exit 0 }
@@ -102,15 +111,40 @@ New-Item -ItemType Directory -Force -Path $tmpDir | Out-Null
 try {
   $agentTmp = Join-Path $tmpDir 'readsubagent.md'
   $serverTmp = Join-Path $tmpDir 'zz-readsubagent-mcp.py'
+  $hookNudgeShTmp = Join-Path $tmpDir 'readsubagent-nudge.sh'
+  $hookBlockExploreShTmp = Join-Path $tmpDir 'block-explore-subagent.sh'
+  $hookNudgeTmp = Join-Path $tmpDir 'readsubagent-nudge.ps1'
+  $hookBlockExploreTmp = Join-Path $tmpDir 'block-explore-subagent.ps1'
+  $skillTmp = Join-Path $tmpDir 'SKILL.md'
   Invoke-WebRequest -UseBasicParsing -Uri "$agentSourceBase/readsubagent.md" -OutFile $agentTmp
   Invoke-WebRequest -UseBasicParsing -Uri "$mcpSourceBase/zz-readsubagent-mcp.py" -OutFile $serverTmp
+  if (-not $skipHooks) {
+    Invoke-WebRequest -UseBasicParsing -Uri "$agentSourceBase/hooks/readsubagent-nudge.sh" -OutFile $hookNudgeShTmp
+    Invoke-WebRequest -UseBasicParsing -Uri "$agentSourceBase/hooks/block-explore-subagent.sh" -OutFile $hookBlockExploreShTmp
+    Invoke-WebRequest -UseBasicParsing -Uri "$agentSourceBase/hooks/readsubagent-nudge.ps1" -OutFile $hookNudgeTmp
+    Invoke-WebRequest -UseBasicParsing -Uri "$agentSourceBase/hooks/block-explore-subagent.ps1" -OutFile $hookBlockExploreTmp
+  }
+  if (-not $skipSkill) {
+    Invoke-WebRequest -UseBasicParsing -Uri "$agentSourceBase/skills/readsubagent/SKILL.md" -OutFile $skillTmp
+  }
 
   $serverName = 'zz_readsubagent'
   $serverArgsPath = '.zz-mcp/zz-readsubagent-mcp.py'
   $relAgent = '.claude/agents/readsubagent.md'
+  $relHookNudgeSh = '.claude/hooks/readsubagent-nudge.sh'
+  $relHookBlockExploreSh = '.claude/hooks/block-explore-subagent.sh'
+  $relHookNudge = '.claude/hooks/readsubagent-nudge.ps1'
+  $relHookBlockExplore = '.claude/hooks/block-explore-subagent.ps1'
+  $relSkill = '.claude/skills/readsubagent/SKILL.md'
   $relServer = '.zz-mcp/zz-readsubagent-mcp.py'
   $agentTarget = Join-Path $projectDir '.claude\agents\readsubagent.md'
+  $hookNudgeShTarget = Join-Path $projectDir '.claude\hooks\readsubagent-nudge.sh'
+  $hookBlockExploreShTarget = Join-Path $projectDir '.claude\hooks\block-explore-subagent.sh'
+  $hookNudgeTarget = Join-Path $projectDir '.claude\hooks\readsubagent-nudge.ps1'
+  $hookBlockExploreTarget = Join-Path $projectDir '.claude\hooks\block-explore-subagent.ps1'
+  $skillTarget = Join-Path $projectDir '.claude\skills\readsubagent\SKILL.md'
   $serverTarget = Join-Path $projectDir '.zz-mcp\zz-readsubagent-mcp.py'
+  $settingsJson = Join-Path $projectDir '.claude\settings.json'
   $mcpJson = Join-Path $projectDir '.mcp.json'
   $claudeMd = Join-Path $projectDir 'CLAUDE.md'
   $manifestPath = Join-Path $projectDir '.claude\zz-claude-readsubagent-manifest.json'
@@ -122,41 +156,29 @@ try {
 ## Read Planning
 
 Before doing focused reads of specific implementation files, start with a
-read-planning pass through the `readsubagent` subagent, which delegates to a
-local model via the `mcp__zz_readsubagent__readsubagent` MCP tool.
+read-planning pass through `readsubagent`, which delegates to a local model
+(Qwen via LM Studio, through a headless `pi` child).
 
-Use `readsubagent` to get:
+`readsubagent` is reachable three equivalent ways — use whichever fits:
 
-- A short map of the relevant subsystem.
-- Candidate files and directories, with reasons.
-- The smallest focused read list for the main agent.
-- Search terms, symbols, or line anchors that should guide the focused reads.
-- Files or areas that look related but should be avoided for now.
-- Uncertainty or follow-up questions that could change the read plan.
+- the **`readsubagent` skill** (via the Skill tool),
+- the **`readsubagent` subagent** (`Agent(subagent_type="readsubagent")`), and
+- the **direct MCP tool `mcp__zz_readsubagent__readsubagent`**, served by
+  `.zz-mcp/zz-readsubagent-mcp.py`.
+
+Prefer the **direct MCP tool** when you already know the targets: it is the
+lowest-overhead path and gives the most control. Pass `question` (required) plus
+any of `path`/`paths`, `symbols`, `searchTerms`, `lineRanges`, `output`, and
+`maxReportChars` to scope the inspection. Reach for the skill or subagent when
+you want the wrapped read-planning workflow instead.
+
+Use `readsubagent` (any entry point) to get a short subsystem map, candidate
+files, the smallest focused read list, useful search terms/line anchors, areas
+to avoid, and uncertainty or follow-up questions.
 
 The local model can be slow. Allow a long wait for `readsubagent`; prefer
-waiting over assuming it stalled.
-
-The main agent should then read only the recommended files or sections first.
-Expand beyond that list only when the focused reads reveal a concrete reason.
-
-Use `readsubagent` only for factual read planning and file inspection. Do not
-ask it to create implementation plans, choose edit strategies, review code,
-find bugs, judge correctness, or validate type/control-flow safety. For those
-tasks, do direct focused reads in the main thread or use a review-focused agent
-when one is available.
-
-When to skip readsubagent (Exceptions):
-
-- You already know the exact files and lines you need to read (no ambiguity).
-- The user names exact files or asks for an immediate direct read.
-- The needed context is already in the current thread.
-- A tool or environment limitation prevents using the subagent.
-
-**Crucial rule for ambiguity:** The decision to use `readsubagent` is about *knowledge*, not tool-call count. If there is *any ambiguity* about where to look or what to read, do NOT do exploratory manual reads (like `find`, `ls`, or `grep` to hunt around). Instead, use `readsubagent` by asking it a targeted question to clear the ambiguity and tell you exactly where and what to read.
-
-When an exception applies, mention it briefly and continue with the smallest
-reasonable focused read.
+waiting over assuming it stalled. Use it only for factual read planning and file
+inspection, not implementation planning or code-review judgments.
 <!-- zz-claude-readsubagent:end -->
 '@
 
@@ -207,9 +229,75 @@ reasonable focused read.
     return "installed $rel"
   }
 
+  function New-CommandHook([string]$scriptRel, [string]$arg) {
+    $argsList = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', "`${CLAUDE_PROJECT_DIR}/$scriptRel")
+    if ($arg) { $argsList += $arg }
+    return [ordered]@{ type = 'command'; command = 'powershell.exe'; args = $argsList; timeout = 5 }
+  }
+
+  function New-HookEntry([string]$scriptRel, [string]$arg, [string]$matcher) {
+    $entry = [ordered]@{ hooks = @((New-CommandHook $scriptRel $arg)) }
+    if ($matcher) { $entry = [ordered]@{ matcher = $matcher; hooks = $entry.hooks } }
+    return $entry
+  }
+
+  function Test-EntryHasScript([object]$entry, [string]$scriptName, [string]$arg) {
+    $text = $entry | ConvertTo-Json -Depth 10 -Compress
+    return ($text -like "*$scriptName*" -and (-not $arg -or $text -like "*$arg*"))
+  }
+
+  function Add-HookEvent([object]$settings, [string]$event, [object]$entry, [string]$scriptName, [string]$arg) {
+    if (-not ($settings.PSObject.Properties.Name -contains 'hooks') -or $null -eq $settings.hooks) {
+      $settings | Add-Member -NotePropertyName hooks -NotePropertyValue ([pscustomobject]@{}) -Force
+    }
+    if (-not ($settings.hooks -is [pscustomobject])) { throw 'Refusing to edit .claude/settings.json because hooks is not an object' }
+    $current = @()
+    if ($settings.hooks.PSObject.Properties.Name -contains $event -and $null -ne $settings.hooks.$event) {
+      $current = @($settings.hooks.$event)
+    }
+    foreach ($existing in $current) {
+      if (Test-EntryHasScript $existing $scriptName $arg) { return $false }
+    }
+    $settings.hooks | Add-Member -NotePropertyName $event -NotePropertyValue @($current + $entry) -Force
+    return $true
+  }
+
+  function Add-SettingsHooks() {
+    if ($skipHooks) { return 'skipped Claude readsubagent hooks' }
+    if ($dryRun) { return 'would merge readsubagent hooks into .claude/settings.json' }
+    $settings = $null
+    if (Test-Path $settingsJson) {
+      try { $settings = Get-Content $settingsJson -Raw | ConvertFrom-Json } catch { throw "Refusing to edit malformed .claude/settings.json: $_" }
+      if (-not ($settings -is [pscustomobject])) { throw 'Refusing to edit .claude/settings.json because root is not an object' }
+    }
+    if ($null -eq $settings) { $settings = [pscustomobject]@{} }
+    $changed = $false
+    $changed = (Add-HookEvent $settings 'PreToolUse' (New-HookEntry '.claude/hooks/readsubagent-nudge.ps1' 'nudge' 'Read') 'readsubagent-nudge.ps1' 'nudge') -or $changed
+    $changed = (Add-HookEvent $settings 'PreToolUse' (New-HookEntry '.claude/hooks/block-explore-subagent.ps1' '' 'Agent|Task') 'block-explore-subagent.ps1' '') -or $changed
+    $changed = (Add-HookEvent $settings 'UserPromptSubmit' (New-HookEntry '.claude/hooks/readsubagent-nudge.ps1' 'reset' '') 'readsubagent-nudge.ps1' 'reset') -or $changed
+    New-Item -ItemType Directory -Force -Path (Split-Path $settingsJson -Parent) | Out-Null
+    [System.IO.File]::WriteAllText($settingsJson, ($settings | ConvertTo-Json -Depth 10) + "`n")
+    if ($changed) { return 'merged readsubagent hooks into .claude/settings.json' }
+    return 'readsubagent hooks already present in .claude/settings.json'
+  }
+
   $actions = New-Object System.Collections.Generic.List[string]
   $actions.Add((Install-OwnedFile $relAgent $agentTarget $agentTmp))
   $actions.Add((Install-OwnedFile $relServer $serverTarget $serverTmp))
+  if ($skipHooks) {
+    $actions.Add('skipped Claude readsubagent hook files')
+  } else {
+    $actions.Add((Install-OwnedFile $relHookNudgeSh $hookNudgeShTarget $hookNudgeShTmp))
+    $actions.Add((Install-OwnedFile $relHookBlockExploreSh $hookBlockExploreShTarget $hookBlockExploreShTmp))
+    $actions.Add((Install-OwnedFile $relHookNudge $hookNudgeTarget $hookNudgeTmp))
+    $actions.Add((Install-OwnedFile $relHookBlockExplore $hookBlockExploreTarget $hookBlockExploreTmp))
+  }
+  if ($skipSkill) {
+    $actions.Add('skipped Claude readsubagent skill')
+  } else {
+    $actions.Add((Install-OwnedFile $relSkill $skillTarget $skillTmp))
+  }
+  $actions.Add((Add-SettingsHooks))
 
   if ($skipMcp) {
     $actions.Add('skipped .mcp.json registration')
@@ -256,19 +344,28 @@ reasonable focused read.
   }
 
   if (-not $dryRun) {
+    $ownedFiles = @($relAgent, $relServer)
+    if (-not $skipHooks) { $ownedFiles += @($relHookNudgeSh, $relHookBlockExploreSh, $relHookNudge, $relHookBlockExplore) }
+    if (-not $skipSkill) { $ownedFiles += $relSkill }
+    $fileHashes = [ordered]@{}
+    foreach ($rel in $ownedFiles) { $fileHashes[$rel] = Get-FileSha256 (Join-Path $projectDir $rel) }
     $managedBlocks = @()
     if (-not $skipClaudeMd) { $managedBlocks += 'CLAUDE.md:zz-claude-readsubagent' }
+    $managedSettings = @()
+    if (-not $skipHooks) { $managedSettings += '.claude/settings.json:readsubagent-hooks' }
     $managedServers = @()
     if (-not $skipMcp) { $managedServers += $serverName }
     $state = [ordered]@{
-      installer       = 'zz-claude-readsubagent'
-      schemaVersion   = 1
-      source_url      = $agentSourceBase
-      owned_files     = @($relAgent, $relServer)
-      managed_blocks  = $managedBlocks
-      managed_servers = $managedServers
-      file_hashes     = [ordered]@{ $relAgent = Get-FileSha256 $agentTarget; $relServer = Get-FileSha256 $serverTarget }
-      server          = [ordered]@{
+      installer        = 'zz-claude-readsubagent'
+      schemaVersion    = 1
+      source_url       = $agentSourceBase
+      mcp_source_url   = $mcpSourceBase
+      owned_files      = $ownedFiles
+      managed_blocks   = $managedBlocks
+      managed_settings = $managedSettings
+      managed_servers  = $managedServers
+      file_hashes      = $fileHashes
+      server           = [ordered]@{
         name        = $serverName
         model       = $model
         pi_bin      = $piBin

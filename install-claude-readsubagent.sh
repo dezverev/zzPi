@@ -6,7 +6,8 @@
 # Thin Claude Code wrapper around the harness-neutral zz-readsubagent-mcp server.
 # It installs the MCP server at ./.zz-mcp/zz-readsubagent-mcp.py, registers the
 # zz_readsubagent server in ./.mcp.json, writes the ./.claude/agents/readsubagent.md
-# subagent (restricted to that one MCP tool), and adds repo CLAUDE.md guidance.
+# subagent (restricted to that one MCP tool), installs the readsubagent skill and
+# hooks, merges ./.claude/settings.json hook entries, and adds repo CLAUDE.md guidance.
 # The MCP server spawns a headless `pi` child on a local Qwen model (via LM Studio).
 set -euo pipefail
 
@@ -20,6 +21,8 @@ Options:
   --pi-bin NAME           pi executable name/path for the MCP server (default: pi).
   --skip-mcp              Do not add/update the zz_readsubagent server in .mcp.json.
   --skip-claude-md        Do not add/update the repo CLAUDE.md guidance block.
+  --skip-hooks            Do not install hooks or merge .claude/settings.json.
+  --skip-skill            Do not install the readsubagent Claude skill.
   --force                 Claim/overwrite existing unowned readsubagent files.
   --dry-run               Show the install plan without writing files.
   -h, --help              Show this help.
@@ -33,6 +36,8 @@ Environment:
   ZZ_CLAUDE_READSUBAGENT_PI_BIN        pi executable name/path
   ZZ_CLAUDE_READSUBAGENT_SKIP_MCP=1
   ZZ_CLAUDE_READSUBAGENT_SKIP_CLAUDE_MD=1
+  ZZ_CLAUDE_READSUBAGENT_SKIP_HOOKS=1
+  ZZ_CLAUDE_READSUBAGENT_SKIP_SKILL=1
   ZZ_CLAUDE_READSUBAGENT_FORCE=1
   ZZ_CLAUDE_READSUBAGENT_DRY_RUN=1
   ZZ_CLAUDE_READSUBAGENT_ALLOW_SUBDIR=1
@@ -54,7 +59,9 @@ MODEL="${ZZ_CLAUDE_READSUBAGENT_MODEL:-lm-studio/qwen/qwen3.6-35b-a3b}"
 PI_BIN="${ZZ_CLAUDE_READSUBAGENT_PI_BIN:-pi}"
 SKIP_MCP="${ZZ_CLAUDE_READSUBAGENT_SKIP_MCP:-0}"
 SKIP_CLAUDE_MD="${ZZ_CLAUDE_READSUBAGENT_SKIP_CLAUDE_MD:-0}"
-FORCE="${ZZ_CLAUDE_READSUBAGENT_FORCE:-0}"
+SKIP_HOOKS="${ZZ_CLAUDE_READSUBAGENT_SKIP_HOOKS:-0}"
+SKIP_SKILL="${ZZ_CLAUDE_READSUBAGENT_SKIP_SKILL:-0}"
+FORCE="${ZZ_CLAUDE_READSUBAGENT_FORCE:-0}"},{
 DRY_RUN="${ZZ_CLAUDE_READSUBAGENT_DRY_RUN:-0}"
 
 while [ "$#" -gt 0 ]; do
@@ -67,6 +74,8 @@ while [ "$#" -gt 0 ]; do
     --pi-bin=*) PI_BIN="${1#*=}"; shift ;;
     --skip-mcp) SKIP_MCP=1; shift ;;
     --skip-claude-md) SKIP_CLAUDE_MD=1; shift ;;
+    --skip-hooks) SKIP_HOOKS=1; shift ;;
+    --skip-skill) SKIP_SKILL=1; shift ;;
     --force) FORCE=1; shift ;;
     --dry-run) DRY_RUN=1; shift ;;
     -h|--help) usage; exit 0 ;;
@@ -99,15 +108,33 @@ trap cleanup EXIT
 
 AGENT_TMP="$TMP_DIR/readsubagent.md"
 SERVER_TMP="$TMP_DIR/zz-readsubagent-mcp.py"
+HOOK_NUDGE_TMP="$TMP_DIR/readsubagent-nudge.sh"
+HOOK_BLOCK_EXPLORE_TMP="$TMP_DIR/block-explore-subagent.sh"
+HOOK_NUDGE_PS1_TMP="$TMP_DIR/readsubagent-nudge.ps1"
+HOOK_BLOCK_EXPLORE_PS1_TMP="$TMP_DIR/block-explore-subagent.ps1"
+SKILL_TMP="$TMP_DIR/SKILL.md"
 curl -fsSL "$AGENT_SOURCE_BASE/readsubagent.md" -o "$AGENT_TMP"
 curl -fsSL "$MCP_SOURCE_BASE/zz-readsubagent-mcp.py" -o "$SERVER_TMP"
+case "$(printf '%s' "$SKIP_HOOKS" | tr '[:upper:]' '[:lower:]')" in
+  1|true|yes|on) ;;
+  *)
+    curl -fsSL "$AGENT_SOURCE_BASE/hooks/readsubagent-nudge.sh" -o "$HOOK_NUDGE_TMP"
+    curl -fsSL "$AGENT_SOURCE_BASE/hooks/block-explore-subagent.sh" -o "$HOOK_BLOCK_EXPLORE_TMP"
+    curl -fsSL "$AGENT_SOURCE_BASE/hooks/readsubagent-nudge.ps1" -o "$HOOK_NUDGE_PS1_TMP"
+    curl -fsSL "$AGENT_SOURCE_BASE/hooks/block-explore-subagent.ps1" -o "$HOOK_BLOCK_EXPLORE_PS1_TMP"
+    ;;
+esac
+case "$(printf '%s' "$SKIP_SKILL" | tr '[:upper:]' '[:lower:]')" in
+  1|true|yes|on) ;;
+  *) curl -fsSL "$AGENT_SOURCE_BASE/skills/readsubagent/SKILL.md" -o "$SKILL_TMP" ;;
+esac
 
 PI_WARNING=""
 if ! command -v "$PI_BIN" >/dev/null 2>&1; then
   PI_WARNING="WARNING: '$PI_BIN' not found on PATH. The readsubagent MCP tool needs pi with the LM Studio (lm-studio) provider available."
 fi
 
-python3 - "$PROJECT_DIR" "$AGENT_TMP" "$SERVER_TMP" "$AGENT_SOURCE_BASE" "$MODEL" "$PI_BIN" "$SKIP_MCP" "$SKIP_CLAUDE_MD" "$FORCE" "$DRY_RUN" <<'PY'
+python3 - "$PROJECT_DIR" "$AGENT_TMP" "$SERVER_TMP" "$HOOK_NUDGE_TMP" "$HOOK_BLOCK_EXPLORE_TMP" "$HOOK_NUDGE_PS1_TMP" "$HOOK_BLOCK_EXPLORE_PS1_TMP" "$SKILL_TMP" "$AGENT_SOURCE_BASE" "$MCP_SOURCE_BASE" "$MODEL" "$PI_BIN" "$SKIP_MCP" "$SKIP_CLAUDE_MD" "$SKIP_HOOKS" "$SKIP_SKILL" "$FORCE" "$DRY_RUN" <<'PY'
 from __future__ import annotations
 
 import hashlib
@@ -119,18 +146,37 @@ from pathlib import Path
 project_dir = Path(sys.argv[1]).resolve()
 agent_tmp = Path(sys.argv[2]).resolve()
 server_tmp = Path(sys.argv[3]).resolve()
-source_base = sys.argv[4].rstrip("/")
-model = sys.argv[5]
-pi_bin = sys.argv[6]
-skip_mcp = sys.argv[7].strip().lower() in {"1", "true", "yes", "on"}
-skip_claude_md = sys.argv[8].strip().lower() in {"1", "true", "yes", "on"}
-force = sys.argv[9].strip().lower() in {"1", "true", "yes", "on"}
-dry_run = sys.argv[10].strip().lower() in {"1", "true", "yes", "on"}
+hook_nudge_tmp = Path(sys.argv[4]).resolve()
+hook_block_explore_tmp = Path(sys.argv[5]).resolve()
+hook_nudge_ps1_tmp = Path(sys.argv[6]).resolve()
+hook_block_explore_ps1_tmp = Path(sys.argv[7]).resolve()
+skill_tmp = Path(sys.argv[8]).resolve()
+source_base = sys.argv[9].rstrip("/")
+mcp_source_base = sys.argv[10].rstrip("/")
+model = sys.argv[11]
+pi_bin = sys.argv[12]
+skip_mcp = sys.argv[13].strip().lower() in {"1", "true", "yes", "on"}
+skip_claude_md = sys.argv[14].strip().lower() in {"1", "true", "yes", "on"}
+skip_hooks = sys.argv[15].strip().lower() in {"1", "true", "yes", "on"}
+skip_skill = sys.argv[16].strip().lower() in {"1", "true", "yes", "on"}
+force = sys.argv[17].strip().lower() in {"1", "true", "yes", "on"}
+dry_run = sys.argv[18].strip().lower() in {"1", "true", "yes", "on"}
 
 rel_agent = ".claude/agents/readsubagent.md"
+rel_hook_nudge = ".claude/hooks/readsubagent-nudge.sh"
+rel_hook_block_explore = ".claude/hooks/block-explore-subagent.sh"
+rel_hook_nudge_ps1 = ".claude/hooks/readsubagent-nudge.ps1"
+rel_hook_block_explore_ps1 = ".claude/hooks/block-explore-subagent.ps1"
+rel_skill = ".claude/skills/readsubagent/SKILL.md"
 rel_server = ".zz-mcp/zz-readsubagent-mcp.py"
 agent_target = project_dir / rel_agent
+hook_nudge_target = project_dir / rel_hook_nudge
+hook_block_explore_target = project_dir / rel_hook_block_explore
+hook_nudge_ps1_target = project_dir / rel_hook_nudge_ps1
+hook_block_explore_ps1_target = project_dir / rel_hook_block_explore_ps1
+skill_target = project_dir / rel_skill
 server_target = project_dir / rel_server
+settings_json = project_dir / ".claude" / "settings.json"
 mcp_json = project_dir / ".mcp.json"
 claude_md = project_dir / "CLAUDE.md"
 manifest_path = project_dir / ".claude" / "zz-claude-readsubagent-manifest.json"
@@ -143,41 +189,29 @@ CLAUDE_BLOCK = f"""{MARKER_START}
 ## Read Planning
 
 Before doing focused reads of specific implementation files, start with a
-read-planning pass through the `readsubagent` subagent, which delegates to a
-local model via the `mcp__zz_readsubagent__readsubagent` MCP tool.
+read-planning pass through `readsubagent`, which delegates to a local model
+(Qwen via LM Studio, through a headless `pi` child).
 
-Use `readsubagent` to get:
+`readsubagent` is reachable three equivalent ways — use whichever fits:
 
-- A short map of the relevant subsystem.
-- Candidate files and directories, with reasons.
-- The smallest focused read list for the main agent.
-- Search terms, symbols, or line anchors that should guide the focused reads.
-- Files or areas that look related but should be avoided for now.
-- Uncertainty or follow-up questions that could change the read plan.
+- the **`readsubagent` skill** (via the Skill tool),
+- the **`readsubagent` subagent** (`Agent(subagent_type=\"readsubagent\")`), and
+- the **direct MCP tool `mcp__zz_readsubagent__readsubagent`**, served by
+  `.zz-mcp/zz-readsubagent-mcp.py`.
+
+Prefer the **direct MCP tool** when you already know the targets: it is the
+lowest-overhead path and gives the most control. Pass `question` (required) plus
+any of `path`/`paths`, `symbols`, `searchTerms`, `lineRanges`, `output`, and
+`maxReportChars` to scope the inspection. Reach for the skill or subagent when
+you want the wrapped read-planning workflow instead.
+
+Use `readsubagent` (any entry point) to get a short subsystem map, candidate
+files, the smallest focused read list, useful search terms/line anchors, areas
+to avoid, and uncertainty or follow-up questions.
 
 The local model can be slow. Allow a long wait for `readsubagent`; prefer
-waiting over assuming it stalled.
-
-The main agent should then read only the recommended files or sections first.
-Expand beyond that list only when the focused reads reveal a concrete reason.
-
-Use `readsubagent` only for factual read planning and file inspection. Do not
-ask it to create implementation plans, choose edit strategies, review code,
-find bugs, judge correctness, or validate type/control-flow safety. For those
-tasks, do direct focused reads in the main thread or use a review-focused agent
-when one is available.
-
-When to skip readsubagent (Exceptions):
-
-- You already know the exact files and lines you need to read (no ambiguity).
-- The user names exact files or asks for an immediate direct read.
-- The needed context is already in the current thread.
-- A tool or environment limitation prevents using the subagent.
-
-**Crucial rule for ambiguity:** The decision to use `readsubagent` is about *knowledge*, not tool-call count. If there is *any ambiguity* about where to look or what to read, do NOT do exploratory manual reads (like `find`, `ls`, or `grep` to hunt around). Instead, use `readsubagent` by asking it a targeted question to clear the ambiguity and tell you exactly where and what to read.
-
-When an exception applies, mention it briefly and continue with the smallest
-reasonable focused read.
+waiting over assuming it stalled. Use it only for factual read planning and file
+inspection, not implementation planning or code-review judgments.
 {MARKER_END}
 """
 
@@ -208,19 +242,84 @@ def replace_marked_block(text: str, start: str, end: str, block: str) -> tuple[s
     return text.rstrip() + ("\n\n" if text.strip() else "") + block.rstrip(), False
 
 
-def ensure_file(rel: str, target: Path, tmp: Path) -> str:
+def ensure_file(rel: str, target: Path, tmp: Path, *, executable: bool = False) -> str:
     if target.exists() and not manifest_owns(rel) and not force:
         if target.read_bytes() != tmp.read_bytes():
             raise SystemExit(
                 f"Refusing to overwrite existing unowned {rel}. Use --force if you want this installer to claim it."
             )
+        if executable and not dry_run:
+            target.chmod(target.stat().st_mode | 0o755)
         return f"unchanged existing matching {rel}"
     if dry_run:
         action = "update" if target.exists() else "create"
         return f"would {action} {rel}"
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_bytes(tmp.read_bytes())
+    if executable:
+        target.chmod(target.stat().st_mode | 0o755)
     return f"installed {rel}"
+
+
+HOOK_NUDGE_COMMAND = '"${CLAUDE_PROJECT_DIR}/.claude/hooks/readsubagent-nudge.sh" nudge'
+HOOK_RESET_COMMAND = '"${CLAUDE_PROJECT_DIR}/.claude/hooks/readsubagent-nudge.sh" reset'
+HOOK_BLOCK_EXPLORE_COMMAND = '"${CLAUDE_PROJECT_DIR}/.claude/hooks/block-explore-subagent.sh"'
+
+
+def hook_entry(command: str, matcher: str | None = None) -> dict:
+    entry: dict = {"hooks": [{"type": "command", "command": command, "timeout": 5}]}
+    if matcher is not None:
+        entry["matcher"] = matcher
+    return entry
+
+
+def entry_has_command(entry: object, command: str) -> bool:
+    if not isinstance(entry, dict):
+        return False
+    hooks = entry.get("hooks")
+    if not isinstance(hooks, list):
+        return False
+    return any(isinstance(hook, dict) and hook.get("command") == command for hook in hooks)
+
+
+def ensure_hook_event(settings: dict, event: str, entry: dict, command: str) -> bool:
+    hooks_root = settings.setdefault("hooks", {})
+    if not isinstance(hooks_root, dict):
+        raise SystemExit("Refusing to edit .claude/settings.json because hooks is not an object")
+    event_entries = hooks_root.get(event)
+    if event_entries is None:
+        event_entries = []
+        hooks_root[event] = event_entries
+    if not isinstance(event_entries, list):
+        raise SystemExit(f"Refusing to edit .claude/settings.json because hooks.{event} is not a list")
+    if any(entry_has_command(existing, command) for existing in event_entries):
+        return False
+    event_entries.append(entry)
+    return True
+
+
+def ensure_settings_hooks() -> str:
+    if skip_hooks:
+        return "skipped Claude readsubagent hooks"
+    if dry_run:
+        return "would merge readsubagent hooks into .claude/settings.json"
+    data: dict = {}
+    if settings_json.exists():
+        try:
+            loaded = json.loads(settings_json.read_text(encoding="utf-8"))
+            if isinstance(loaded, dict):
+                data = loaded
+            else:
+                raise ValueError("root is not an object")
+        except Exception as exc:
+            raise SystemExit(f"Refusing to edit malformed .claude/settings.json: {exc}")
+    changed = False
+    changed |= ensure_hook_event(data, "PreToolUse", hook_entry(HOOK_NUDGE_COMMAND, "Read"), HOOK_NUDGE_COMMAND)
+    changed |= ensure_hook_event(data, "PreToolUse", hook_entry(HOOK_BLOCK_EXPLORE_COMMAND, "Agent|Task"), HOOK_BLOCK_EXPLORE_COMMAND)
+    changed |= ensure_hook_event(data, "UserPromptSubmit", hook_entry(HOOK_RESET_COMMAND), HOOK_RESET_COMMAND)
+    settings_json.parent.mkdir(parents=True, exist_ok=True)
+    settings_json.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+    return "merged readsubagent hooks into .claude/settings.json" if changed else "readsubagent hooks already present in .claude/settings.json"
 
 
 def server_entry() -> dict:
@@ -276,20 +375,43 @@ def ensure_claude_md() -> str:
 actions = [
     ensure_file(rel_agent, agent_target, agent_tmp),
     ensure_file(rel_server, server_target, server_tmp),
+]
+if skip_hooks:
+    actions.append("skipped Claude readsubagent hook files")
+else:
+    actions.extend([
+        ensure_file(rel_hook_nudge, hook_nudge_target, hook_nudge_tmp, executable=True),
+        ensure_file(rel_hook_block_explore, hook_block_explore_target, hook_block_explore_tmp, executable=True),
+        ensure_file(rel_hook_nudge_ps1, hook_nudge_ps1_target, hook_nudge_ps1_tmp),
+        ensure_file(rel_hook_block_explore_ps1, hook_block_explore_ps1_target, hook_block_explore_ps1_tmp),
+    ])
+if skip_skill:
+    actions.append("skipped Claude readsubagent skill")
+else:
+    actions.append(ensure_file(rel_skill, skill_target, skill_tmp))
+actions.extend([
+    ensure_settings_hooks(),
     ensure_mcp(),
     ensure_claude_md(),
-]
+])
 
 if not dry_run:
+    owned_files = [rel_agent, rel_server]
+    if not skip_hooks:
+        owned_files.extend([rel_hook_nudge, rel_hook_block_explore, rel_hook_nudge_ps1, rel_hook_block_explore_ps1])
+    if not skip_skill:
+        owned_files.append(rel_skill)
     managed_blocks = ["CLAUDE.md:zz-claude-readsubagent" if not skip_claude_md else ""]
     state = {
         "installer": "zz-claude-readsubagent",
         "schemaVersion": 1,
         "source_url": source_base,
-        "owned_files": [rel_agent, rel_server],
+        "mcp_source_url": mcp_source_base,
+        "owned_files": owned_files,
         "managed_blocks": [item for item in managed_blocks if item],
+        "managed_settings": [] if skip_hooks else [".claude/settings.json:readsubagent-hooks"],
         "managed_servers": [] if skip_mcp else [SERVER_NAME],
-        "file_hashes": {rel_agent: sha256(agent_target), rel_server: sha256(server_target)},
+        "file_hashes": {rel: sha256(project_dir / rel) for rel in owned_files},
         "server": {
             "name": SERVER_NAME,
             "model": model,

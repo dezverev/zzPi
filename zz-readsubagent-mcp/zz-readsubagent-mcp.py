@@ -21,8 +21,9 @@ resolved by Pi's ``zzLocalModels`` extension. The spawned ``pi`` therefore
 needs that provider available (pi-plugs installed in the working repo, or a
 global Pi ``lm-studio`` provider) and LM Studio reachable.
 
-Pure standard library, zero dependencies. JSON-RPC 2.0 over newline-delimited
-stdin/stdout (the MCP stdio transport). Everything non-protocol goes to stderr.
+Pure standard library, zero dependencies. JSON-RPC 2.0 over stdio. Supports
+both Content-Length framed MCP messages and newline-delimited JSON messages.
+Everything non-protocol goes to stderr.
 """
 
 from __future__ import annotations
@@ -34,7 +35,7 @@ import sys
 from typing import Any
 
 SERVER_NAME = "zz_readsubagent"
-SERVER_VERSION = "1.0.0"
+SERVER_VERSION = "1.1.0"
 DEFAULT_PROTOCOL_VERSION = "2025-06-18"
 
 # --- Defaults (overridable via environment) ---------------------------------
@@ -527,8 +528,14 @@ TOOL_DESCRIPTOR = {
 # --- JSON-RPC / MCP transport ----------------------------------------------
 
 
-def send_message(message: dict[str, Any]) -> None:
-    sys.stdout.write(json.dumps(message) + "\n")
+def send_message(message: dict[str, Any], framed: bool = False) -> None:
+    payload = json.dumps(message).encode("utf-8")
+    if framed:
+        sys.stdout.buffer.write(f"Content-Length: {len(payload)}\r\n\r\n".encode("ascii"))
+        sys.stdout.buffer.write(payload)
+        sys.stdout.buffer.flush()
+        return
+    sys.stdout.write(payload.decode("utf-8") + "\n")
     sys.stdout.flush()
 
 
@@ -592,16 +599,53 @@ def handle_request(request: dict[str, Any]) -> dict[str, Any] | None:
     return make_error(request_id, -32601, f"Method not found: {method}")
 
 
+def read_framed_body(first_header_line: bytes) -> bytes | None:
+    headers = [first_header_line]
+    while True:
+        line = sys.stdin.buffer.readline()
+        if line in (b"", b"\r\n", b"\n"):
+            break
+        headers.append(line)
+
+    content_length: int | None = None
+    for raw_header in headers:
+        name, separator, value = raw_header.decode("ascii", "replace").partition(":")
+        if separator and name.lower() == "content-length":
+            try:
+                content_length = int(value.strip())
+            except ValueError:
+                return None
+            break
+
+    if content_length is None or content_length < 0:
+        return None
+    return sys.stdin.buffer.read(content_length)
+
+
+def iter_input_messages() -> Any:
+    while True:
+        first = sys.stdin.buffer.readline()
+        if not first:
+            break
+        if not first.strip():
+            continue
+        if first.lower().startswith(b"content-length:"):
+            body = read_framed_body(first)
+            if body is None:
+                yield None, True
+            else:
+                yield body.decode("utf-8", "replace"), True
+            continue
+        yield first.decode("utf-8", "replace").strip(), False
+
+
 def main() -> int:
     log(f"starting {SERVER_NAME} v{SERVER_VERSION}")
-    for raw_line in sys.stdin:
-        line = raw_line.strip()
-        if not line:
-            continue
+    for line, framed in iter_input_messages():
         try:
             message = json.loads(line)
-        except json.JSONDecodeError:
-            send_message(make_error(None, -32700, "Parse error"))
+        except (TypeError, json.JSONDecodeError):
+            send_message(make_error(None, -32700, "Parse error"), framed=framed)
             continue
 
         messages = message if isinstance(message, list) else [message]
@@ -610,7 +654,7 @@ def main() -> int:
                 continue
             response = handle_request(item)
             if response is not None:
-                send_message(response)
+                send_message(response, framed=framed)
     return 0
 
 
