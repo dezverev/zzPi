@@ -151,7 +151,6 @@ These are rough observed baselines for the local-agent side of the setup. They a
 |---|---|---|
 | M5 Max, 128 GB | High-end local agent host | Can run Qwen 3.6 27B 8-bit for coding plus Qwen 3.6 35B A3B 4-bit for reads. Full ~267k context for both. A3B reads around 120 tok/s. |
 | Dual RTX 5060 Ti | Fast local read/discovery host | Qwen 3.6 35B A3B 4-bit at 127k context around 80 tok/s. Higher context works less well / falls off. |
-| Base M5 MacBook, 32 GB | Portable local read agent | Qwen 3.6 35B A3B 4-bit around 40-50 tok/s, with full ~267k context. |
 
 The practical takeaway: use the largest context that is actually fast on the box. For example, a desktop GPU box may be better at 127k while an Apple Silicon machine with enough unified memory may be comfortable at full context.
 
