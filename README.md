@@ -1,3 +1,5 @@
+# THIS IS A FROZEN EXAMPLE AND WILL NOT BE UPDATED, FEEL FREE TO FORK FOR OWN PURPOSES.
+
 # zzPi
 
 `zzPi` is a context-routing toolkit for coding agents.
