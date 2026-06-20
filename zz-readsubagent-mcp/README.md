@@ -71,8 +71,10 @@ Or just copy the single file anywhere (repo-local or e.g.
 
 ## Registering it in a harness
 
-The MCP **server name** is `zz_readsubagent` and the tool is therefore callable
-as `mcp__zz_readsubagent__readsubagent`.
+Most wrappers register the MCP **server name** as `zz_readsubagent`, making the
+tool callable as `mcp__zz_readsubagent__readsubagent`. Codex can also register
+the server as `readsubagent` in `.codex/config.toml`, exposing a plain
+`readsubagent` tool in trusted sessions.
 
 **Generic stdio MCP server config:**
 
@@ -105,6 +107,22 @@ or:
 claude mcp add --scope project --transport stdio \
   --env ZZ_READSUBAGENT_MODEL=lm-studio/qwen/qwen3.6-35b-a3b \
   -- zz_readsubagent python3 ./.zz-mcp/zz-readsubagent-mcp.py
+```
+
+**Codex** — project `.codex/config.toml`:
+
+```toml
+# zz-codex-readsubagent-mcp:start
+[mcp_servers.readsubagent]
+command = "python3"
+args = [".zz-mcp/zz-readsubagent-mcp.py"]
+cwd = "."
+enabled = true
+required = false
+startup_timeout_sec = 10
+tool_timeout_sec = 1800
+enabled_tools = ["readsubagent"]
+# zz-codex-readsubagent-mcp:end
 ```
 
 **Copilot / VS Code** — workspace `.vscode/mcp.json`:

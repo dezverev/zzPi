@@ -157,7 +157,7 @@ The practical takeaway: use the largest context that is actually fast on the box
 
 You can install harness integrations directly too. Run these from the target repo root.
 
-Codex custom agent + user-level LM Studio provider:
+Codex MCP tool + custom agent + user-level LM Studio provider:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/dezverev/zzPi/main/install-codex-readsubagent.sh | bash
@@ -190,7 +190,7 @@ MCP server only, for any MCP-capable harness:
 curl -fsSL https://raw.githubusercontent.com/dezverev/zzPi/main/install-zz-readsubagent-mcp.sh | bash
 ```
 
-Claude/Copilot/MCP integrations require `pi` on PATH with a usable local-model provider and a reachable local OpenAI-compatible server. Install `zz-local-models` through Pi plugs or define your own Pi provider.
+Codex/Claude/Copilot/MCP integrations require `pi` on PATH with a usable local-model provider and a reachable local OpenAI-compatible server. Install `zz-local-models` through Pi plugs or define your own Pi provider.
 
 ## Repository layout
 
@@ -203,7 +203,7 @@ Claude/Copilot/MCP integrations require `pi` on PATH with a usable local-model p
 - `zz-lib/files/` — exported shared runtime source files.
 - `pi-plugs/files/README.md` — exported plugin catalog documentation.
 - `pi-plugs/files/WORKFLOWMODE.md` — exported workflow mode documentation.
-- `install-codex-readsubagent.{sh,ps1}` + `codex-readsubagent/readsubagent.toml` — Codex readsubagent installer + agent.
+- `install-codex-readsubagent.{sh,ps1}` + `codex-readsubagent/readsubagent.toml` — Codex readsubagent installer, agent, `.codex/config.toml` MCP registration, and `.zz-mcp/` server.
 - `install-claude-readsubagent.{sh,ps1}` + `claude-readsubagent/readsubagent.md` — Claude Code readsubagent installer + subagent.
 - `install-copilot-readsubagent.{sh,ps1}` — Copilot/VS Code readsubagent installer + workspace MCP instructions.
 - `install-zz-readsubagent-mcp.{sh,ps1}` + `zz-readsubagent-mcp/` — harness-neutral readsubagent MCP server.

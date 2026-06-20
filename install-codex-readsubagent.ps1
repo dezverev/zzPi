@@ -3,8 +3,9 @@
 #   irm https://raw.githubusercontent.com/dezverev/zzPi/main/install-codex-readsubagent.ps1 | iex
 #
 # Installs the project-local Codex readsubagent under .\.codex\agents\,
-# adds repo AGENTS.md read-planning guidance, and ensures the user-level
-# LM Studio provider required by the agent.
+# installs the shared zz-readsubagent MCP server under .\.zz-mcp\, registers it
+# in .\.codex\config.toml, adds repo AGENTS.md read-planning guidance, and
+# ensures the user-level LM Studio provider required by the custom agent.
 
 $ErrorActionPreference = 'Stop'
 
@@ -21,17 +22,20 @@ Options:
   --project-dir DIR       Target repo/project dir (default: current directory).
   --provider-url URL      LM Studio OpenAI-compatible base URL for ~/.codex/config.toml.
   --skip-provider         Do not add/update the user-level model provider.
+  --skip-mcp              Do not install/register the repo-local MCP server.
   --skip-agents-md        Do not add/update the repo AGENTS.md guidance block.
-  --force                 Claim/overwrite an existing unowned readsubagent TOML.
+  --force                 Claim/overwrite existing unowned readsubagent files.
   --dry-run               Show the install plan without writing files.
   -h, --help              Show this help.
 
 Environment:
   ZZ_DASH_URL                         Website host (default: https://raw.githubusercontent.com/dezverev/zzPi/main)
   ZZ_CODEX_READSUBAGENT_URL           Exact source URL (default: $ZZ_DASH_URL/codex-readsubagent)
+  ZZ_READSUBAGENT_MCP_URL             MCP server source URL (default: $ZZ_DASH_URL/zz-readsubagent-mcp)
   ZZ_CODEX_READSUBAGENT_PROJECT_DIR   Target repo/project dir
   ZZ_CODEX_READSUBAGENT_PROVIDER_URL  Provider base URL (default: http://127.0.0.1:11444/v1)
   ZZ_CODEX_READSUBAGENT_SKIP_PROVIDER=1
+  ZZ_CODEX_READSUBAGENT_SKIP_MCP=1
   ZZ_CODEX_READSUBAGENT_SKIP_AGENTS_MD=1
   ZZ_CODEX_READSUBAGENT_FORCE=1
   ZZ_CODEX_READSUBAGENT_DRY_RUN=1
@@ -47,10 +51,16 @@ $sourceBase = if ($env:ZZ_CODEX_READSUBAGENT_URL) {
 } else {
   "$hostBase/codex-readsubagent"
 }
+$mcpSourceBase = if ($env:ZZ_READSUBAGENT_MCP_URL) {
+  $env:ZZ_READSUBAGENT_MCP_URL.TrimEnd('/')
+} else {
+  "$hostBase/zz-readsubagent-mcp"
+}
 $projectDir = if ($env:ZZ_CODEX_READSUBAGENT_PROJECT_DIR) { $env:ZZ_CODEX_READSUBAGENT_PROJECT_DIR } else { (Get-Location).Path }
 $codexDir = if ($env:CODEX_HOME) { $env:CODEX_HOME } else { Join-Path $env:USERPROFILE '.codex' }
 $providerUrl = if ($env:ZZ_CODEX_READSUBAGENT_PROVIDER_URL) { $env:ZZ_CODEX_READSUBAGENT_PROVIDER_URL } else { 'http://127.0.0.1:11444/v1' }
 $skipProvider = Test-Truthy $env:ZZ_CODEX_READSUBAGENT_SKIP_PROVIDER
+$skipMcp = Test-Truthy $env:ZZ_CODEX_READSUBAGENT_SKIP_MCP
 $skipAgentsMd = Test-Truthy $env:ZZ_CODEX_READSUBAGENT_SKIP_AGENTS_MD
 $force = Test-Truthy $env:ZZ_CODEX_READSUBAGENT_FORCE
 $dryRun = Test-Truthy $env:ZZ_CODEX_READSUBAGENT_DRY_RUN
@@ -78,6 +88,7 @@ for ($i = 0; $i -lt $args.Count; $i++) {
       continue
     }
     '^--skip-provider$' { $skipProvider = $true; continue }
+    '^--skip-mcp$' { $skipMcp = $true; continue }
     '^--skip-agents-md$' { $skipAgentsMd = $true; continue }
     '^--force$' { $force = $true; continue }
     '^--dry-run$' { $dryRun = $true; continue }
@@ -108,10 +119,18 @@ $tmpDir = Join-Path ([System.IO.Path]::GetTempPath()) "zz-codex-readsubagent-$([
 New-Item -ItemType Directory -Force -Path $tmpDir | Out-Null
 try {
   $agentTmp = Join-Path $tmpDir 'readsubagent.toml'
+  $serverTmp = Join-Path $tmpDir 'zz-readsubagent-mcp.py'
   Invoke-WebRequest -UseBasicParsing -Uri "$sourceBase/readsubagent.toml" -OutFile $agentTmp
+  if (-not $skipMcp) {
+    Invoke-WebRequest -UseBasicParsing -Uri "$mcpSourceBase/zz-readsubagent-mcp.py" -OutFile $serverTmp
+  }
 
   $relAgent = '.codex/agents/readsubagent.toml'
+  $relCodexConfig = '.codex/config.toml'
+  $relServer = '.zz-mcp/zz-readsubagent-mcp.py'
   $agentTarget = Join-Path $projectDir '.codex\agents\readsubagent.toml'
+  $codexConfig = Join-Path $projectDir '.codex\config.toml'
+  $serverTarget = Join-Path $projectDir '.zz-mcp\zz-readsubagent-mcp.py'
   $agentsMd = Join-Path $projectDir 'AGENTS.md'
   $manifestPath = Join-Path $projectDir '.codex\zz-codex-readsubagent-manifest.json'
   $userConfig = Join-Path $codexDir 'config.toml'
@@ -123,7 +142,13 @@ try {
 ## Read Planning
 
 Before doing focused reads of specific implementation files, start with a
-read-planning pass through the `readsubagent` custom agent.
+read-planning pass through `readsubagent`.
+
+Prefer the Codex MCP tool provided by `.zz-mcp/zz-readsubagent-mcp.py`. This
+repo registers it in `.codex/config.toml`, so trusted Codex sessions should see
+a `readsubagent` tool that behaves similarly to `.pi/extensions/readsubagent.ts`.
+If that MCP tool is not exposed in the current session, fall back to the
+`readsubagent` custom agent.
 
 Use `readsubagent` to get:
 
@@ -134,30 +159,19 @@ Use `readsubagent` to get:
 - Files or areas that look related but should be avoided for now.
 - Uncertainty or follow-up questions that could change the read plan.
 
-Use at least a ten-minute wait for `readsubagent` when the tool supports an
-explicit timeout; the role uses a local LM Studio model and may be slower than
-hosted models. Prefer a longer wait over assuming the subagent stalled.
+When using the MCP tool, ask a targeted factual `question` and include
+repo-relative `path`/`paths`, `symbols`, `searchTerms`, `lineRanges`, `output`,
+and `maxReportChars` where useful. Keep reports small and ask narrower
+follow-ups before falling back to broad direct reads.
 
-The main agent should then read only the recommended files or sections first.
-Expand beyond that list only when the focused reads reveal a concrete reason.
+Use at least a ten-minute wait for `readsubagent` when the tool supports an
+explicit timeout, because the local model may be slower than hosted models.
+Prefer a longer wait over assuming the subagent stalled.
 
 Use `readsubagent` only for factual read planning and file inspection. Do not
-ask it to create implementation plans, choose edit strategies, review code,
-find bugs, judge correctness, or validate type/control-flow safety. For those
-tasks, do direct focused reads in the main thread or use a review-focused agent
-when one is available.
-
-When to skip readsubagent (Exceptions):
-
-- You already know the exact files and lines you need to read (no ambiguity).
-- The user names exact files or asks for an immediate direct read.
-- The needed context is already in the current thread.
-- A tool or environment limitation prevents using the custom agent.
-
-**Crucial rule for ambiguity:** The decision to use `readsubagent` is about *knowledge*, not tool-call count. If there is *any ambiguity* about where to look or what to read, do NOT do exploratory manual reads (like `find`, `ls`, or `grep` to hunt around). Instead, use `readsubagent` by asking it a targeted question to clear the ambiguity and tell you exactly where and what to read.
-
-When an exception applies, mention it briefly and continue with the smallest
-reasonable focused read.
+ask it to create implementation plans, solution proposals, edit strategies,
+code-review judgments, bug findings, correctness assessments, or accept/reject
+recommendations.
 <!-- zz-codex-readsubagent:end -->
 '@
 
@@ -169,6 +183,22 @@ $providerStart
 name = "LM Studio readsubagent"
 base_url = "$providerUrl"
 $providerEnd
+"@
+
+  $codexMcpStart = '# zz-codex-readsubagent-mcp:start'
+  $codexMcpEnd = '# zz-codex-readsubagent-mcp:end'
+  $codexMcpBlock = @"
+$codexMcpStart
+[mcp_servers.readsubagent]
+command = "python3"
+args = ["$relServer"]
+cwd = "."
+enabled = true
+required = false
+startup_timeout_sec = 10
+tool_timeout_sec = 1800
+enabled_tools = ["readsubagent"]
+$codexMcpEnd
 "@
 
   function Get-ManifestOwns([string]$rel) {
@@ -195,21 +225,53 @@ $providerEnd
     return $block.TrimEnd()
   }
 
-  $actions = New-Object System.Collections.Generic.List[string]
-
-  if ((Test-Path $agentTarget) -and -not (Get-ManifestOwns $relAgent) -and -not $force) {
-    $same = (Get-FileSha256 $agentTarget) -eq (Get-FileSha256 $agentTmp)
-    if (-not $same) {
-      throw "Refusing to overwrite existing unowned $relAgent. Use --force if you want this installer to claim it."
+  function Install-OwnedFile([string]$rel, [string]$target, [string]$tmp) {
+    if ((Test-Path $target) -and -not (Get-ManifestOwns $rel) -and -not $force) {
+      $same = (Get-FileSha256 $target) -eq (Get-FileSha256 $tmp)
+      if (-not $same) {
+        throw "Refusing to overwrite existing unowned $rel. Use --force if you want this installer to claim it."
+      }
+      return "unchanged existing matching $rel"
     }
-    $actions.Add('unchanged existing matching readsubagent.toml')
-  } elseif ($dryRun) {
-    $verb = if (Test-Path $agentTarget) { 'update' } else { 'create' }
-    $actions.Add("would $verb $relAgent")
+    if ($dryRun) {
+      $verb = if (Test-Path $target) { 'update' } else { 'create' }
+      return "would $verb $rel"
+    }
+    New-Item -ItemType Directory -Force -Path (Split-Path $target -Parent) | Out-Null
+    Copy-Item -Force -Path $tmp -Destination $target
+    return "installed $rel"
+  }
+
+  $actions = New-Object System.Collections.Generic.List[string]
+  $actions.Add((Install-OwnedFile $relAgent $agentTarget $agentTmp))
+
+  if ($skipMcp) {
+    $actions.Add('skipped repo-local Codex MCP server')
+    $actions.Add('skipped .codex/config.toml MCP registration')
   } else {
-    New-Item -ItemType Directory -Force -Path (Split-Path $agentTarget -Parent) | Out-Null
-    Copy-Item -Force -Path $agentTmp -Destination $agentTarget
-    $actions.Add("installed $relAgent")
+    $actions.Add((Install-OwnedFile $relServer $serverTarget $serverTmp))
+    $existingCodexConfig = if (Test-Path $codexConfig) { Get-Content $codexConfig -Raw } else { '' }
+    if ($existingCodexConfig.Contains($codexMcpStart) -and $existingCodexConfig.Contains($codexMcpEnd)) {
+      if ($dryRun) {
+        $actions.Add('would update .codex/config.toml MCP registration')
+      } else {
+        $updatedCodexConfig = Set-MarkedBlock $existingCodexConfig $codexMcpStart $codexMcpEnd $codexMcpBlock
+        New-Item -ItemType Directory -Force -Path (Split-Path $codexConfig -Parent) | Out-Null
+        [System.IO.File]::WriteAllText($codexConfig, $updatedCodexConfig.TrimEnd() + "`n")
+        $actions.Add('updated .codex/config.toml MCP registration')
+      }
+    } elseif ($existingCodexConfig -match '(?m)^\[mcp_servers\.readsubagent\]\s*$') {
+      $actions.Add('preserved existing unmanaged readsubagent MCP server in .codex/config.toml')
+    } elseif ($dryRun) {
+      $actions.Add('would add readsubagent MCP server to .codex/config.toml')
+    } else {
+      New-Item -ItemType Directory -Force -Path (Split-Path $codexConfig -Parent) | Out-Null
+      $nextCodexConfig = $existingCodexConfig.TrimEnd()
+      if ($nextCodexConfig.Length -gt 0) { $nextCodexConfig = "$nextCodexConfig`n`n" }
+      $nextCodexConfig = "$nextCodexConfig$($codexMcpBlock.TrimEnd())`n"
+      [System.IO.File]::WriteAllText($codexConfig, $nextCodexConfig)
+      $actions.Add('added readsubagent MCP server to .codex/config.toml')
+    }
   }
 
   if ($skipAgentsMd) {
@@ -251,22 +313,34 @@ $providerEnd
   }
 
   if (-not $dryRun) {
+    $ownedFiles = @($relAgent)
+    if (-not $skipMcp) { $ownedFiles += @($relCodexConfig, $relServer) }
+    $fileHashes = [ordered]@{}
+    foreach ($rel in $ownedFiles) { $fileHashes[$rel] = Get-FileSha256 (Join-Path $projectDir $rel) }
+    $managedBlocks = @()
+    if (-not $skipAgentsMd) { $managedBlocks += 'AGENTS.md:zz-codex-readsubagent' }
+    if (-not $skipMcp) { $managedBlocks += '.codex/config.toml:zz-codex-readsubagent-mcp' }
+    if (-not $skipProvider) { $managedBlocks += '~/.codex/config.toml:zz-codex-readsubagent' }
     $state = [ordered]@{
       installer      = 'zz-codex-readsubagent'
       schemaVersion  = 1
       source_url     = $sourceBase
-      owned_files    = @($relAgent)
-      managed_blocks = @('AGENTS.md:zz-codex-readsubagent')
-      file_hashes    = [ordered]@{ $relAgent = Get-FileSha256 $agentTarget }
+      mcp_source_url = $mcpSourceBase
+      owned_files    = $ownedFiles
+      managed_blocks = $managedBlocks
+      file_hashes    = $fileHashes
+      mcp_server     = [ordered]@{
+        name        = 'readsubagent'
+        config_path = $codexConfig
+        server_path = $relServer
+        managed     = -not $skipMcp
+      }
       provider       = [ordered]@{
         name        = 'zz_lmstudio_read'
         base_url    = $providerUrl
         config_path = $userConfig
         managed     = -not $skipProvider
       }
-    }
-    if (-not $skipProvider) {
-      $state.managed_blocks += '~/.codex/config.toml:zz-codex-readsubagent'
     }
     New-Item -ItemType Directory -Force -Path (Split-Path $manifestPath -Parent) | Out-Null
     [System.IO.File]::WriteAllText($manifestPath, ($state | ConvertTo-Json -Depth 10) + "`n")
@@ -281,8 +355,9 @@ $providerEnd
   foreach ($action in $actions) { Write-Host "  -> $action" }
   Write-Host "  -> target repo: $projectDir"
   Write-Host "  -> source: $sourceBase"
+  Write-Host "  -> mcp source: $mcpSourceBase"
   if (-not $dryRun) {
-    Write-Host '  -> restart Codex from this repo so it discovers .codex\agents\readsubagent.toml'
+    Write-Host '  -> restart Codex from this repo so it discovers .codex\agents\readsubagent.toml and .codex\config.toml'
   }
 } finally {
   Remove-Item -Recurse -Force -ErrorAction SilentlyContinue $tmpDir

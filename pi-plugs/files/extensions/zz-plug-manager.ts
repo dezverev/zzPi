@@ -669,6 +669,7 @@ async function ensureSharedLibs(
 }
 
 const CODEX_AGENT_REL = ".codex/agents/readsubagent.toml";
+const CODEX_CONFIG_REL = ".codex/config.toml";
 const CODEX_MANIFEST_REL = ".codex/zz-codex-readsubagent-manifest.json";
 const CLAUDE_AGENT_REL = ".claude/agents/readsubagent.md";
 const CLAUDE_HOOK_NUDGE_SH_REL = ".claude/hooks/readsubagent-nudge.sh";
@@ -694,12 +695,20 @@ const COPILOT_GUIDANCE_START = "<!-- zz-copilot-readsubagent:start -->";
 const COPILOT_GUIDANCE_END = "<!-- zz-copilot-readsubagent:end -->";
 const CODEX_PROVIDER_START = "# zz-codex-readsubagent:start";
 const CODEX_PROVIDER_END = "# zz-codex-readsubagent:end";
+const CODEX_MCP_START = "# zz-codex-readsubagent-mcp:start";
+const CODEX_MCP_END = "# zz-codex-readsubagent-mcp:end";
 
 const CODEX_AGENTS_BLOCK = `${CODEX_AGENTS_START}
 ## Read Planning
 
 Before doing focused reads of specific implementation files, start with a
-read-planning pass through the \`readsubagent\` custom agent.
+read-planning pass through \`readsubagent\`.
+
+Prefer the Codex MCP tool provided by \`.zz-mcp/zz-readsubagent-mcp.py\`. This
+repo registers it in \`.codex/config.toml\`, so trusted Codex sessions should see
+a \`readsubagent\` tool that behaves similarly to \`.pi/extensions/readsubagent.ts\`.
+If that MCP tool is not exposed in the current session, fall back to the
+\`readsubagent\` custom agent.
 
 Use \`readsubagent\` to get:
 
@@ -709,6 +718,11 @@ Use \`readsubagent\` to get:
 - Search terms, symbols, or line anchors that should guide the focused reads.
 - Files or areas that look related but should be avoided for now.
 - Uncertainty or follow-up questions that could change the read plan.
+
+When using the MCP tool, ask a targeted factual \`question\` and include
+repo-relative \`path\`/\`paths\`, \`symbols\`, \`searchTerms\`, \`lineRanges\`, \`output\`,
+and \`maxReportChars\` where useful. Keep reports small and ask narrower
+follow-ups before falling back to broad direct reads.
 
 Use at least a ten-minute wait for \`readsubagent\` when the tool supports an
 explicit timeout, because the local model may be slower than hosted models.
@@ -1134,6 +1148,48 @@ async function removeCodexProvider(manifest: JsonRecord | undefined): Promise<st
   return `removed zz_lmstudio_read provider block from ${target}`;
 }
 
+function codexMcpBlock(): string {
+  return `${CODEX_MCP_START}
+[mcp_servers.readsubagent]
+command = "python3"
+args = ["${READSUBAGENT_SERVER_REL}"]
+cwd = "."
+enabled = true
+required = false
+startup_timeout_sec = 10
+tool_timeout_sec = 1800
+enabled_tools = ["readsubagent"]
+${CODEX_MCP_END}`;
+}
+
+async function ensureCodexMcpConfig(cwd: string, force: boolean): Promise<ManagedAction> {
+  const target = safeTarget(cwd, CODEX_CONFIG_REL);
+  const existing = (await fileExists(target)) ? await readFile(target, "utf8") : "";
+  const block = codexMcpBlock();
+  if (existing.includes(CODEX_MCP_START) && existing.includes(CODEX_MCP_END)) {
+    const result = replaceMarkedBlock(existing, CODEX_MCP_START, CODEX_MCP_END, block);
+    await mkdir(dirname(target), { recursive: true });
+    await writeFile(target, `${result.text.trimEnd()}\n`, "utf8");
+    return { action: `updated ${CODEX_CONFIG_REL} MCP registration`, managed: true };
+  }
+  if (/^\[mcp_servers\.readsubagent\]\s*$/mu.test(existing) && !force) {
+    return { action: `preserved existing unmanaged readsubagent MCP server in ${CODEX_CONFIG_REL}`, managed: false };
+  }
+  const result = replaceMarkedBlock(existing, CODEX_MCP_START, CODEX_MCP_END, block);
+  await mkdir(dirname(target), { recursive: true });
+  await writeFile(target, `${result.text.trimEnd()}\n`, "utf8");
+  return { action: `added readsubagent MCP server to ${CODEX_CONFIG_REL}`, managed: true };
+}
+
+async function removeCodexMcpConfig(cwd: string): Promise<string | undefined> {
+  const target = safeTarget(cwd, CODEX_CONFIG_REL);
+  if (!(await fileExists(target))) return undefined;
+  const result = removeMarkedBlock(await readFile(target, "utf8"), CODEX_MCP_START, CODEX_MCP_END);
+  if (!result.removed) return undefined;
+  await writeFile(target, result.text, "utf8");
+  return `removed readsubagent MCP server block from ${CODEX_CONFIG_REL}`;
+}
+
 function serverEntry(model: string, piBin: string): JsonRecord {
   const env: JsonRecord = { ZZ_READSUBAGENT_MODEL: model };
   if (piBin !== "pi") env.ZZ_READSUBAGENT_PI_BIN = piBin;
@@ -1206,15 +1262,18 @@ async function hashExistingHarnessFiles(cwd: string, rels: string[]): Promise<Re
 
 async function installCodexIntegration(cwd: string, sourceUrl: string, options: ApplyOptions, signal?: AbortSignal): Promise<string[]> {
   const sourceBase = siblingUrl(sourceUrl, "codex-readsubagent");
+  const mcpBase = siblingUrl(sourceUrl, "zz-readsubagent-mcp");
   const manifest = await readHarnessManifest(cwd, CODEX_MANIFEST_REL);
   const defaults = await readHarnessDefaults(cwd);
   const providerUrl = process.env.ZZ_CODEX_READSUBAGENT_PROVIDER_URL || defaults.providerUrl;
   const skipProvider = truthy(process.env.ZZ_CODEX_READSUBAGENT_SKIP_PROVIDER);
+  const skipMcp = truthy(process.env.ZZ_CODEX_READSUBAGENT_SKIP_MCP);
   const skipAgentsMd = truthy(process.env.ZZ_CODEX_READSUBAGENT_SKIP_AGENTS_MD);
 
   if (options.dryRun) {
     return [
       `would install/update ${CODEX_AGENT_REL}`,
+      skipMcp ? "would skip repo-local Codex MCP server" : `would install/update ${READSUBAGENT_SERVER_REL} and ${CODEX_CONFIG_REL}`,
       skipAgentsMd ? "would skip AGENTS.md guidance" : "would add/update AGENTS.md guidance",
       skipProvider ? "would skip Codex provider" : `would add/update Codex provider ${providerUrl}`,
     ];
@@ -1223,6 +1282,20 @@ async function installCodexIntegration(cwd: string, sourceUrl: string, options: 
   const actions: string[] = [];
   const agent = await fetchUrlBytes(joinUrl(sourceBase, "readsubagent.toml"), signal);
   actions.push(await ensureHarnessFile(cwd, CODEX_AGENT_REL, agent, manifest, CODEX_MANIFEST_REL, options.force));
+
+  let mcpManaged = false;
+  const ownedFiles = [CODEX_AGENT_REL];
+  if (skipMcp) actions.push("skipped repo-local Codex MCP server");
+  else {
+    const server = await fetchUrlBytes(joinUrl(mcpBase, "zz-readsubagent-mcp.py"), signal);
+    actions.push(await ensureHarnessFile(cwd, READSUBAGENT_SERVER_REL, server, manifest, CODEX_MANIFEST_REL, options.force));
+    const config = await ensureCodexMcpConfig(cwd, options.force);
+    mcpManaged = config.managed;
+    actions.push(config.action);
+    ownedFiles.push(READSUBAGENT_SERVER_REL);
+    if (mcpManaged) ownedFiles.push(CODEX_CONFIG_REL);
+  }
+
   if (skipAgentsMd) actions.push("skipped AGENTS.md guidance");
   else actions.push(await ensureMarkedBlockFile(cwd, "AGENTS.md", "# Codex Guidance\n", CODEX_AGENTS_START, CODEX_AGENTS_END, CODEX_AGENTS_BLOCK));
 
@@ -1238,12 +1311,20 @@ async function installCodexIntegration(cwd: string, sourceUrl: string, options: 
     installer: "zz-codex-readsubagent",
     schemaVersion: 1,
     source_url: sourceBase,
-    owned_files: [CODEX_AGENT_REL],
+    mcp_source_url: mcpBase,
+    owned_files: ownedFiles,
     managed_blocks: [
       ...(skipAgentsMd ? [] : ["AGENTS.md:zz-codex-readsubagent"]),
+      ...(mcpManaged ? [".codex/config.toml:zz-codex-readsubagent-mcp"] : []),
       ...(providerManaged ? ["~/.codex/config.toml:zz-codex-readsubagent"] : []),
     ],
-    file_hashes: await hashExistingHarnessFiles(cwd, [CODEX_AGENT_REL]),
+    file_hashes: await hashExistingHarnessFiles(cwd, ownedFiles),
+    mcp_server: {
+      name: "readsubagent",
+      config_path: safeTarget(cwd, CODEX_CONFIG_REL),
+      server_path: READSUBAGENT_SERVER_REL,
+      managed: mcpManaged,
+    },
     provider: {
       name: "zz_lmstudio_read",
       base_url: providerUrl,
@@ -1432,6 +1513,13 @@ async function removeHarnessIntegration(cwd: string, id: HarnessIntegrationId, o
       if (options.dryRun) actions.push("would remove AGENTS.md guidance block");
       else {
         const action = await removeMarkedBlockFile(cwd, "AGENTS.md", CODEX_AGENTS_START, CODEX_AGENTS_END);
+        if (action) actions.push(action);
+      }
+    }
+    if (manifestManagedBlocks(manifest).includes(".codex/config.toml:zz-codex-readsubagent-mcp")) {
+      if (options.dryRun) actions.push("would remove .codex/config.toml MCP registration");
+      else {
+        const action = await removeCodexMcpConfig(cwd);
         if (action) actions.push(action);
       }
     }

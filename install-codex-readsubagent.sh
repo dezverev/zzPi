@@ -4,8 +4,9 @@
 #   curl -fsSL https://raw.githubusercontent.com/dezverev/zzPi/main/install-codex-readsubagent.sh | bash
 #
 # Installs the project-local Codex readsubagent under ./.codex/agents/,
-# adds repo AGENTS.md read-planning guidance, and ensures the user-level
-# LM Studio provider required by the agent.
+# installs the shared zz-readsubagent MCP server under ./.zz-mcp/, registers it
+# in ./.codex/config.toml, adds repo AGENTS.md read-planning guidance, and
+# ensures the user-level LM Studio provider required by the custom agent.
 set -euo pipefail
 
 usage() {
@@ -16,17 +17,20 @@ Options:
   --project-dir DIR       Target repo/project dir (default: current directory).
   --provider-url URL      LM Studio OpenAI-compatible base URL for ~/.codex/config.toml.
   --skip-provider         Do not add/update the user-level model provider.
+  --skip-mcp              Do not install/register the repo-local MCP server.
   --skip-agents-md        Do not add/update the repo AGENTS.md guidance block.
-  --force                 Claim/overwrite an existing unowned readsubagent TOML.
+  --force                 Claim/overwrite existing unowned readsubagent files.
   --dry-run               Show the install plan without writing files.
   -h, --help              Show this help.
 
 Environment:
   ZZ_DASH_URL                         Website host (default: https://raw.githubusercontent.com/dezverev/zzPi/main)
   ZZ_CODEX_READSUBAGENT_URL           Exact source URL (default: $ZZ_DASH_URL/codex-readsubagent)
+  ZZ_READSUBAGENT_MCP_URL             MCP server source URL (default: $ZZ_DASH_URL/zz-readsubagent-mcp)
   ZZ_CODEX_READSUBAGENT_PROJECT_DIR   Target repo/project dir
   ZZ_CODEX_READSUBAGENT_PROVIDER_URL  Provider base URL (default: http://127.0.0.1:11444/v1)
   ZZ_CODEX_READSUBAGENT_SKIP_PROVIDER=1
+  ZZ_CODEX_READSUBAGENT_SKIP_MCP=1
   ZZ_CODEX_READSUBAGENT_SKIP_AGENTS_MD=1
   ZZ_CODEX_READSUBAGENT_FORCE=1
   ZZ_CODEX_READSUBAGENT_DRY_RUN=1
@@ -46,10 +50,13 @@ DEFAULT_HOST="https://raw.githubusercontent.com/dezverev/zzPi/main"
 HOST_BASE="${ZZ_DASH_URL:-$DEFAULT_HOST}"
 SOURCE_BASE="${ZZ_CODEX_READSUBAGENT_URL:-${HOST_BASE%/}/codex-readsubagent}"
 SOURCE_BASE="${SOURCE_BASE%/}"
+MCP_SOURCE_BASE="${ZZ_READSUBAGENT_MCP_URL:-${HOST_BASE%/}/zz-readsubagent-mcp}"
+MCP_SOURCE_BASE="${MCP_SOURCE_BASE%/}"
 PROJECT_DIR="${ZZ_CODEX_READSUBAGENT_PROJECT_DIR:-$PWD}"
 CODEX_DIR="${CODEX_HOME:-$HOME/.codex}"
 PROVIDER_URL="${ZZ_CODEX_READSUBAGENT_PROVIDER_URL:-http://127.0.0.1:11444/v1}"
 SKIP_PROVIDER="${ZZ_CODEX_READSUBAGENT_SKIP_PROVIDER:-0}"
+SKIP_MCP="${ZZ_CODEX_READSUBAGENT_SKIP_MCP:-0}"
 SKIP_AGENTS_MD="${ZZ_CODEX_READSUBAGENT_SKIP_AGENTS_MD:-0}"
 FORCE="${ZZ_CODEX_READSUBAGENT_FORCE:-0}"
 DRY_RUN="${ZZ_CODEX_READSUBAGENT_DRY_RUN:-0}"
@@ -61,6 +68,7 @@ while [ "$#" -gt 0 ]; do
     --provider-url) [ "$#" -ge 2 ] || { echo "--provider-url needs a value" >&2; exit 2; }; PROVIDER_URL="$2"; shift 2 ;;
     --provider-url=*) PROVIDER_URL="${1#*=}"; shift ;;
     --skip-provider) SKIP_PROVIDER=1; shift ;;
+    --skip-mcp) SKIP_MCP=1; shift ;;
     --skip-agents-md) SKIP_AGENTS_MD=1; shift ;;
     --force) FORCE=1; shift ;;
     --dry-run) DRY_RUN=1; shift ;;
@@ -94,9 +102,14 @@ cleanup() { rm -rf "$TMP_DIR"; }
 trap cleanup EXIT
 
 AGENT_TMP="$TMP_DIR/readsubagent.toml"
+SERVER_TMP="$TMP_DIR/zz-readsubagent-mcp.py"
 curl -fsSL "$SOURCE_BASE/readsubagent.toml" -o "$AGENT_TMP"
+case "$(printf '%s' "$SKIP_MCP" | tr '[:upper:]' '[:lower:]')" in
+  1|true|yes|on) ;;
+  *) curl -fsSL "$MCP_SOURCE_BASE/zz-readsubagent-mcp.py" -o "$SERVER_TMP" ;;
+esac
 
-python3 - "$PROJECT_DIR" "$CODEX_DIR" "$AGENT_TMP" "$SOURCE_BASE" "$PROVIDER_URL" "$SKIP_PROVIDER" "$SKIP_AGENTS_MD" "$FORCE" "$DRY_RUN" <<'PY'
+python3 - "$PROJECT_DIR" "$CODEX_DIR" "$AGENT_TMP" "$SERVER_TMP" "$SOURCE_BASE" "$MCP_SOURCE_BASE" "$PROVIDER_URL" "$SKIP_PROVIDER" "$SKIP_MCP" "$SKIP_AGENTS_MD" "$FORCE" "$DRY_RUN" <<'PY'
 from __future__ import annotations
 
 import hashlib
@@ -109,15 +122,22 @@ from pathlib import Path
 project_dir = Path(sys.argv[1]).resolve()
 codex_dir = Path(sys.argv[2]).resolve()
 agent_tmp = Path(sys.argv[3]).resolve()
-source_base = sys.argv[4].rstrip("/")
-provider_url = sys.argv[5]
-skip_provider = sys.argv[6].strip().lower() in {"1", "true", "yes", "on"}
-skip_agents_md = sys.argv[7].strip().lower() in {"1", "true", "yes", "on"}
-force = sys.argv[8].strip().lower() in {"1", "true", "yes", "on"}
-dry_run = sys.argv[9].strip().lower() in {"1", "true", "yes", "on"}
+server_tmp = Path(sys.argv[4]).resolve()
+source_base = sys.argv[5].rstrip("/")
+mcp_source_base = sys.argv[6].rstrip("/")
+provider_url = sys.argv[7]
+skip_provider = sys.argv[8].strip().lower() in {"1", "true", "yes", "on"}
+skip_mcp = sys.argv[9].strip().lower() in {"1", "true", "yes", "on"}
+skip_agents_md = sys.argv[10].strip().lower() in {"1", "true", "yes", "on"}
+force = sys.argv[11].strip().lower() in {"1", "true", "yes", "on"}
+dry_run = sys.argv[12].strip().lower() in {"1", "true", "yes", "on"}
 
 rel_agent = ".codex/agents/readsubagent.toml"
+rel_codex_config = ".codex/config.toml"
+rel_server = ".zz-mcp/zz-readsubagent-mcp.py"
 agent_target = project_dir / rel_agent
+codex_config = project_dir / rel_codex_config
+server_target = project_dir / rel_server
 agents_md = project_dir / "AGENTS.md"
 manifest_path = project_dir / ".codex" / "zz-codex-readsubagent-manifest.json"
 user_config = codex_dir / "config.toml"
@@ -128,7 +148,13 @@ AGENTS_BLOCK = f"""{MARKER_START}
 ## Read Planning
 
 Before doing focused reads of specific implementation files, start with a
-read-planning pass through the `readsubagent` custom agent.
+read-planning pass through `readsubagent`.
+
+Prefer the Codex MCP tool provided by `.zz-mcp/zz-readsubagent-mcp.py`. This
+repo registers it in `.codex/config.toml`, so trusted Codex sessions should see
+a `readsubagent` tool that behaves similarly to `.pi/extensions/readsubagent.ts`.
+If that MCP tool is not exposed in the current session, fall back to the
+`readsubagent` custom agent.
 
 Use `readsubagent` to get:
 
@@ -139,30 +165,19 @@ Use `readsubagent` to get:
 - Files or areas that look related but should be avoided for now.
 - Uncertainty or follow-up questions that could change the read plan.
 
-Use at least a ten-minute wait for `readsubagent` when the tool supports an
-explicit timeout; the role uses a local LM Studio model and may be slower than
-hosted models. Prefer a longer wait over assuming the subagent stalled.
+When using the MCP tool, ask a targeted factual `question` and include
+repo-relative `path`/`paths`, `symbols`, `searchTerms`, `lineRanges`, `output`,
+and `maxReportChars` where useful. Keep reports small and ask narrower
+follow-ups before falling back to broad direct reads.
 
-The main agent should then read only the recommended files or sections first.
-Expand beyond that list only when the focused reads reveal a concrete reason.
+Use at least a ten-minute wait for `readsubagent` when the tool supports an
+explicit timeout, because the local model may be slower than hosted models.
+Prefer a longer wait over assuming the subagent stalled.
 
 Use `readsubagent` only for factual read planning and file inspection. Do not
-ask it to create implementation plans, choose edit strategies, review code,
-find bugs, judge correctness, or validate type/control-flow safety. For those
-tasks, do direct focused reads in the main thread or use a review-focused agent
-when one is available.
-
-When to skip readsubagent (Exceptions):
-
-- You already know the exact files and lines you need to read (no ambiguity).
-- The user names exact files or asks for an immediate direct read.
-- The needed context is already in the current thread.
-- A tool or environment limitation prevents using the custom agent.
-
-**Crucial rule for ambiguity:** The decision to use `readsubagent` is about *knowledge*, not tool-call count. If there is *any ambiguity* about where to look or what to read, do NOT do exploratory manual reads (like `find`, `ls`, or `grep` to hunt around). Instead, use `readsubagent` by asking it a targeted question to clear the ambiguity and tell you exactly where and what to read.
-
-When an exception applies, mention it briefly and continue with the smallest
-reasonable focused read.
+ask it to create implementation plans, solution proposals, edit strategies,
+code-review judgments, bug findings, correctness assessments, or accept/reject
+recommendations.
 {MARKER_END}
 """
 
@@ -173,6 +188,21 @@ PROVIDER_BLOCK = f"""{PROVIDER_START}
 name = "LM Studio readsubagent"
 base_url = "{provider_url}"
 {PROVIDER_END}
+"""
+
+CODEX_MCP_START = "# zz-codex-readsubagent-mcp:start"
+CODEX_MCP_END = "# zz-codex-readsubagent-mcp:end"
+CODEX_MCP_BLOCK = f"""{CODEX_MCP_START}
+[mcp_servers.readsubagent]
+command = "python3"
+args = ["{rel_server}"]
+cwd = "."
+enabled = true
+required = false
+startup_timeout_sec = 10
+tool_timeout_sec = 1800
+enabled_tools = ["readsubagent"]
+{CODEX_MCP_END}
 """
 
 
@@ -202,19 +232,29 @@ def replace_marked_block(text: str, start: str, end: str, block: str) -> tuple[s
     return text.rstrip() + ("\n\n" if text.strip() else "") + block.rstrip(), False
 
 
-def ensure_agent() -> str:
-    if agent_target.exists() and not manifest_owns(rel_agent) and not force:
-        if agent_target.read_bytes() != agent_tmp.read_bytes():
+def ensure_owned_file(rel: str, target: Path, tmp: Path) -> str:
+    if target.exists() and not manifest_owns(rel) and not force:
+        if target.read_bytes() != tmp.read_bytes():
             raise SystemExit(
-                f"Refusing to overwrite existing unowned {rel_agent}. Use --force if you want this installer to claim it."
+                f"Refusing to overwrite existing unowned {rel}. Use --force if you want this installer to claim it."
             )
-        return "unchanged existing matching readsubagent.toml"
+        return f"unchanged existing matching {rel}"
     if dry_run:
-        action = "update" if agent_target.exists() else "create"
-        return f"would {action} {rel_agent}"
-    agent_target.parent.mkdir(parents=True, exist_ok=True)
-    agent_target.write_bytes(agent_tmp.read_bytes())
-    return f"installed {rel_agent}"
+        action = "update" if target.exists() else "create"
+        return f"would {action} {rel}"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_bytes(tmp.read_bytes())
+    return f"installed {rel}"
+
+
+def ensure_agent() -> str:
+    return ensure_owned_file(rel_agent, agent_target, agent_tmp)
+
+
+def ensure_server() -> str:
+    if skip_mcp:
+        return "skipped repo-local Codex MCP server"
+    return ensure_owned_file(rel_server, server_target, server_tmp)
 
 
 def ensure_agents_md() -> str:
@@ -226,6 +266,27 @@ def ensure_agents_md() -> str:
     next_text, replaced = replace_marked_block(existing, MARKER_START, MARKER_END, AGENTS_BLOCK)
     agents_md.write_text(next_text.rstrip() + "\n", encoding="utf-8")
     return "updated AGENTS.md read-planning block" if replaced else "added AGENTS.md read-planning block"
+
+
+def ensure_codex_config() -> str:
+    if skip_mcp:
+        return "skipped .codex/config.toml MCP registration"
+    existing = codex_config.read_text(encoding="utf-8") if codex_config.exists() else ""
+    if CODEX_MCP_START in existing and CODEX_MCP_END in existing:
+        next_text, _ = replace_marked_block(existing, CODEX_MCP_START, CODEX_MCP_END, CODEX_MCP_BLOCK)
+        if dry_run:
+            return "would update .codex/config.toml MCP registration"
+        codex_config.parent.mkdir(parents=True, exist_ok=True)
+        codex_config.write_text(next_text.rstrip() + "\n", encoding="utf-8")
+        return "updated .codex/config.toml MCP registration"
+    if re.search(r"(?m)^\[mcp_servers\.readsubagent\]\s*$", existing):
+        return "preserved existing unmanaged readsubagent MCP server in .codex/config.toml"
+    if dry_run:
+        return "would add readsubagent MCP server to .codex/config.toml"
+    codex_config.parent.mkdir(parents=True, exist_ok=True)
+    next_text = existing.rstrip() + ("\n\n" if existing.strip() else "") + CODEX_MCP_BLOCK.rstrip() + "\n"
+    codex_config.write_text(next_text, encoding="utf-8")
+    return "added readsubagent MCP server to .codex/config.toml"
 
 
 def ensure_provider() -> str:
@@ -258,19 +319,30 @@ else:
         tomllib.load(fh)
     toml_status = "validated readsubagent.toml"
 
-actions = [toml_status, ensure_agent(), ensure_agents_md(), ensure_provider()]
+actions = [toml_status, ensure_agent(), ensure_server(), ensure_codex_config(), ensure_agents_md(), ensure_provider()]
 
 if not dry_run:
+    owned_files = [rel_agent]
+    if not skip_mcp:
+        owned_files.extend([rel_codex_config, rel_server])
     state = {
         "installer": "zz-codex-readsubagent",
         "schemaVersion": 1,
         "source_url": source_base,
-        "owned_files": [rel_agent],
+        "mcp_source_url": mcp_source_base,
+        "owned_files": owned_files,
         "managed_blocks": [
-            "AGENTS.md:zz-codex-readsubagent",
+            "AGENTS.md:zz-codex-readsubagent" if not skip_agents_md else "",
+            ".codex/config.toml:zz-codex-readsubagent-mcp" if not skip_mcp else "",
             "~/.codex/config.toml:zz-codex-readsubagent" if not skip_provider else "",
         ],
-        "file_hashes": {rel_agent: sha256(agent_target)},
+        "file_hashes": {rel: sha256(project_dir / rel) for rel in owned_files},
+        "mcp_server": {
+            "name": "readsubagent",
+            "config_path": str(codex_config),
+            "server_path": rel_server,
+            "managed": not skip_mcp,
+        },
         "provider": {
             "name": "zz_lmstudio_read",
             "base_url": provider_url,
@@ -288,6 +360,7 @@ for action in actions:
     print(f"  -> {action}")
 print(f"  -> target repo: {project_dir}")
 print(f"  -> source: {source_base}")
+print(f"  -> mcp source: {mcp_source_base}")
 if not dry_run:
-    print("  -> restart Codex from this repo so it discovers .codex/agents/readsubagent.toml")
+    print("  -> restart Codex from this repo so it discovers .codex/agents/readsubagent.toml and .codex/config.toml")
 PY
