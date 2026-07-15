@@ -4,19 +4,19 @@
   "default": "all-visible",
   "files": [
     {
-      "bytes": 10028,
+      "bytes": 11186,
       "path": "README.md",
-      "sha256": "4d6133ef3f248bb51e0ebd981dd832a6066bd325185f56871181bd342953d67d"
+      "sha256": "0fe74f7a5d0b205939f06851e3b51065947e738e947d5e2255be47cece9a768a"
     },
     {
-      "bytes": 20112,
+      "bytes": 20104,
       "path": "WORKFLOWMODE.md",
-      "sha256": "9b0e63d12b8120fb35df7041921d5fdf8dacdb672e6d1d803536090488d3e798"
+      "sha256": "d36070ae360fcd3502efae022bbe31d8058ab3356e92bcb143c269a7570e5017"
     },
     {
-      "bytes": 17656,
+      "bytes": 19673,
       "path": "pi-plugs.catalog.jsonc",
-      "sha256": "d3b0ec7d99a349d71fcd02902735b1de86cbcd305e7a5883ab45f50f85fbe3bc"
+      "sha256": "3cedfaedefc143d06ae5dbf176f6f6563542c11e52a3c29e643a9df5fc9daf71"
     },
     {
       "bytes": 257,
@@ -24,9 +24,19 @@
       "sha256": "1342ca9b09a234b66bdb07fd651c0af75eac673ca7619bb6d47f95f16bb182aa"
     },
     {
-      "bytes": 20898,
+      "bytes": 20808,
       "path": "extensions/00-zz-subagent-runtime.ts",
-      "sha256": "59def7f7d50e409fe825457f7ce452b8d5d694443c97db723fca2fdd06263a97"
+      "sha256": "af112044bbb60b791102b39ab6a9d601e006120d54d1e31ec89af67cb0f2ff99"
+    },
+    {
+      "bytes": 2425,
+      "path": "extensions/brainstormer.config.jsonc",
+      "sha256": "ca8e0a1cad40a6907baebdd77b296d2f46d22540c28cc49c9c0caa5b98516082"
+    },
+    {
+      "bytes": 8669,
+      "path": "extensions/brainstormer.ts",
+      "sha256": "f429c8462af12d9cd5e3aa9696e41f6f9f23a8896c3d38e26b128288b5669e0a"
     },
     {
       "bytes": 1091,
@@ -39,14 +49,29 @@
       "sha256": "5ccfeb5167f39487b6c5edeeb1b5b7d9174c373575bf5cc74a5ff56d39028f02"
     },
     {
-      "bytes": 4848,
-      "path": "extensions/explorationsubagent.config.jsonc",
-      "sha256": "64bda7acd2c5d7775bf2fdc44b48a3a4c5f8620a442e1d7855a838b65f75e7a9"
+      "bytes": 2607,
+      "path": "extensions/debuggersubagent.config.jsonc",
+      "sha256": "a6ee0011dd9f9272b279a196f054749b9beb87d2d652cdb9a4fdae9c09a45f7f"
     },
     {
-      "bytes": 30375,
-      "path": "extensions/explorationsubagent.ts",
-      "sha256": "7aa8aaa65dc13e4cd32b8c6730d6893b61bb9efef31d24ac85e1580167b83694"
+      "bytes": 13640,
+      "path": "extensions/debuggersubagent.ts",
+      "sha256": "a51762211917232cdc5f6b02fc0dd1b0703e685c77eb511f1e47094d412bd235"
+    },
+    {
+      "bytes": 7710,
+      "path": "extensions/design-loop.ts",
+      "sha256": "2161c512ebb5da0bf4aadbb97eb06054e55b4104c93d21c31ff3a6203d733493"
+    },
+    {
+      "bytes": 2445,
+      "path": "extensions/designplanner.config.jsonc",
+      "sha256": "bcf1af57d941e3421804c698a85f2350e1541e9ae79060010b710767a68053ae"
+    },
+    {
+      "bytes": 10150,
+      "path": "extensions/designplanner.ts",
+      "sha256": "b45617ded4937dcafa34698440a4181423f7bf167213c4d0e366a7efb28f186f"
     },
     {
       "bytes": 819,
@@ -59,19 +84,9 @@
       "sha256": "467739069f3ebb9277ed5d7a4cb3ecbf1c83604807e0bd565db5a9124b845c16"
     },
     {
-      "bytes": 4096,
-      "path": "extensions/implementationsubagent.config.jsonc",
-      "sha256": "d77a63209af27d1a8923bbd809d79db625c54f783d5ec97d7b9602fd15e56f7a"
-    },
-    {
-      "bytes": 31152,
-      "path": "extensions/implementationsubagent.ts",
-      "sha256": "60a0ca646c7fe34506f18642256f0ed1e05aba03f7362219b4baf6a39660e318"
-    },
-    {
-      "bytes": 1259,
+      "bytes": 1083,
       "path": "extensions/local-model-endpoints.config.jsonc",
-      "sha256": "ff09028009b4f6857b6e0e179a40901e65f0daaa3939f314d5f52d76d88d6629"
+      "sha256": "899238534facc812e5ff5ccc809cefadd96ee922e7251d4d266cbf20c38b3539"
     },
     {
       "bytes": 674,
@@ -84,24 +99,24 @@
       "sha256": "ef76e8961f48a9795e5131676828a2cda5bc44d5b00ae816ee89c563b3d3e1d7"
     },
     {
-      "bytes": 5170,
+      "bytes": 3938,
+      "path": "extensions/promptenrichsubagent.config.jsonc",
+      "sha256": "3d8f1f2eb58fb84271dbdf86c87bc78565040aff7a86470ec1ec03478014e8cb"
+    },
+    {
+      "bytes": 28953,
+      "path": "extensions/promptenrichsubagent.ts",
+      "sha256": "0974a66f2cefbac3a34ede6bcb98380f38b1aa0f67de1f1c58e5f337faf0a2df"
+    },
+    {
+      "bytes": 5456,
       "path": "extensions/readsubagent.config.jsonc",
-      "sha256": "f85bd5c7026394f58cf43c802b5b6fc36461a02392a5ebf3cfffe6677dce917a"
+      "sha256": "9cf414ba96a3f69d05e410d980bf90cd9507c8088adead13d3c3383233cb57b2"
     },
     {
-      "bytes": 41859,
+      "bytes": 42146,
       "path": "extensions/readsubagent.ts",
-      "sha256": "dda03d77a74fef8392c9b5953c2f30de22020ab34776c85c7f4c3bc83823f7d9"
-    },
-    {
-      "bytes": 2292,
-      "path": "extensions/reviewsubagent.config.jsonc",
-      "sha256": "5d2d00fe9c7a4715db2e26cd3819782ae46a9bfd8f6e3ff52fee745dd368e9c3"
-    },
-    {
-      "bytes": 20258,
-      "path": "extensions/reviewsubagent.ts",
-      "sha256": "428d7d35183bb56a16ba832e0de61760a2d395d58481f9a02d57d4deee56865c"
+      "sha256": "23b8b7de766a14d7a3546668d52e350d917af0601424fd1c7394a86bc2b6d445"
     },
     {
       "bytes": 1496,
@@ -124,94 +139,104 @@
       "sha256": "ebcaf1c4135ab183c1556a359df1456fa2b615e0012abbace02be86b6656596e"
     },
     {
-      "bytes": 3889,
+      "bytes": 4046,
+      "path": "extensions/vettingagents.config.jsonc",
+      "sha256": "28ee621cbf6c4865d3bd97a2fe8b61b6a2fec045de8720db64ef5f34039838d4"
+    },
+    {
+      "bytes": 37856,
+      "path": "extensions/vettingagents.ts",
+      "sha256": "5e491885629f2b74224738cf6db62480cff5dd738dc25f73dca68e5d00149c57"
+    },
+    {
+      "bytes": 3189,
       "path": "extensions/wf-adversarialreview.config.jsonc",
-      "sha256": "d0ab99d743ca6bbef62c645952d2fc85db3f1aa914fbc2b3910a140289b2e319"
+      "sha256": "1bc834d4aecd154d654f8da67b0ae32ce40aabc49fbd6b5159ca85dbdf9874f3"
     },
     {
-      "bytes": 23630,
+      "bytes": 23410,
       "path": "extensions/wf-adversarialreview.ts",
-      "sha256": "c78bd6ca20dce9d79f7eb608edadde43dad921fe1246993a6600b819293c72c4"
+      "sha256": "76b3e675562011e442683a90e2babe2221cba6a8479e140a114851ca8022f809"
     },
     {
-      "bytes": 4006,
+      "bytes": 3246,
       "path": "extensions/wf-brainstormer.config.jsonc",
-      "sha256": "7eea6249d8ac04d90d71ba407584b9cbef41e00cde766b3da8dd6f0f64382860"
+      "sha256": "d94ac87d25aa2637694e34796623d000ef25a46a55ef87ff2d75d916cec46150"
     },
     {
-      "bytes": 24116,
+      "bytes": 23929,
       "path": "extensions/wf-brainstormer.ts",
-      "sha256": "f7195c6d08849162b648098b55042e8dee11eebc1978c2457e8de8ba292b5a76"
+      "sha256": "0aa695a79865fef9749aea407537b0b49c93bbb104c49e9d44a86fafd271c0ea"
     },
     {
-      "bytes": 3957,
+      "bytes": 3197,
       "path": "extensions/wf-clarifier.config.jsonc",
-      "sha256": "f2bd411b49fe0c2053abf417eb97f4663a9586c49cf9a6a3506e5f792a2a011e"
+      "sha256": "e0db72df4eb78cfd43e34a9f500b0b715c3c98555afd0dc75cb5b4e044c9fab1"
     },
     {
-      "bytes": 29720,
+      "bytes": 22085,
       "path": "extensions/wf-clarifier.ts",
-      "sha256": "3586e12e3528e3ef4ca25c58b5ea642a86537546149782b30181853722c331bb"
+      "sha256": "5889e4857c588881fc99ac66b7f29896570660847ca49bc65fcad22cddc2bcb5"
     },
     {
-      "bytes": 4095,
+      "bytes": 3395,
       "path": "extensions/wf-designplan.config.jsonc",
-      "sha256": "c99f58d49d234116fafd7ad5249bd3bce8075eeb17b6f931d8f32b1555a43d20"
+      "sha256": "a56b03590543cdce9ba0cb106c7f60066c34ab682bebf47ce07bcf4cac45a073"
     },
     {
-      "bytes": 35268,
+      "bytes": 35090,
       "path": "extensions/wf-designplan.ts",
-      "sha256": "f9d23169cae93ac4694a02422f1c155cb4f143c881bdc355bb120e4978381ec4"
+      "sha256": "7575df1b286477ed8a4ad2d962000df22d43d1b5fdd03cdd33ff8420fa6d47ec"
     },
     {
-      "bytes": 3767,
+      "bytes": 3087,
       "path": "extensions/wf-finalreviewagent.config.jsonc",
-      "sha256": "4e81416b5ebbfff37cc09ade9919a75d9728480081bc0f613980c8d23df0b5e2"
+      "sha256": "00a70e6a3d4cc406bdcad46208c06be1a0e7f97a35233ceb077c8339b82c1076"
     },
     {
-      "bytes": 28410,
+      "bytes": 28421,
       "path": "extensions/wf-finalreviewagent.ts",
-      "sha256": "8cdb99fd8a0961aad3921c38290d4ea13b3b086c794a6400f5373fc7ee49303e"
+      "sha256": "2286dcaf5b9dadcf0506b6ec84ee6f103625141a5e110e3b7f18e656da65b381"
     },
     {
-      "bytes": 3816,
+      "bytes": 3103,
       "path": "extensions/wf-implementeragent.config.jsonc",
-      "sha256": "43506dbc2ba03327b84db7321706f1e83bacdb6952116d7c63485d7b9b6b1111"
+      "sha256": "1c7734c889f8408541c969d15d2827dcc4d9d239c97ed654f9faca1d38f8cf55"
     },
     {
-      "bytes": 24803,
+      "bytes": 24761,
       "path": "extensions/wf-implementeragent.ts",
-      "sha256": "22edc52dd253c77a76c4268fc35ecbb815db8ca9d77c3b2780ee8847b5417ad8"
+      "sha256": "8669598207c8a53f3b93f33df27621ea0b3110b5ae76149d9859096918241bfc"
     },
     {
-      "bytes": 4068,
+      "bytes": 3396,
       "path": "extensions/wf-impplanner.config.jsonc",
-      "sha256": "c0027210e06ef5511217e131418991688b5ca3c61d0041349dd48425644d39d5"
+      "sha256": "8d39cc06b121ff89cbc468fb427fdd86a2bb0d2936e38ec92028c798d5d2ce3f"
     },
     {
-      "bytes": 53640,
+      "bytes": 53624,
       "path": "extensions/wf-impplanner.ts",
-      "sha256": "2d681cefdca7376f799dcc507fdb12ed9649c677bf00ab6a122f8ad4bd087a4c"
+      "sha256": "16b140fd08b8f6b2baa92cfb208b4dc172b4c5c2d61b4e33a67b3dfe6959a03e"
     },
     {
-      "bytes": 3571,
+      "bytes": 2891,
       "path": "extensions/wf-revieweragent.config.jsonc",
-      "sha256": "b3b3b6c6a62c38a2896dd3ca0a67819885b59b8df6946e8d1617f96923673105"
+      "sha256": "8e5b76b2829dcdb4a26dcace07dab07a6bcc074184f559caeb5472cef4e77289"
     },
     {
-      "bytes": 26060,
+      "bytes": 26076,
       "path": "extensions/wf-revieweragent.ts",
-      "sha256": "ade4795240bc740d0ec00899f0f7129d7f09491891d6d948a3b52777bc40022a"
+      "sha256": "3c9b278a0df193c43cdefab56fbeaa32b70026af9eb4fe603874aacb0888ba56"
     },
     {
-      "bytes": 3875,
+      "bytes": 3178,
       "path": "extensions/wf-testeragent.config.jsonc",
-      "sha256": "31072f387b3fa84e3fdc5f1ef575400a5334e6cd35f696fefab5bcff9bf5cf6b"
+      "sha256": "32fbcfcfdca6a11454850ba42e06605b543cdc90788361736b6dad2b8a1be8ec"
     },
     {
-      "bytes": 25184,
+      "bytes": 25200,
       "path": "extensions/wf-testeragent.ts",
-      "sha256": "fa1fb1b0c4ddfa1ad7756148caaae8a13c1ca793dd170d2ee4e8c973efbc92f2"
+      "sha256": "87a0c7484b89ae09adda3a5a0444abc59310239d4cecf2b7d416ee3a11c1efa8"
     },
     {
       "bytes": 738,
@@ -224,9 +249,9 @@
       "sha256": "8d68ee77fb02dd6daace7d17d683ce96fb27805a3d5af06532dc543923fcba14"
     },
     {
-      "bytes": 125746,
+      "bytes": 130170,
       "path": "extensions/workflowmode.ts",
-      "sha256": "ee8f0c91e4e66463906ea6c70f4bae173c19dd24890c4b3b8f5e2d1aa69177a6"
+      "sha256": "b4cc2ab336f000bca3a28daaaa9f7601c83df0f4f0df26c1b48e1805deb6849e"
     },
     {
       "bytes": 491,
@@ -234,29 +259,54 @@
       "sha256": "bf53a2a78af53602abf4a86f6b81a0cb6f4c3a8daa213465be51995c72d3c9f4"
     },
     {
-      "bytes": 84558,
+      "bytes": 84084,
       "path": "extensions/zz-plug-manager.ts",
-      "sha256": "b9feed1a0bf7e1448e99d41fa260f6bdb881f663e273c2c7cbf6bdef6ee4aa54"
+      "sha256": "f72be8f356a8886cf7c33aa77ff76d4fe73ee288aebc8bacf5101415b5ee4fb6"
     },
     {
-      "bytes": 851,
+      "bytes": 1002,
       "path": "extensions/zzLocalModels.config.jsonc",
-      "sha256": "b12c1b147c1c4116f7982a60d62969cd58dabe91e377bc32a3fed7cac9484455"
+      "sha256": "5bd2728d00a90500a33714d144d8c5f454131ebc4998999b79defd3f1d294156"
     },
     {
-      "bytes": 6312,
+      "bytes": 6512,
       "path": "extensions/zzLocalModels.ts",
-      "sha256": "a46624fc7e5eb4fb0845e6f702335ce33abf33d4332a920ae4b8767d04f9d252"
+      "sha256": "2a9bd6fb9a85da02fa4ededb911b325b1e0f20e9c80cbc826656762572ca7d69"
     },
     {
-      "bytes": 11825,
+      "bytes": 4050,
+      "path": "extensions/lib/agent-mode.ts",
+      "sha256": "1d5c1ff4590043f9f94701d3744027f1c3ccefb370db06c8a61988a5b4e5d250"
+    },
+    {
+      "bytes": 12442,
       "path": "extensions/lib/child-agent-model-options.ts",
-      "sha256": "d1ae08154d928d9ccc8e68f9fd5b4f50bb5b1f0c7f787004e98b04f9d7bb50ad"
+      "sha256": "32c283bc086dded242cfeaff0af78aaf797529990d9c19a36fc7b4920f12244a"
+    },
+    {
+      "bytes": 4171,
+      "path": "extensions/lib/design-artifacts.ts",
+      "sha256": "04ae84a8036dfa099a36ee0b99dd01cb5a91c47f26c00cbdf1a29c225b1030eb"
+    },
+    {
+      "bytes": 1714,
+      "path": "extensions/lib/design-loop-types.ts",
+      "sha256": "cfad4e383fcf84f2f861ffc6db16ba845cdeb0a68232233c1dbd36e4b08dd499"
+    },
+    {
+      "bytes": 2248,
+      "path": "extensions/lib/planning-artifact-paths.ts",
+      "sha256": "a55181b9422de96a5bd38b248d45bc44054169bc190a40909e70ec56dbfd7225"
     },
     {
       "bytes": 38286,
       "path": "extensions/lib/right-overlay-tiler.ts",
       "sha256": "4afbf24627b1a9b8b1b459f8ec212a2cf63b2fd9c1cb072606575f1e2fc3c0b9"
+    },
+    {
+      "bytes": 19019,
+      "path": "extensions/lib/standalone-agent-common.ts",
+      "sha256": "a8194d0c77ef7e24e2f01daa91175c08dd0347a4dda4e45812dfdcfa8d8c7b02"
     },
     {
       "bytes": 4409,
@@ -347,7 +397,7 @@
       "configFiles": [
         "extensions/zzLocalModels.config.jsonc"
       ],
-      "description": "Registers shared LM Studio Qwen models in Pi's normal /model picker.",
+      "description": "Registers shared LM Studio models in Pi's normal /model picker.",
       "entry": "extensions/zzLocalModels.ts",
       "fileDeps": [
         "extensions/zzLocalModels.config.jsonc"
@@ -431,68 +481,6 @@
     },
     {
       "configFiles": [
-        "extensions/explorationsubagent.config.jsonc",
-        "extensions/local-model-endpoints.config.jsonc"
-      ],
-      "description": "Delegates exploratory read-only investigation to a child Pi process.",
-      "entry": "extensions/explorationsubagent.ts",
-      "fileDeps": [
-        "extensions/explorationsubagent.config.jsonc",
-        "extensions/local-model-endpoints.config.jsonc"
-      ],
-      "id": "explorationsubagent",
-      "internal": false,
-      "optionalPluginDeps": [],
-      "pluginDeps": [
-        "zz-subagent-runtime",
-        "zz-local-models"
-      ],
-      "sharedDeps": [
-        {
-          "id": "zz-lib",
-          "minVersion": "1.0.0"
-        }
-      ],
-      "tags": [
-        "agent"
-      ],
-      "title": "Exploration subagent"
-    },
-    {
-      "configFiles": [
-        "extensions/implementationsubagent.config.jsonc",
-        "extensions/local-model-endpoints.config.jsonc"
-      ],
-      "description": "Adds /zzSubagentImplemention and an implementationsubagent tool for delegated implementation work through a child Pi process; Alt+S toggles the delegation mode.",
-      "entry": "extensions/implementationsubagent.ts",
-      "fileDeps": [
-        "extensions/implementationsubagent.config.jsonc",
-        "extensions/local-model-endpoints.config.jsonc",
-        "extensions/lib/child-agent-model-options.ts"
-      ],
-      "id": "implementationsubagent",
-      "internal": false,
-      "optionalPluginDeps": [],
-      "pluginDeps": [
-        "zz-subagent-runtime",
-        "zz-local-models",
-        "readsubagent",
-        "explorationsubagent"
-      ],
-      "sharedDeps": [
-        {
-          "id": "zz-lib",
-          "minVersion": "1.0.0"
-        }
-      ],
-      "tags": [
-        "agent",
-        "implementation"
-      ],
-      "title": "Implementation subagent"
-    },
-    {
-      "configFiles": [
         "extensions/git-status.config.jsonc"
       ],
       "description": "Shows a VS Code-style Git branch/change summary in the footer and right-side details pane.",
@@ -548,7 +536,7 @@
       "configFiles": [
         "extensions/wf-clarifier.config.jsonc"
       ],
-      "description": "Runs the first workflow-mode clarification pass, using read/exploration subagents to produce enriched prompts or questions; Alt+E enriches the next prompt, asks follow-up questions if needed, then sends it normally.",
+      "description": "Runs the first workflow-mode clarification pass, using readsubagent to produce enriched prompts or questions; Alt+E enriches the next prompt, asks follow-up questions if needed, then sends it normally.",
       "entry": "extensions/wf-clarifier.ts",
       "fileDeps": [
         "extensions/wf-clarifier.config.jsonc",
@@ -558,8 +546,7 @@
       "internal": true,
       "optionalPluginDeps": [],
       "pluginDeps": [
-        "readsubagent",
-        "explorationsubagent"
+        "readsubagent"
       ],
       "sharedDeps": [
         {
@@ -587,8 +574,7 @@
       "internal": true,
       "optionalPluginDeps": [],
       "pluginDeps": [
-        "readsubagent",
-        "explorationsubagent"
+        "readsubagent"
       ],
       "sharedDeps": [
         {
@@ -616,8 +602,7 @@
       "internal": true,
       "optionalPluginDeps": [],
       "pluginDeps": [
-        "readsubagent",
-        "explorationsubagent"
+        "readsubagent"
       ],
       "sharedDeps": [
         {
@@ -647,7 +632,6 @@
       "optionalPluginDeps": [],
       "pluginDeps": [
         "readsubagent",
-        "explorationsubagent",
         "wf-adversarialreview"
       ],
       "sharedDeps": [
@@ -677,7 +661,6 @@
       "optionalPluginDeps": [],
       "pluginDeps": [
         "readsubagent",
-        "explorationsubagent",
         "wf-adversarialreview",
         "wf-designplan"
       ],
@@ -709,7 +692,6 @@
       "pluginDeps": [
         "zz-subagent-runtime",
         "readsubagent",
-        "explorationsubagent",
         "wf-impplanner"
       ],
       "sharedDeps": [
@@ -741,7 +723,6 @@
       "pluginDeps": [
         "zz-subagent-runtime",
         "readsubagent",
-        "explorationsubagent",
         "wf-impplanner",
         "wf-implementeragent"
       ],
@@ -774,7 +755,6 @@
       "pluginDeps": [
         "zz-subagent-runtime",
         "readsubagent",
-        "explorationsubagent",
         "wf-impplanner"
       ],
       "sharedDeps": [
@@ -806,7 +786,6 @@
       "pluginDeps": [
         "zz-subagent-runtime",
         "readsubagent",
-        "explorationsubagent",
         "wf-impplanner"
       ],
       "sharedDeps": [
@@ -821,6 +800,130 @@
         "testing"
       ],
       "title": "Workflow tester agent"
+    },
+    {
+      "configFiles": [
+        "extensions/debuggersubagent.config.jsonc"
+      ],
+      "description": "Provides standalone read-only root-cause diagnosis for bugs, failures, regressions, flaky behavior, and suspicious runtime results.",
+      "entry": "extensions/debuggersubagent.ts",
+      "fileDeps": [
+        "extensions/debuggersubagent.config.jsonc",
+        "extensions/lib/child-agent-model-options.ts",
+        "extensions/lib/standalone-agent-common.ts"
+      ],
+      "id": "debuggersubagent",
+      "internal": false,
+      "optionalPluginDeps": [],
+      "pluginDeps": [
+        "zz-subagent-runtime",
+        "readsubagent"
+      ],
+      "sharedDeps": [
+        {
+          "id": "zz-lib",
+          "minVersion": "1.0.0"
+        }
+      ],
+      "tags": [
+        "agent",
+        "debugging",
+        "subagent"
+      ],
+      "title": "Debugger subagent"
+    },
+    {
+      "configFiles": [
+        "extensions/brainstormer.config.jsonc"
+      ],
+      "description": "Standalone read-only agent that researches and suggests structured solution options and tradeoffs.",
+      "entry": "extensions/brainstormer.ts",
+      "fileDeps": [
+        "extensions/brainstormer.config.jsonc",
+        "extensions/lib/child-agent-model-options.ts",
+        "extensions/lib/design-loop-types.ts",
+        "extensions/lib/standalone-agent-common.ts"
+      ],
+      "id": "brainstormer",
+      "internal": false,
+      "optionalPluginDeps": [],
+      "pluginDeps": [
+        "zz-subagent-runtime",
+        "readsubagent"
+      ],
+      "sharedDeps": [
+        {
+          "id": "zz-lib",
+          "minVersion": "1.0.0"
+        }
+      ],
+      "tags": [
+        "agent",
+        "design",
+        "standalone"
+      ],
+      "title": "Solution brainstormer"
+    },
+    {
+      "configFiles": [
+        "extensions/designplanner.config.jsonc"
+      ],
+      "description": "Standalone read-only agent that turns one selected brainstorm solution into a staged technical design.",
+      "entry": "extensions/designplanner.ts",
+      "fileDeps": [
+        "extensions/designplanner.config.jsonc",
+        "extensions/lib/child-agent-model-options.ts",
+        "extensions/lib/design-loop-types.ts",
+        "extensions/lib/standalone-agent-common.ts"
+      ],
+      "id": "designplanner",
+      "internal": false,
+      "optionalPluginDeps": [],
+      "pluginDeps": [
+        "zz-subagent-runtime",
+        "readsubagent"
+      ],
+      "sharedDeps": [
+        {
+          "id": "zz-lib",
+          "minVersion": "1.0.0"
+        }
+      ],
+      "tags": [
+        "agent",
+        "design",
+        "standalone"
+      ],
+      "title": "Design planner"
+    },
+    {
+      "configFiles": [],
+      "description": "Composes solution brainstorming and explicit single-solution selection into a staged technical design workflow.",
+      "entry": "extensions/design-loop.ts",
+      "fileDeps": [
+        "extensions/lib/agent-mode.ts",
+        "extensions/lib/design-artifacts.ts",
+        "extensions/lib/planning-artifact-paths.ts"
+      ],
+      "id": "design-loop",
+      "internal": false,
+      "optionalPluginDeps": [],
+      "pluginDeps": [
+        "brainstormer",
+        "designplanner"
+      ],
+      "sharedDeps": [
+        {
+          "id": "zz-lib",
+          "minVersion": "1.0.0"
+        }
+      ],
+      "tags": [
+        "workflow",
+        "brainstorming",
+        "design"
+      ],
+      "title": "Design loop"
     },
     {
       "configFiles": [],
@@ -864,7 +967,8 @@
       "entry": "extensions/readsubagent.ts",
       "fileDeps": [
         "extensions/readsubagent.config.jsonc",
-        "extensions/local-model-endpoints.config.jsonc"
+        "extensions/local-model-endpoints.config.jsonc",
+        "extensions/lib/agent-mode.ts"
       ],
       "id": "readsubagent",
       "internal": false,
@@ -887,16 +991,18 @@
     },
     {
       "configFiles": [
-        "extensions/reviewsubagent.config.jsonc",
+        "extensions/vettingagents.config.jsonc",
         "extensions/local-model-endpoints.config.jsonc"
       ],
-      "description": "Delegates code-review style analysis to a child Pi process.",
-      "entry": "extensions/reviewsubagent.ts",
+      "description": "Runs three independent read-only adversarial child agents for docs, plans, implementation results, diffs, and code review targets.",
+      "entry": "extensions/vettingagents.ts",
       "fileDeps": [
-        "extensions/reviewsubagent.config.jsonc",
-        "extensions/local-model-endpoints.config.jsonc"
+        "extensions/vettingagents.config.jsonc",
+        "extensions/local-model-endpoints.config.jsonc",
+        "extensions/lib/child-agent-model-options.ts",
+        "extensions/lib/agent-mode.ts"
       ],
-      "id": "reviewsubagent",
+      "id": "vettingagents",
       "internal": false,
       "optionalPluginDeps": [],
       "pluginDeps": [
@@ -910,9 +1016,41 @@
       ],
       "tags": [
         "agent",
-        "review"
+        "vetting",
+        "docs"
       ],
-      "title": "Review subagent"
+      "title": "Vetting agents"
+    },
+    {
+      "configFiles": [
+        "extensions/promptenrichsubagent.config.jsonc",
+        "extensions/local-model-endpoints.config.jsonc"
+      ],
+      "description": "Standalone, manually-triggered prompt-enrichment agent. /pe <prompt> runs a clarification/enrichment pass (using readsubagent for repo context) and returns enriched prompt options or clarifying questions. Independent of workflow mode; does not alter wf-clarifier.",
+      "entry": "extensions/promptenrichsubagent.ts",
+      "fileDeps": [
+        "extensions/promptenrichsubagent.config.jsonc",
+        "extensions/local-model-endpoints.config.jsonc"
+      ],
+      "id": "promptenrichsubagent",
+      "internal": false,
+      "optionalPluginDeps": [],
+      "pluginDeps": [
+        "zz-subagent-runtime",
+        "zz-local-models",
+        "readsubagent"
+      ],
+      "sharedDeps": [
+        {
+          "id": "zz-lib",
+          "minVersion": "1.0.0"
+        }
+      ],
+      "tags": [
+        "agent",
+        "enrichment"
+      ],
+      "title": "Prompt enrich subagent"
     },
     {
       "configFiles": [
@@ -955,18 +1093,21 @@
   ],
   "schemaVersion": 2,
   "source": "zzPi git export",
-  "updated_at": "2026-06-20T00:48:14.560600+00:00",
+  "updated_at": "2026-07-15T00:09:38.484541+00:00",
   "visiblePlugins": [
     "zz-local-models",
     "context-tools",
     "workflow-tree",
-    "explorationsubagent",
-    "implementationsubagent",
     "git-status",
     "pi-context",
+    "debuggersubagent",
+    "brainstormer",
+    "designplanner",
+    "design-loop",
     "workflowmode",
     "readsubagent",
-    "reviewsubagent",
+    "vettingagents",
+    "promptenrichsubagent",
     "tetris"
   ]
 }

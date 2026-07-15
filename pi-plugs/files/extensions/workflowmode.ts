@@ -25,16 +25,19 @@ import {
   formatWfBrainstormerDecisionReport,
   parseWfBrainstormerDecision,
   runWfBrainstormerForPrompt,
+  selectWfBrainstormerModel,
   sendWfBrainstormerReportMessage,
 } from "./wf-brainstormer.ts";
 import {
   runWfAdversarialReviewForStage,
+  selectWfAdversarialReviewModel,
   sendWfAdversarialReviewReportMessage,
   stringifyReviewedOutput,
 } from "./wf-adversarialreview.ts";
 import {
   type WfClarifierPromptOption,
   runWfClarifierForPrompt,
+  selectWfClarifierModel,
   sendWfClarifierReportMessage,
 } from "./wf-clarifier.ts";
 import {
@@ -42,6 +45,7 @@ import {
   type WfDesignPlanRunResult,
   reviewWfDesignPlanRun,
   runWfDesignPlanForOption,
+  selectWfDesignPlanModel,
   sendWfDesignPlanReportMessage,
 } from "./wf-designplan.ts";
 import {
@@ -49,11 +53,13 @@ import {
   type WfImpplannerRunResult,
   type WfImpplannerStepPlan,
   runWfImpplannerForDesignPlan,
+  selectWfImpplannerModel,
   sendWfImpplannerReportMessage,
 } from "./wf-impplanner.ts";
 import {
   type WfImplementerAgentDecision,
   runWfImplementerAgentForStage,
+  selectWfImplementerAgentModel,
   sendWfImplementerAgentReportMessage,
 } from "./wf-implementeragent.ts";
 import {
@@ -61,16 +67,19 @@ import {
   type WfFinalReviewRemediationStep,
   formatWfFinalReviewAgentFeedback,
   runWfFinalReviewAgentForBranch,
+  selectWfFinalReviewAgentModel,
   sendWfFinalReviewAgentReportMessage,
 } from "./wf-finalreviewagent.ts";
 import {
   type WfTesterAgentDecision,
   runWfTesterAgentForBranch,
+  selectWfTesterAgentModel,
   sendWfTesterAgentReportMessage,
 } from "./wf-testeragent.ts";
 import {
   formatWfReviewerAgentFeedback,
   runWfReviewerAgentForStage,
+  selectWfReviewerAgentModel,
   sendWfReviewerAgentReportMessage,
 } from "./wf-revieweragent.ts";
 
@@ -79,6 +88,116 @@ const WORKFLOW_STATE_SCHEMA_VERSION = 1;
 const WORKFLOW_STATE_DIR_PARTS = [".zzwf", "workflows"] as const;
 const WORKFLOW_STATE_FILE = "current.json";
 const WORKFLOW_ARCHIVE_TOPIC_SLUG_MAX_LENGTH = 80;
+
+type WorkflowAgentModelSelector = (
+  pi: ExtensionAPI,
+  ctx: ExtensionContext,
+  args: string,
+  options?: { readonly quiet?: boolean },
+) => Promise<void>;
+
+const WORKFLOW_MODEL_OPTIONS = [
+  { id: "gpt-5.6-sol-xhigh", label: "GPT-5.6 Sol xhigh (openai-codex)" },
+  { id: "gpt-5.5-xhigh", label: "GPT-5.5 xhigh (openai-codex)" },
+  { id: "qwen-35b-a3b", label: "Qwen 3.6 35B A3B via proxy" },
+  { id: "glm-5p2-xhigh", label: "GLM 5.2 xhigh (fireworks)" },
+] as const;
+
+const WORKFLOW_MODEL_ALIASES: Record<string, string> = {
+  "gpt": "gpt-5.6-sol-xhigh",
+  "gpt-5.5": "gpt-5.5-xhigh",
+  "gpt-5.5-xhigh": "gpt-5.5-xhigh",
+  "gpt-5.6-sol": "gpt-5.6-sol-xhigh",
+  "gpt-5.6-sol-xhigh": "gpt-5.6-sol-xhigh",
+  "qwen": "qwen-35b-a3b",
+  "qwen-35b-a3b": "qwen-35b-a3b",
+  "qwen/qwen3.6-35b-a3b": "qwen-35b-a3b",
+  "glm": "glm-5p2-xhigh",
+  "glm-5p2": "glm-5p2-xhigh",
+  "glm-5p2-xhigh": "glm-5p2-xhigh",
+};
+
+const WORKFLOW_AGENT_MODEL_SELECTORS: readonly {
+  readonly name: string;
+  readonly selectModel: WorkflowAgentModelSelector;
+}[] = [
+  { name: "wf-clarifier", selectModel: selectWfClarifierModel },
+  { name: "wf-brainstormer", selectModel: selectWfBrainstormerModel },
+  { name: "wf-adversarialreview", selectModel: selectWfAdversarialReviewModel },
+  { name: "wf-designplan", selectModel: selectWfDesignPlanModel },
+  { name: "wf-impplanner", selectModel: selectWfImpplannerModel },
+  { name: "wf-implementeragent", selectModel: selectWfImplementerAgentModel },
+  { name: "wf-revieweragent", selectModel: selectWfReviewerAgentModel },
+  { name: "wf-finalreviewagent", selectModel: selectWfFinalReviewAgentModel },
+  { name: "wf-testeragent", selectModel: selectWfTesterAgentModel },
+];
+function formatWorkflowModelOptions(): string {
+  return WORKFLOW_MODEL_OPTIONS.map((option) => `${option.id}: ${option.label}`).join(", ");
+}
+
+function normalizeWorkflowModelRequest(requested: string): string | undefined {
+  const normalized = requested.trim().toLowerCase();
+  return WORKFLOW_MODEL_ALIASES[normalized];
+}
+
+function getWorkflowModeCommandCompletions(prefix: string) {
+  const trimmed = prefix.trimStart();
+  const hasTrailingSpace = /\s$/u.test(prefix);
+  const parts = trimmed ? trimmed.split(/\s+/u) : [];
+  const [first = "", ...rest] = parts;
+  const normalizedFirst = first.toLowerCase();
+
+  if ((normalizedFirst === "model" || normalizedFirst === "models") && (trimmed.includes(" ") || hasTrailingSpace)) {
+    const modelPrefix = (hasTrailingSpace ? "" : rest.join(" ")).toLowerCase();
+    return WORKFLOW_MODEL_OPTIONS
+      .filter((option) => option.id.startsWith(modelPrefix) || option.label.toLowerCase().includes(modelPrefix))
+      .map((option) => ({ value: option.id, label: `${option.id} — ${option.label}` }));
+  }
+
+  if (trimmed.includes(" ") || hasTrailingSpace) return null;
+
+  return ["on", "off", "toggle", "status", "reset", "resume", "continue", "model"]
+    .filter((option) => option.startsWith(normalizedFirst))
+    .map((option) => ({ value: option, label: option }));
+}
+
+async function selectAllWorkflowAgentModels(
+  pi: ExtensionAPI,
+  ctx: ExtensionContext,
+  requestedModel: string,
+): Promise<void> {
+  const selectedModelId = normalizeWorkflowModelRequest(requestedModel);
+  if (!selectedModelId) {
+    ctx.ui.notify(
+      `Usage: /workflowmode model <model>. Available workflow model ids: ${formatWorkflowModelOptions()}`,
+      "warning",
+    );
+    return;
+  }
+
+  const failures: string[] = [];
+  for (const agent of WORKFLOW_AGENT_MODEL_SELECTORS) {
+    try {
+      await agent.selectModel(pi, ctx, selectedModelId, { quiet: true });
+    } catch (error) {
+      failures.push(`${agent.name}: ${getErrorMessage(error)}`);
+    }
+  }
+
+  if (failures.length > 0) {
+    ctx.ui.notify(
+      `Workflow mode: selected ${selectedModelId} for ${WORKFLOW_AGENT_MODEL_SELECTORS.length - failures.length}/${WORKFLOW_AGENT_MODEL_SELECTORS.length} wf agents. Failures:\n${failures.join("\n")}`,
+      "warning",
+    );
+    return;
+  }
+
+  ctx.ui.notify(
+    `Workflow mode: selected ${selectedModelId} for all ${WORKFLOW_AGENT_MODEL_SELECTORS.length} wf agents`,
+    "info",
+  );
+}
+
 const WF_BRAINSTORMER_STAGE_SCHEMA = [
   "Return a WfBrainstormerDecision JSON object using one of these shapes:",
   `{"kind":"brainstorm","summary":"short synthesis","recommendedOption":"optional recommendation","options":[{"title":"Option title","approach":"strategy-level description","repoTouchpoints":["relevant path/symbol/context"],"pros":["benefit"],"cons":["tradeoff"],"risks":["risk"],"unknowns":["open unknown"],"nextSteps":["high-level next workflow step"]}],"questions":["optional question for later stages"]}`,
@@ -1249,15 +1368,12 @@ export default function workflowModeExtension(pi: ExtensionAPI): void {
   };
 
   pi.registerCommand("workflowmode", {
-    description: "Toggle, reset, resume, or inspect workflow mode.",
-    getArgumentCompletions: (prefix) => {
-      const trimmed = prefix.trim().toLowerCase();
-      return ["on", "off", "toggle", "status", "reset", "resume", "continue"]
-        .filter((option) => option.startsWith(trimmed))
-        .map((option) => ({ value: option, label: option }));
-    },
+    description: "Toggle, reset, resume, inspect workflow mode, or set every wf-* child model.",
+    getArgumentCompletions: getWorkflowModeCommandCompletions,
     handler: async (args, ctx) => {
-      const action = args.trim().toLowerCase();
+      const trimmed = args.trim();
+      const [command = "", ...rest] = trimmed.split(/\s+/u);
+      const action = command.toLowerCase();
 
       if (action === "on") {
         workflowModeEnabled = true;
@@ -1290,6 +1406,9 @@ export default function workflowModeExtension(pi: ExtensionAPI): void {
           ctx.ui.notify("Workflow mode: resuming saved workflow", "info");
           return;
         }
+      } else if (action === "model" || action === "models") {
+        await selectAllWorkflowAgentModels(pi, ctx, rest.join(" "));
+        return;
       } else {
         toggleWorkflowMode();
         await clearWorkflowStateFile(ctx);

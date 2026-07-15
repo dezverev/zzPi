@@ -28,7 +28,7 @@ Most coding-agent waste starts with reads:
 3. It returns a concise map: relevant files, line ranges, symbols, search terms, related areas to avoid, and uncertainty.
 4. The main model reads only the small, targeted slices it needs.
 
-The current system is built around read and discovery scenarios (`readsubagent`, `explorationsubagent`, review/test/workflow helpers), but the broader design is **token/context flow control**: decide which work belongs in the main thread and which work should be delegated.
+The current system is built around focused repository inspection (`readsubagent`), standalone debugging and design agents, adversarial vetting, and the larger workflow pipeline. The broader design is **token/context flow control**: decide which work belongs in the main thread and which work should be delegated.
 
 <figure>
      <img src="repoAssets/fullview.png" alt="Full view screenshot" width="80%">
@@ -59,7 +59,7 @@ Pi is flexible enough to act as a local, harness-agnostic subagent runner:
 - Some agents can stay local while others use remote providers.
 - Config lives in the repo under `.pi/`, so each project can tune its own routing.
 
-In Pi itself this is first-class: `/readsubagent`, `/explorationsubagent`, workflow-mode agents, review/test agents, and `/zz-model-setup` can route work to local or remote models with fine-grained control.
+In Pi itself this is first-class: `/readsubagent`, `/debuggersubagent`, `/design-loop`, workflow-mode agents, vetting agents, and `/zz-model-setup` can route work to local or remote models with fine-grained control.
 
 For closed or harder-to-customize harnesses, `zzPi` exposes the same idea in a reduced form:
 
@@ -77,12 +77,15 @@ The public export contains two layers:
 1. **Pi plugs** — project-local `.pi/` extensions installed by `install.sh`.
 2. **Harness integrations** — Codex/Claude/Copilot/MCP readsubagent installers, also selectable from Pi's `/zz-plugs select` UI.
 
+The separate `zz-refs` bundle is intentionally not included in this public export.
+
 The important user-facing commands are:
 
 - `/zz-plugs select` — choose Pi plugs and harness readsubagent integrations.
 - `/zz-model-setup setup` — point local-model configs at your LM Studio/OpenAI-compatible endpoint.
 - `/readsubagent ask ...` — ask a local read-only file-inspection agent for a focused answer/map.
-- `/explorationsubagent ask ...` — ask a local discovery agent to map a broader subsystem.
+- `/debuggersubagent ask ...` — delegate read-only root-cause diagnosis.
+- `/design-loop` — enable or inspect the standalone brainstorm/design workflow.
 - `/workflowmode` — run the larger staged workflow using the configured agent stack.
 
 ## Install Pi plugs
@@ -104,7 +107,7 @@ Useful options:
 ```bash
 ./install.sh --list
 ./install.sh --all
-./install.sh --plugins git-status,readsubagent,explorationsubagent
+./install.sh --plugins git-status,readsubagent,design-loop
 ./install.sh --dry-run --select
 ```
 

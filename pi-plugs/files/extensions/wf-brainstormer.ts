@@ -33,10 +33,10 @@ const CONFIG_FILE_PATH = ".pi/extensions/wf-brainstormer.config.jsonc";
 const WF_BRAINSTORMER_MESSAGE_TYPE = "wf-brainstormer-report";
 const WF_BRAINSTORMER_STATE_ENTRY_TYPE = "wf-brainstormer-state";
 const STATUS_KEY = "wf-brainstormer";
-const DEFAULT_TOOLS = ["readsubagent", "explorationsubagent"];
+const DEFAULT_TOOLS = ["readsubagent"];
 const EXCLUDED_CHILD_TOOLS = [
-  "reviewsubagent",
-  "simpletasksubagent",
+  "vettingagents",
+  "vetting-agents",
   "wfclarifier",
   "wf-clarifier",
   "wfbrainstormer",
@@ -49,8 +49,6 @@ const EXCLUDED_CHILD_TOOLS = [
   "wf-impplanner",
   "wfimplementeragent",
   "wf-implementeragent",
-  "wfimplemnteragent",
-  "wf-implemnteragent",
   "wfrevieweragent",
   "wf-revieweragent",
   "wffinalreviewagent",
@@ -60,16 +58,16 @@ const EXCLUDED_CHILD_TOOLS = [
 ] as const;
 
 const DEFAULT_WF_BRAINSTORMER_CONFIG: ChildPiAgentConfig = {
-  contextWindow: 400_000,
+  contextWindow: 272_000,
   endpoint: "http://127.0.0.1:1234",
-  maxOutputTokens: 32_768,
-  model: "gpt-5.5",
+  maxOutputTokens: 128_000,
+  model: "gpt-5.6-sol",
   provider: "openai-codex",
   providerRegistration: "none",
   reportMaxChars: 24_000,
   requestTimeoutMs: 30 * 60 * 1_000,
   systemPrompt:
-    "You are wf-brainstormer, a workflow-mode brainstorming subagent for Pi. Research solution options for the clarified workflow prompt before implementation planning begins. Use readsubagent and explorationsubagent only for factual repo context, evidence, constraints, and uncertainty; do not ask them for implementation plans or solution proposals. Return only the requested JSON decision.",
+    "You are wf-brainstormer, a workflow-mode brainstorming subagent for Pi. Research solution options for the clarified workflow prompt before implementation planning begins. Use readsubagent only for factual repo context, evidence, constraints, and uncertainty; do not ask it for implementation plans or solution proposals. Return only the requested JSON decision.",
   thinking: "xhigh",
   tools: DEFAULT_TOOLS,
 };
@@ -242,10 +240,11 @@ function persistState(pi: ExtensionAPI): void {
   });
 }
 
-async function selectWfBrainstormerModel(
+export async function selectWfBrainstormerModel(
   pi: ExtensionAPI,
   ctx: ExtensionContext,
   args: string,
+  options?: { readonly quiet?: boolean },
 ): Promise<void> {
   reloadWfBrainstormerSettings(pi, ctx.cwd);
 
@@ -288,10 +287,12 @@ async function selectWfBrainstormerModel(
   selectedWfBrainstormerModelId = option.id;
   persistState(pi);
   reloadWfBrainstormerSettings(pi, ctx.cwd);
-  ctx.ui.notify(
-    `wf-brainstormer model selected: ${getChildAgentModelChoiceLabel(option)}\nactive child model selector: ${getModelSelector(currentConfig)}`,
-    "info",
-  );
+  if (!options?.quiet) {
+    ctx.ui.notify(
+      `wf-brainstormer model selected: ${getChildAgentModelChoiceLabel(option)}\nactive child model selector: ${getModelSelector(currentConfig)}`,
+      "info",
+    );
+  }
 }
 
 function buildWfBrainstormerTask(options: {
@@ -327,10 +328,9 @@ function buildWfBrainstormerPrompt(task: string): string {
   return [
     "You are running as wf-brainstormer, the second subagent in Pi workflow mode.",
     "Your job is solution-space brainstorming after clarification and before implementation planning.",
-    "Use the explorationsubagent tool for broad repo discovery around existing architecture, conventions, similar code, configuration, and constraints.",
-    "Use the readsubagent tool for targeted inspection of files, symbols, docs, or configs surfaced by exploration.",
-    "When calling readsubagent or explorationsubagent, ask only for factual repo findings, evidence, relationships, constraints, and uncertainty. Do not ask those tools for implementation plans, solution proposals, recommendations, or edit strategies; wf-brainstormer owns the solution/options synthesis.",
-    "The readsubagent and explorationsubagent tools have their own configured Qwen models; rely on them for repo investigation instead of doing raw inspection yourself.",
+    "Use the readsubagent tool for factual inspection of relevant architecture, conventions, similar code, configuration, files, symbols, docs, and constraints.",
+    "When calling readsubagent, ask only for factual repo findings, evidence, relationships, constraints, and uncertainty. Do not ask it for implementation plans, solution proposals, recommendations, or edit strategies; wf-brainstormer owns the solution/options synthesis.",
+    "The readsubagent tool has its own configured model; rely on it for repo investigation instead of doing raw inspection yourself.",
     "Do not write code, propose patches, mutate files, or produce a detailed implementation plan. Keep the output at the strategy/options/tradeoff level.",
     "Return JSON only. Do not wrap it in markdown. Use exactly one of these shapes:",
     `{"kind":"brainstorm","summary":"short synthesis","recommendedOption":"optional recommendation or leave blank","options":[{"title":"Option title","approach":"strategy-level description","repoTouchpoints":["relevant path/symbol/context"],"pros":["benefit"],"cons":["tradeoff"],"risks":["risk"],"unknowns":["open unknown"],"nextSteps":["high-level next workflow step"]}],"questions":["optional question for later stages"]}`,

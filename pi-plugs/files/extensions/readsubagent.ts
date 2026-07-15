@@ -3,7 +3,6 @@ import {
   type ExtensionAPI,
   type ExtensionContext,
 } from "@earendil-works/pi-coding-agent";
-import { Text } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 
 import {
@@ -20,12 +19,14 @@ import {
   readChildPiAgentConfig,
   registerChildAgentProvider,
   renderChildAgentMessage,
+  renderChildAgentToolCall,
   renderChildAgentToolResult,
   runChildPiAgent,
   sendChildAgentReportMessage,
   textFromContent,
   truncateText,
 } from "./zz-lib/child-pi-agent.ts";
+import { createAgentMode, type AgentModeController } from "./lib/agent-mode.ts";
 import {
   type ChildAgentModelOption,
   applyChildAgentModelSelection,
@@ -56,8 +57,6 @@ type ReadSubagentModelOption = ChildAgentModelOption;
 const EXCLUDED_CHILD_TOOLS = [
   "readsubagent",
   "explorationsubagent",
-  "reviewsubagent",
-  "simpletasksubagent",
 ] as const;
 const READSUBAGENT_EVENT_END = "readsubagent:end";
 const READSUBAGENT_EVENT_ERROR = "readsubagent:error";
@@ -104,10 +103,10 @@ const MAIN_READSUBAGENT_PROMPT = [
   "Before copying a pattern from another known file or large implementation, ask readsubagent for relevant symbols, descriptive flow, and exact line ranges; then direct-read only those small ranges needed for edits.",
   "Avoid direct-reading large source files just to learn what behavior exists; delegate that summarization to readsubagent unless exact file text is immediately required.",
   "If you would read a file mainly to retrieve facts, summarize/explain/compare documented behavior, inspect docs/config/logs, or find where something is defined, ask readsubagent that factual question instead.",
-  "If the task asks for issues, bugs, correctness, regressions, type safety, control-flow problems, maintainability judgment, or whether code is acceptable, do not use readsubagent; use direct reads plus validation or reviewsubagent instead.",
+  "If the task asks for issues, bugs, correctness, regressions, type safety, control-flow problems, maintainability judgment, or whether code is acceptable, do not use readsubagent; use direct reads plus validation instead.",
   "Use main-context grep/find/ls only for one-shot low-output discovery with a clear next action, such as rg -l or a single tight rg -n; if the search would branch, require multiple commands, or produce broad output, use explorationsubagent.",
   "For exploratory repo archaeology or broad rg/find/ls work, use explorationsubagent instead of readsubagent or raw parent output.",
-  "For code/implementation review, use reviewsubagent instead of readsubagent so review judgment happens in the review-focused model.",
+  "For code/implementation review, use direct parent analysis instead of readsubagent so review judgment stays in the main session.",
   "For git operations that mutate repo or remote state, handle them in the parent session rather than readsubagent.",
   "Ask narrow readsubagent questions and include repo-relative paths, symbols, line ranges, search terms, desired output shape, and a maxReportChars budget when possible.",
   "Prefer small readsubagent reports: ask for the direct answer, citations, and only the minimal snippets needed for the next action.",
@@ -117,7 +116,7 @@ const MAIN_READSUBAGENT_PROMPT = [
 
 const DEFAULT_READSUBAGENT_CONFIG: ChildPiAgentConfig = {
   contextWindow: 127_000,
-  endpoint: "http://127.0.0.1:11444",
+  endpoint: "http://127.0.0.1:1234",
   maxOutputTokens: 32_768,
   model: "qwen/qwen3.6-35b-a3b",
   provider: "lm-studio",
@@ -138,6 +137,7 @@ let currentModelOptions: readonly ReadSubagentModelOption[] = [
 let lastConfigError: string | undefined;
 let lastMainConfigError: string | undefined;
 let readSubagentEnabled = false;
+let readSubagentMode: AgentModeController;
 let selectedReadSubagentModelId: string | undefined;
 
 function createReadSubagentModelOptionFromConfig(config: ChildPiAgentConfig): ReadSubagentModelOption {
@@ -327,8 +327,7 @@ function getSavedStateFromBranch(ctx: ExtensionContext): ReadSubagentSavedState 
 }
 
 function applyStatus(ctx: ExtensionContext): void {
-  if (!ctx.hasUI) return;
-  ctx.ui.setStatus(STATUS_KEY, readSubagentEnabled ? "readsubagent: on" : undefined);
+  readSubagentMode.applyStatus(ctx);
 }
 
 function restoreState(pi: ExtensionAPI, ctx: ExtensionContext): void {
@@ -337,11 +336,10 @@ function restoreState(pi: ExtensionAPI, ctx: ExtensionContext): void {
   currentMainConfig = readReadSubagentMainConfig(ctx.cwd);
 
   const saved = getSavedStateFromBranch(ctx);
-  readSubagentEnabled = saved.enabled ?? currentMainConfig.enabledByDefault;
   selectedReadSubagentModelId = saved.selectedModelId;
   currentConfig = applyReadSubagentModelSelection(baseConfig);
   registerReadSubagentProvider(pi, currentConfig);
-  applyStatus(ctx);
+  readSubagentMode.restore(ctx);
 }
 
 function persistState(pi: ExtensionAPI): void {
@@ -351,10 +349,8 @@ function persistState(pi: ExtensionAPI): void {
   });
 }
 
-function setEnabled(pi: ExtensionAPI, ctx: ExtensionContext, enabled: boolean): void {
-  readSubagentEnabled = enabled;
-  persistState(pi);
-  applyStatus(ctx);
+function setEnabled(_pi: ExtensionAPI, ctx: ExtensionContext, enabled: boolean): void {
+  readSubagentMode.setEnabled(enabled, ctx);
 }
 
 async function selectReadSubagentModel(
@@ -658,6 +654,16 @@ async function runReadSubagentTask(options: {
 
 export default function readSubagentExtension(pi: ExtensionAPI) {
   reloadReadSubagentSettings(pi, process.cwd());
+  readSubagentMode = createAgentMode(pi, {
+    id: "readsubagent",
+    label: "readsubagent",
+    stateEntryType: READSUBAGENT_STATE_ENTRY_TYPE,
+    statusKey: STATUS_KEY,
+    tools: ["readsubagent"],
+    enabledByDefault: () => currentMainConfig.enabledByDefault,
+    shortcut: "ctrl+alt+r",
+    onChange: (enabled) => { readSubagentEnabled = enabled; },
+  });
 
   pi.on("session_start", (_event, ctx) => {
     restoreState(pi, ctx);
@@ -669,7 +675,7 @@ export default function readSubagentExtension(pi: ExtensionAPI) {
   });
 
   pi.on("session_shutdown", (_event, ctx) => {
-    ctx.ui.setStatus(STATUS_KEY, undefined);
+    readSubagentMode.clearStatus(ctx);
   });
 
   pi.registerMessageRenderer(READSUBAGENT_MESSAGE_TYPE, (message, options, theme) =>
@@ -801,7 +807,7 @@ export default function readSubagentExtension(pi: ExtensionAPI) {
 
       if (normalized === "endpoint" || normalized === "endpoints") {
         ctx.ui.notify(
-          "Readsubagent endpoints are selected through /readsubagent model entries in .pi/extensions/readsubagent.config.jsonc. Use /readsubagent model qwen or /readsubagent model gpt-5.5-xhigh.",
+          "Readsubagent endpoints are selected through /readsubagent model entries in .pi/extensions/readsubagent.config.jsonc. Use /readsubagent model qwen or /readsubagent model gpt-5.6-sol-xhigh.",
           "info",
         );
         return;
@@ -881,7 +887,7 @@ export default function readSubagentExtension(pi: ExtensionAPI) {
       "Use main-context grep/find/ls only for one-shot low-output discovery with a clear next action; if the search would branch, require multiple commands, or produce broad output, use explorationsubagent.",
       "If readsubagent's answer is too vague or missing needed details, ask readsubagent a narrower follow-up question before falling back to direct reads.",
       "Do not use readsubagent for broad repo exploration; use explorationsubagent when discovery requires broad rg/find/ls work.",
-      "Do not use readsubagent for hard logic or code review; use direct reads plus validation or reviewsubagent when the goal is to inspect for issues, judge correctness, validate control flow/type safety, quality, maintainability, security, or regression risk.",
+      "Do not use readsubagent for hard logic or code review; use direct reads plus validation when the goal is to inspect for issues, judge correctness, validate control flow/type safety, quality, maintainability, security, or regression risk.",
       "Do not use readsubagent for git operations that mutate repo or remote state; handle committing, pushing, PR creation/merge, branch cleanup, and main sync in the parent session.",
     ],
     parameters: Type.Object({
@@ -965,17 +971,19 @@ export default function readSubagentExtension(pi: ExtensionAPI) {
       };
     },
 
-    renderCall(rawArgs: unknown, theme) {
+    renderCall(rawArgs: unknown, theme, context) {
       const args = isRecord(rawArgs) ? rawArgs : {};
       const question = typeof args.question === "string" ? args.question : "";
       const path = typeof args.path === "string" ? args.path : "";
       const pathCount = Array.isArray(args.paths) ? args.paths.length : 0;
       const pathText = path || (pathCount > 0 ? `${pathCount} paths` : "no path");
-      return new Text(
-        `${theme.fg("toolTitle", theme.bold("readsubagent"))} ${theme.fg("accent", pathText)} ${theme.fg("dim", previewTask(question || "..."))}`,
-        0,
-        0,
-      );
+      currentConfig = readActiveReadSubagentConfig(context.cwd);
+      return renderChildAgentToolCall(theme, {
+        agentName: "readsubagent",
+        model: getModelSelector(currentConfig),
+        scope: pathText,
+        task: question || "...",
+      });
     },
 
     renderResult(result, state, theme) {

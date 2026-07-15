@@ -33,10 +33,10 @@ const CONFIG_FILE_PATH = ".pi/extensions/wf-adversarialreview.config.jsonc";
 const WF_ADVERSARIAL_REVIEW_MESSAGE_TYPE = "wf-adversarialreview-report";
 const WF_ADVERSARIAL_REVIEW_STATE_ENTRY_TYPE = "wf-adversarialreview-state";
 const STATUS_KEY = "wf-adversarialreview";
-const DEFAULT_TOOLS = ["readsubagent", "explorationsubagent"];
+const DEFAULT_TOOLS = ["readsubagent"];
 const EXCLUDED_CHILD_TOOLS = [
-  "reviewsubagent",
-  "simpletasksubagent",
+  "vettingagents",
+  "vetting-agents",
   "wfclarifier",
   "wf-clarifier",
   "wfbrainstormer",
@@ -49,8 +49,6 @@ const EXCLUDED_CHILD_TOOLS = [
   "wf-impplanner",
   "wfimplementeragent",
   "wf-implementeragent",
-  "wfimplemnteragent",
-  "wf-implemnteragent",
   "wfrevieweragent",
   "wf-revieweragent",
   "wffinalreviewagent",
@@ -60,16 +58,16 @@ const EXCLUDED_CHILD_TOOLS = [
 ] as const;
 
 const DEFAULT_WF_ADVERSARIAL_REVIEW_CONFIG: ChildPiAgentConfig = {
-  contextWindow: 400_000,
+  contextWindow: 272_000,
   endpoint: "http://127.0.0.1:1234",
-  maxOutputTokens: 32_768,
-  model: "gpt-5.5",
+  maxOutputTokens: 128_000,
+  model: "gpt-5.6-sol",
   provider: "openai-codex",
   providerRegistration: "none",
   reportMaxChars: 20_000,
   requestTimeoutMs: 30 * 60 * 1_000,
   systemPrompt:
-    "You are wf-adversarialreview, a workflow-mode review gate for Pi. Adversarially review selected wf-* stage outputs before they are shown as final user-facing workflow output. Use readsubagent and explorationsubagent only for factual repo context, evidence, constraints, and uncertainty; do not ask them for implementation plans or solution proposals. Return only the requested JSON review envelope.",
+    "You are wf-adversarialreview, a workflow-mode review gate for Pi. Adversarially review selected wf-* stage outputs before they are shown as final user-facing workflow output. Use readsubagent only for factual repo context, evidence, constraints, and uncertainty; do not ask it for implementation plans or solution proposals. Return only the requested JSON review envelope.",
   thinking: "xhigh",
   tools: DEFAULT_TOOLS,
 };
@@ -239,10 +237,11 @@ function persistState(pi: ExtensionAPI): void {
   });
 }
 
-async function selectWfAdversarialReviewModel(
+export async function selectWfAdversarialReviewModel(
   pi: ExtensionAPI,
   ctx: ExtensionContext,
   args: string,
+  options?: { readonly quiet?: boolean },
 ): Promise<void> {
   reloadWfAdversarialReviewSettings(pi, ctx.cwd);
 
@@ -285,10 +284,12 @@ async function selectWfAdversarialReviewModel(
   selectedWfAdversarialReviewModelId = option.id;
   persistState(pi);
   reloadWfAdversarialReviewSettings(pi, ctx.cwd);
-  ctx.ui.notify(
-    `wf-adversarialreview model selected: ${getChildAgentModelChoiceLabel(option)}\nactive child model selector: ${getModelSelector(currentConfig)}`,
-    "info",
-  );
+  if (!options?.quiet) {
+    ctx.ui.notify(
+      `wf-adversarialreview model selected: ${getChildAgentModelChoiceLabel(option)}\nactive child model selector: ${getModelSelector(currentConfig)}`,
+      "info",
+    );
+  }
 }
 
 function buildWfAdversarialReviewTask(options: {
@@ -321,7 +322,7 @@ function buildWfAdversarialReviewTask(options: {
     "Review objective:",
     "- Adversarially inspect the stage output before it is shown as final user-facing workflow output.",
     "- Check for mistakes, missing constraints, risky assumptions, contradictions, misleading recommendations, and unclear wording.",
-    "- Use readsubagent/explorationsubagent only for factual repo verification when needed; do not ask them for plans.",
+    "- Use readsubagent only for factual repo verification when needed; do not ask it for plans.",
     "- Return a review envelope. If the stage output is acceptable, verdict should be pass and reviewedOutput should preserve the stage output. If corrections are needed, verdict should be revised and reviewedOutput must contain corrected stage output using the expected schema. If the output is too unsafe/invalid to correct, verdict should be blocked and issues should explain why.",
   ].join("\n");
 }
@@ -330,8 +331,7 @@ function buildWfAdversarialReviewPrompt(task: string): string {
   return [
     "You are running as wf-adversarialreview, a stage-aware review gate in Pi workflow mode.",
     "Your job is adversarial review and correction of another wf-* stage's output before it is displayed as final workflow output.",
-    "Use the explorationsubagent tool for broad factual repo checks only if the stage output makes claims about architecture, files, behavior, or constraints that may be wrong or incomplete.",
-    "Use the readsubagent tool for targeted factual inspection of files, symbols, docs, or configs. Do not ask readsubagent or explorationsubagent for implementation plans, solution proposals, recommendations, or edit strategies.",
+    "Use the readsubagent tool for factual inspection of architecture, files, behavior, symbols, docs, configs, or constraints. Do not ask readsubagent for implementation plans, solution proposals, recommendations, or edit strategies.",
     "Do not write code, mutate files, or produce a new implementation plan. Preserve the reviewed stage's expected output schema in reviewedOutput.",
     "Return JSON only. Do not wrap it in markdown. Use exactly this shape:",
     `{"kind":"reviewed_stage","stageId":"wf-stage-id","verdict":"pass|revised|blocked","summary":"short review summary","issues":[{"severity":"info|minor|major|critical","title":"issue title","detail":"issue detail","suggestion":"optional correction"}],"reviewedOutput":{}}`,

@@ -34,10 +34,10 @@ const CONFIG_FILE_PATH = ".pi/extensions/wf-implementeragent.config.jsonc";
 const WF_IMPLEMENTER_AGENT_MESSAGE_TYPE = "wf-implementeragent-report";
 const WF_IMPLEMENTER_AGENT_STATE_ENTRY_TYPE = "wf-implementeragent-state";
 const STATUS_KEY = "wf-implementeragent";
-const DEFAULT_TOOLS = ["read", "bash", "edit", "write", "grep", "find", "ls", "readsubagent", "explorationsubagent"];
+const DEFAULT_TOOLS = ["read", "bash", "edit", "write", "grep", "find", "ls", "readsubagent"];
 const EXCLUDED_CHILD_TOOLS = [
-  "reviewsubagent",
-  "simpletasksubagent",
+  "vettingagents",
+  "vetting-agents",
   "wfclarifier",
   "wf-clarifier",
   "wfbrainstormer",
@@ -50,8 +50,6 @@ const EXCLUDED_CHILD_TOOLS = [
   "wf-impplanner",
   "wfimplementeragent",
   "wf-implementeragent",
-  "wfimplemnteragent",
-  "wf-implemnteragent",
   "wfrevieweragent",
   "wf-revieweragent",
   "wffinalreviewagent",
@@ -61,10 +59,10 @@ const EXCLUDED_CHILD_TOOLS = [
 ] as const;
 
 const DEFAULT_WF_IMPLEMENTER_AGENT_CONFIG: ChildPiAgentConfig = {
-  contextWindow: 400_000,
+  contextWindow: 272_000,
   endpoint: "http://127.0.0.1:1234",
-  maxOutputTokens: 32_768,
-  model: "gpt-5.5",
+  maxOutputTokens: 128_000,
+  model: "gpt-5.6-sol",
   provider: "openai-codex",
   providerRegistration: "none",
   reportMaxChars: 32_000,
@@ -237,10 +235,11 @@ function persistState(pi: ExtensionAPI): void {
   });
 }
 
-async function selectWfImplementerAgentModel(
+export async function selectWfImplementerAgentModel(
   pi: ExtensionAPI,
   ctx: ExtensionContext,
   args: string,
+  options?: { readonly quiet?: boolean },
 ): Promise<void> {
   reloadWfImplementerAgentSettings(pi, ctx.cwd);
 
@@ -283,10 +282,12 @@ async function selectWfImplementerAgentModel(
   selectedWfImplementerAgentModelId = option.id;
   persistState(pi);
   reloadWfImplementerAgentSettings(pi, ctx.cwd);
-  ctx.ui.notify(
-    `wf-implementeragent model selected: ${getChildAgentModelChoiceLabel(option)}\nactive child model selector: ${getModelSelector(currentConfig)}`,
-    "info",
-  );
+  if (!options?.quiet) {
+    ctx.ui.notify(
+      `wf-implementeragent model selected: ${getChildAgentModelChoiceLabel(option)}\nactive child model selector: ${getModelSelector(currentConfig)}`,
+      "info",
+    );
+  }
 }
 
 function buildWfImplementerAgentTask(options: {
@@ -640,5 +641,4 @@ export default function wfImplementerAgentExtension(pi: ExtensionAPI): void {
   );
 
   registerWfImplementerCommand(pi, "wf-implementeragent");
-  registerWfImplementerCommand(pi, "wf-implemnteragent");
 }

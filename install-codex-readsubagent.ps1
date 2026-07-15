@@ -33,7 +33,7 @@ Environment:
   ZZ_CODEX_READSUBAGENT_URL           Exact source URL (default: $ZZ_DASH_URL/codex-readsubagent)
   ZZ_READSUBAGENT_MCP_URL             MCP server source URL (default: $ZZ_DASH_URL/zz-readsubagent-mcp)
   ZZ_CODEX_READSUBAGENT_PROJECT_DIR   Target repo/project dir
-  ZZ_CODEX_READSUBAGENT_PROVIDER_URL  Provider base URL (default: http://127.0.0.1:11444/v1)
+  ZZ_CODEX_READSUBAGENT_PROVIDER_URL  Provider base URL (default: http://127.0.0.1:1234/v1)
   ZZ_CODEX_READSUBAGENT_SKIP_PROVIDER=1
   ZZ_CODEX_READSUBAGENT_SKIP_MCP=1
   ZZ_CODEX_READSUBAGENT_SKIP_AGENTS_MD=1
@@ -58,7 +58,7 @@ $mcpSourceBase = if ($env:ZZ_READSUBAGENT_MCP_URL) {
 }
 $projectDir = if ($env:ZZ_CODEX_READSUBAGENT_PROJECT_DIR) { $env:ZZ_CODEX_READSUBAGENT_PROJECT_DIR } else { (Get-Location).Path }
 $codexDir = if ($env:CODEX_HOME) { $env:CODEX_HOME } else { Join-Path $env:USERPROFILE '.codex' }
-$providerUrl = if ($env:ZZ_CODEX_READSUBAGENT_PROVIDER_URL) { $env:ZZ_CODEX_READSUBAGENT_PROVIDER_URL } else { 'http://127.0.0.1:11444/v1' }
+$providerUrl = if ($env:ZZ_CODEX_READSUBAGENT_PROVIDER_URL) { $env:ZZ_CODEX_READSUBAGENT_PROVIDER_URL } else { 'http://127.0.0.1:1234/v1' }
 $skipProvider = Test-Truthy $env:ZZ_CODEX_READSUBAGENT_SKIP_PROVIDER
 $skipMcp = Test-Truthy $env:ZZ_CODEX_READSUBAGENT_SKIP_MCP
 $skipAgentsMd = Test-Truthy $env:ZZ_CODEX_READSUBAGENT_SKIP_AGENTS_MD

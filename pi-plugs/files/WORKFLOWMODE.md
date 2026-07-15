@@ -11,6 +11,7 @@ It lives entirely in the pi-plugs extension bundle under `clients/pi-plugs/exten
 - `/workflowmode off` — turns workflow mode off and clears workflow state.
 - `/workflowmode reset` — keeps workflow mode on/off as-is but clears pending workflow state.
 - `/workflowmode status` — shows current workflow state.
+- `/workflowmode model <model>` — selects the same configured child model for every `wf-*` stage agent. Current shared model ids are `gpt-5.6-sol-xhigh`, `gpt-5.5-xhigh`, `qwen-35b-a3b`, and `glm-5p2-xhigh`.
 - `Alt+W` — input-focused shortcut that toggles workflow mode.
 
 After workflow mode is on, the next normal user prompt is intercepted by the workflow pipeline. Once the current workflow reaches a terminal state, later prompts pass through normally until workflow mode is reset or toggled again.
@@ -71,14 +72,13 @@ workflow complete
 | Reviewer agent | `wf-revieweragent.ts` | Review the implemented stage and return a green signal before workflow mode advances. |
 | Tester agent | `wf-testeragent.ts` | Analyze branch changes for reasonable test gaps, fill them, and pass testing changes through review before final review. |
 | Final review agent | `wf-finalreviewagent.ts` | Review the whole branch after all stages pass and dispatch final remediation loops until green. |
-| Factual subagents | `readsubagent.ts`, `explorationsubagent.ts` | Provide factual repo inspection/discovery only. They must not produce implementation plans, solution proposals, recommendations, or edit strategies. |
+| Factual subagent | `readsubagent.ts` | Provides factual repo inspection only. It must not produce implementation plans, solution proposals, recommendations, or edit strategies. |
 
 ## Role boundaries
 
 Workflow mode deliberately separates responsibilities:
 
 - `readsubagent` answers targeted file/config/source questions with concise evidence and citations.
-- `explorationsubagent` maps broad repo facts, relevant files, symbols, relationships, and uncertainty.
 - `wf-clarifier` uses factual subagent output to enrich the user's ask, not to plan implementation.
 - `wf-brainstormer` owns solution-option synthesis.
 - `wf-designplan` owns breaking the chosen idea/solution into ordered, manageable design/development stages.
@@ -89,7 +89,7 @@ Workflow mode deliberately separates responsibilities:
 - `wf-finalreviewagent` owns whole-branch review after all per-stage reviews and testing pass, and can dispatch final remediation steps back through implementer/reviewer loops until it returns green.
 - `wf-adversarialreview` owns critique/correction of selected planning-stage outputs.
 
-When adding or changing workflow agents, preserve this boundary. In particular, do not ask `readsubagent` or `explorationsubagent` for plans, recommendations, or edit strategies.
+When adding or changing workflow agents, preserve this boundary. In particular, do not ask `readsubagent` for plans, recommendations, or edit strategies.
 
 ## Stage output contracts
 
@@ -436,12 +436,12 @@ Each workflow stage can also be invoked directly:
 - `/wf-adversarialreview model|config|ask <stage-output>`
 - `/wf-designplan model|config|ask <prompt>`
 - `/wf-impplanner model|config|ask <prompt>`
-- `/wf-implementeragent config|ask <manual implementation task>`
-- `/wf-revieweragent config|ask <manual review task>`
-- `/wf-testeragent config|ask <manual testing task>`
-- `/wf-finalreviewagent config|ask <manual branch review task>`
+- `/wf-implementeragent model|config|ask <manual implementation task>`
+- `/wf-revieweragent model|config|ask <manual review task>`
+- `/wf-testeragent model|config|ask <manual testing task>`
+- `/wf-finalreviewagent model|config|ask <manual branch review task>`
 
-For planner stages, the `model` command selects a configured model option for that stage. The `config` command shows the active config, model selector, tools, and timeouts.
+For workflow stages, the `model` command selects a configured model option for that stage. Use `/workflowmode model <model>` to set all `wf-*` stage agents at once. The `config` command shows the active config, model selector, tools, and timeouts.
 
 ## Config and models
 
@@ -457,12 +457,11 @@ Each workflow stage has a JSONC config beside the extension:
 - `extensions/wf-testeragent.config.jsonc`
 - `extensions/wf-finalreviewagent.config.jsonc`
 
-By default, these stages use `openai-codex/gpt-5.5` with `thinking: "xhigh"`. Planning stages are configured with `tools: ["readsubagent", "explorationsubagent"]` so that repository investigation is delegated to the existing Qwen-based factual subagents. `wf-implementeragent` and `wf-testeragent` are configured with mutating code/testing tools plus `readsubagent`/`explorationsubagent`; `wf-revieweragent` and `wf-finalreviewagent` are configured with read/search/bash tools plus `readsubagent`/`explorationsubagent`.
+By default, these stages use `openai-codex/gpt-5.6-sol` with `thinking: "xhigh"`. Planning stages are configured with `tools: ["readsubagent"]` so repository inspection is delegated to the existing Qwen-based factual subagent. `wf-implementeragent` and `wf-testeragent` are configured with mutating code/testing tools plus `readsubagent`; `wf-revieweragent` and `wf-finalreviewagent` are configured with read/search/bash tools plus `readsubagent`.
 
-The factual subagents keep their own model configs:
+The factual subagent keeps its own model config:
 
 - `extensions/readsubagent.config.jsonc`
-- `extensions/explorationsubagent.config.jsonc`
 
 ## Installation and updates
 
@@ -480,7 +479,6 @@ workflowmode
 ├─ wf-testeragent
 ├─ wf-finalreviewagent
 ├─ readsubagent
-├─ explorationsubagent
 └─ zz-subagent-runtime
 ```
 

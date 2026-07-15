@@ -275,11 +275,27 @@ export function formatChildAgentModelSelection(options: {
   ].join("\n");
 }
 
+function migrateLegacyGptDefault(config: ChildPiAgentConfig): ChildPiAgentConfig {
+  if (config.provider !== "openai-codex" || config.model !== "gpt-5.5" || config.thinking !== "xhigh") {
+    return config;
+  }
+  const { modelSelector: _modelSelector, ...baseConfig } = config;
+  void _modelSelector;
+  return {
+    ...baseConfig,
+    contextWindow: 272_000,
+    maxOutputTokens: 128_000,
+    model: "gpt-5.6-sol",
+  };
+}
+
 export function applyChildAgentModelSelection(
   config: ChildPiAgentConfig,
   selectedOption: ChildAgentModelOption | undefined,
 ): ChildPiAgentConfig {
-  if (!selectedOption) return config;
+  // Installed config files are intentionally preserved across plug updates. Migrate
+  // the former automatic default in memory while retaining explicit model choices.
+  if (!selectedOption) return migrateLegacyGptDefault(config);
 
   const { modelSelector: _modelSelector, ...baseConfig } = config;
   void _modelSelector;

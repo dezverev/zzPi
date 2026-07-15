@@ -57,6 +57,14 @@ if [ -n "$SCRIPT_PATH" ] && [ "$SCRIPT_PATH" != "bash" ] && [ "$SCRIPT_PATH" != 
   SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd -P)"
 fi
 
+path_to_file_url() {
+  python3 - "$1" <<'PY_URL'
+from pathlib import Path
+import sys
+print(Path(sys.argv[1]).resolve().as_uri())
+PY_URL
+}
+
 DEFAULT_RAW_BASE="https://raw.githubusercontent.com/dezverev/zzPi/main"
 DEFAULT_RAW_BASE="${DEFAULT_RAW_BASE%/}"
 RAW_BASE="${ZZ_PI_RAW_BASE:-$DEFAULT_RAW_BASE}"
@@ -64,7 +72,7 @@ RAW_BASE="${RAW_BASE%/}"
 if [ -n "${ZZ_PI_PLUGS_URL:-}" ]; then
   PLUGS_BASE="$ZZ_PI_PLUGS_URL"
 elif [ -n "$SCRIPT_DIR" ] && [ -f "$SCRIPT_DIR/pi-plugs/manifest.json" ] && [ -f "$SCRIPT_DIR/pi-plugs/pi-plugs.tar.gz" ]; then
-  PLUGS_BASE="file://$SCRIPT_DIR/pi-plugs"
+  PLUGS_BASE="$(path_to_file_url "$SCRIPT_DIR/pi-plugs")"
 else
   PLUGS_BASE="$RAW_BASE/pi-plugs"
 fi
@@ -72,7 +80,7 @@ PLUGS_BASE="${PLUGS_BASE%/}"
 if [ -n "${ZZ_LIB_URL:-}" ]; then
   ZZ_LIB_BASE="$ZZ_LIB_URL"
 elif [ -n "$SCRIPT_DIR" ] && [ -f "$SCRIPT_DIR/zz-lib/manifest.json" ]; then
-  ZZ_LIB_BASE="file://$SCRIPT_DIR/zz-lib"
+  ZZ_LIB_BASE="$(path_to_file_url "$SCRIPT_DIR/zz-lib")"
 else
   ZZ_LIB_BASE="$RAW_BASE/zz-lib"
 fi
@@ -693,13 +701,6 @@ if isinstance(old_owned_raw, dict):
 else:
     # Migration path from the first non-selectable installer, which stored the server manifest directly.
     old_owned = {str(item.get("path")) for item in old_state.get("files", []) if isinstance(item, dict) and item.get("path")}
-old_hashes = old_state.get("file_hashes") if isinstance(old_state.get("file_hashes"), dict) else {}
-if not old_hashes:
-    old_hashes = {
-        str(item.get("path")): str(item.get("sha256"))
-        for item in old_state.get("files", [])
-        if isinstance(item, dict) and item.get("path") and item.get("sha256")
-    }
 old_config_files = set(old_state.get("config_files", [])) if isinstance(old_state.get("config_files"), list) else {
     path for path in old_owned if path.endswith(".config.jsonc")
 }
@@ -732,10 +733,9 @@ try:
         if not target.exists() or not target.is_file():
             continue
         if rel in old_config_files:
-            previous_hash = old_hashes.get(rel)
-            if previous_hash and hash_file(target) != previous_hash:
-                warnings.append(f"kept modified config from removed plug: {rel}")
-                continue
+            warnings.append(f"kept config from removed plug for manual cleanup: {rel}")
+            preserved_configs.append(rel)
+            continue
         target.unlink()
         removed.append(rel)
 

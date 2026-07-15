@@ -1,0 +1,101 @@
+{
+  // vettingagents runs three independent read-only child Pi agents over the same
+  // high-value doc, plan, implementation result, diff, or code review target:
+  // research/grounding, live-tree feasibility, and
+  // consistency/severity. The default is GPT-5.6 Sol with xhigh reasoning through
+  // Pi's existing openai-codex provider/auth.
+
+  "model": "gpt-5.6-sol",
+  "provider": "openai-codex",
+  "providerRegistration": "none",
+  "endpoint": "http://127.0.0.1:1234",
+
+  // Optional Pi model selector to pass directly to the child processes.
+  // Leave empty to use "<provider>/<model>" from the settings above.
+  "modelSelector": "",
+
+  // Choices shown by /vettingagents model. Additional models can be added here
+  // without changing the extension code.
+  "modelOptions": {
+    "gpt-5.6-sol-xhigh": {
+      "label": "GPT-5.6 Sol xhigh (openai-codex)",
+      "provider": "openai-codex",
+      "providerRegistration": "none",
+      "model": "gpt-5.6-sol",
+      "endpoint": "http://127.0.0.1:1234",
+      "contextWindow": 272000,
+      "maxOutputTokens": 128000,
+      "requestTimeoutMs": 1800000,
+      "reportMaxChars": 36000,
+      "thinking": "xhigh",
+      "tools": ["read", "bash", "grep", "find", "ls"],
+    },
+    "gpt-5.5-xhigh": {
+      "label": "GPT-5.5 xhigh (openai-codex)",
+      "provider": "openai-codex",
+      "providerRegistration": "none",
+      "model": "gpt-5.5",
+      "endpoint": "http://127.0.0.1:1234",
+      "contextWindow": 400000,
+      "maxOutputTokens": 32768,
+      "requestTimeoutMs": 1800000,
+      "reportMaxChars": 36000,
+      "thinking": "xhigh",
+      "tools": ["read", "bash", "grep", "find", "ls"],
+    },
+    "qwen-35b-a3b": {
+      "label": "Qwen 3.6 35B A3B via 127.0.0.1:1234 proxy (telemetry)",
+      "provider": "lm-studio",
+      "providerRegistration": "none",
+      "endpoint": "http://127.0.0.1:1234",
+      "model": "qwen/qwen3.6-35b-a3b",
+      "contextWindow": 127000,
+      "maxOutputTokens": 32768,
+      "requestTimeoutMs": 1800000,
+      "reportMaxChars": 36000,
+      "thinking": "off",
+      "tools": ["read", "bash", "grep", "find", "ls"],
+    },
+    "glm-5p2-xhigh": {
+      "label": "GLM 5.2 xhigh (fireworks)",
+      "provider": "fireworks",
+      "providerRegistration": "none",
+      "model": "accounts/fireworks/models/glm-5p2",
+      "contextWindow": 1048575,
+      "maxOutputTokens": 65536,
+      "requestTimeoutMs": 1800000,
+      "reportMaxChars": 36000,
+      "thinking": "xhigh",
+      "tools": ["read", "bash", "grep", "find", "ls"],
+    },
+    "qwen3p7-plus": {
+      "label": "Qwen 3.7 Plus (fireworks)",
+      "provider": "fireworks",
+      "providerRegistration": "none",
+      "model": "accounts/fireworks/models/qwen3p7-plus",
+      "contextWindow": 262144,
+      "maxOutputTokens": 65536,
+      "requestTimeoutMs": 1800000,
+      "reportMaxChars": 36000,
+      "thinking": "high",
+      "tools": ["read", "bash", "grep", "find", "ls"],
+    },
+  },
+
+  // Read-only tools available to each vetting child. Each lens inspects its
+  // assigned evidence directly in its own child thread/model and cannot
+  // delegate to readsubagent.
+  "tools": ["read", "bash", "grep", "find", "ls"],
+
+  "requestTimeoutMs": 1800000,
+  "contextWindow": 272000,
+  "maxOutputTokens": 128000,
+
+  // Hard cap for the combined report injected back into the main conversation.
+  // The extension divides this budget across the three independent lens reports.
+  "reportMaxChars": 36000,
+
+  "thinking": "xhigh",
+
+  "systemPrompt": "You are a read-only adversarial vetting subagent spawned by Pi. Verify high-value documents, plans, implementation results, diffs, and code review targets without implementing changes. Be skeptical, evidence-driven, and specific. Inspect assigned evidence directly with your own read-only repo tools and model thread; do not delegate to other subagents. Do not edit or write files, do not run destructive commands, and do not perform git or PR operations. Return structured findings with blockers, major issues, evidence, uncertainty, and severity.",
+}

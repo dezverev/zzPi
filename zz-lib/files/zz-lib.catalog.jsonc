@@ -5,6 +5,7 @@
   "version": "1.0.0",
   "commonFiles": [
     "extensions/zz-lib/child-pi-agent.ts",
+    "extensions/zz-lib/child-run-semaphore.ts",
     "extensions/zz-lib/jsonc-config.ts",
     "extensions/zz-lib/version.ts"
   ],

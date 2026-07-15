@@ -12,7 +12,7 @@ The child invocation mirrors the Pi ``readsubagent`` extension
 runner (clients/zz-lib/extensions/zz-lib/child-pi-agent.ts):
 
     pi --mode json -p --no-session --model <selector> --thinking off \
-       --exclude-tools readsubagent,explorationsubagent,reviewsubagent,simpletasksubagent \
+       --exclude-tools readsubagent,explorationsubagent \
        --tools read,grep,find,ls \
        --append-system-prompt "<system prompt>" "<delegated task>"
 
@@ -46,7 +46,7 @@ DEFAULT_THINKING = "off"
 DEFAULT_TOOLS = "read,grep,find,ls"
 DEFAULT_TIMEOUT_MS = 30 * 60 * 1000
 DEFAULT_REPORT_MAX_CHARS = 16_000
-EXCLUDED_CHILD_TOOLS = "readsubagent,explorationsubagent,reviewsubagent,simpletasksubagent"
+EXCLUDED_CHILD_TOOLS = "readsubagent,explorationsubagent"
 
 # Ported verbatim from DEFAULT_READSUBAGENT_CONFIG.systemPrompt in
 # clients/pi-plugs/extensions/readsubagent.ts so the child behaves identically.
