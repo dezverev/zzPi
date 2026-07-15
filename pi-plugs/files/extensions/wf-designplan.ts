@@ -56,10 +56,10 @@ const WF_DESIGNPLAN_STAGE_SCHEMA = [
   `{"kind":"questions","summary":"why design planning is blocked","questions":["question 1","question 2"]}`,
   "For reviewed final design-plan output, prefer kind=design_plan. Preserve the design-plan schema exactly; ensure steps are ordered, feasible, manageable implementation stages; do not return the adversarial-review envelope inside reviewedOutput.",
 ].join("\n");
-const DEFAULT_TOOLS = ["readsubagent", "explorationsubagent"];
+const DEFAULT_TOOLS = ["readsubagent"];
 const EXCLUDED_CHILD_TOOLS = [
-  "reviewsubagent",
-  "simpletasksubagent",
+  "vettingagents",
+  "vetting-agents",
   "wfclarifier",
   "wf-clarifier",
   "wfbrainstormer",
@@ -72,8 +72,6 @@ const EXCLUDED_CHILD_TOOLS = [
   "wf-impplanner",
   "wfimplementeragent",
   "wf-implementeragent",
-  "wfimplemnteragent",
-  "wf-implemnteragent",
   "wfrevieweragent",
   "wf-revieweragent",
   "wffinalreviewagent",
@@ -83,16 +81,16 @@ const EXCLUDED_CHILD_TOOLS = [
 ] as const;
 
 const DEFAULT_WF_DESIGNPLAN_CONFIG: ChildPiAgentConfig = {
-  contextWindow: 400_000,
+  contextWindow: 272_000,
   endpoint: "http://127.0.0.1:1234",
-  maxOutputTokens: 32_768,
-  model: "gpt-5.5",
+  maxOutputTokens: 128_000,
+  model: "gpt-5.6-sol",
   provider: "openai-codex",
   providerRegistration: "none",
   reportMaxChars: 28_000,
   requestTimeoutMs: 30 * 60 * 1_000,
   systemPrompt:
-    "You are wf-designplan, a workflow-mode design planning subagent for Pi. Consume the selected brainstorm option and break the chosen idea/solution into smaller, manageable, implementable stages before implementation begins. Focus on sequencing, boundaries, dependencies, feasibility, validation, and handoff clarity rather than concrete code edits. Use readsubagent and explorationsubagent only for factual repo context, evidence, constraints, and uncertainty; do not ask them for implementation plans or solution proposals. Return only the requested JSON decision.",
+    "You are wf-designplan, a workflow-mode design planning subagent for Pi. Consume the selected brainstorm option and break the chosen idea/solution into smaller, manageable, implementable stages before implementation begins. Focus on sequencing, boundaries, dependencies, feasibility, validation, and handoff clarity rather than concrete code edits. Use readsubagent only for factual repo context, evidence, constraints, and uncertainty; do not ask it for implementation plans or solution proposals. Return only the requested JSON decision.",
   thinking: "xhigh",
   tools: DEFAULT_TOOLS,
 };
@@ -279,10 +277,11 @@ function persistState(pi: ExtensionAPI): void {
   });
 }
 
-async function selectWfDesignPlanModel(
+export async function selectWfDesignPlanModel(
   pi: ExtensionAPI,
   ctx: ExtensionContext,
   args: string,
+  options?: { readonly quiet?: boolean },
 ): Promise<void> {
   reloadWfDesignPlanSettings(pi, ctx.cwd);
 
@@ -325,10 +324,12 @@ async function selectWfDesignPlanModel(
   selectedWfDesignPlanModelId = option.id;
   persistState(pi);
   reloadWfDesignPlanSettings(pi, ctx.cwd);
-  ctx.ui.notify(
-    `wf-designplan model selected: ${getChildAgentModelChoiceLabel(option)}\nactive child model selector: ${getModelSelector(currentConfig)}`,
-    "info",
-  );
+  if (!options?.quiet) {
+    ctx.ui.notify(
+      `wf-designplan model selected: ${getChildAgentModelChoiceLabel(option)}\nactive child model selector: ${getModelSelector(currentConfig)}`,
+      "info",
+    );
+  }
 }
 
 function buildWfDesignPlanTask(options: {
@@ -371,9 +372,8 @@ function buildWfDesignPlanPrompt(task: string): string {
   return [
     "You are running as wf-designplan, a design planning subagent in Pi workflow mode.",
     "Your job is to turn one selected wf-brainstormer option into a staged development design plan that breaks the idea/solution into smaller, manageable, implementable steps for later workflow stages.",
-    "Use the explorationsubagent tool for broad factual repo checks around architecture, conventions, similar code, configuration, and constraints.",
-    "Use the readsubagent tool for targeted factual inspection of files, symbols, docs, or configs surfaced by the selected option or exploration.",
-    "When calling readsubagent or explorationsubagent, ask only for factual repo findings, evidence, relationships, constraints, and uncertainty. Do not ask those tools for implementation plans, solution proposals, recommendations, or edit strategies; wf-designplan owns the design synthesis.",
+    "Use the readsubagent tool for factual inspection of relevant architecture, conventions, similar code, configuration, constraints, files, symbols, and docs.",
+    "When calling readsubagent, ask only for factual repo findings, evidence, relationships, constraints, and uncertainty. Do not ask it for implementation plans, solution proposals, recommendations, or edit strategies; wf-designplan owns the design synthesis.",
     "Do not write code, mutate files, or produce patches. Do produce a clear sequence of implementation-ready stages with repo touchpoints, dependencies, risks, and validation guidance.",
     "Return JSON only. Do not wrap it in markdown. Use exactly one of these shapes:",
     `{"kind":"design_plan","summary":"short synthesis","selectedOptionTitle":"selected option title","objective":"what the staged plan accomplishes","architecture":"design-level approach, boundaries, and sequencing rationale","steps":[{"title":"Stage/step title","details":"what this implementation stage accomplishes, why it is ordered here, and what should be true before moving on","touchpoints":["repo path/symbol/context"],"risks":["risk"],"validation":["validation idea"]}],"risks":["cross-cutting risk"],"unknowns":["open unknown"],"acceptanceCriteria":["observable success criterion"],"validation":["test/check/manual validation"],"questions":["optional question to carry forward"],"handoffPrompt":"optional concise prompt for the next workflow stage"}`,

@@ -1,8 +1,11 @@
 {
-  // wf-clarifier is the first workflow-mode subagent. It clarifies and enriches
-  // the user's initial prompt before the rest of the workflow runs.
+  // promptenrichsubagent is a standalone, manually-triggered prompt-enrichment
+  // agent. /pe <prompt> runs a clarification/enrichment pass (using the
+  // readsubagent for repo context) and returns
+  // enriched prompt options or clarifying questions into the main context.
+  // It is independent of workflow mode and does not alter wf-clarifier.
 
-  // Default remote Pi model for the clarification pass.
+  // Default remote Pi model for the enrichment pass.
   "model": "gpt-5.6-sol",
   "provider": "openai-codex",
   "providerRegistration": "none",
@@ -11,8 +14,13 @@
   // providerRegistration is "none".
   "endpoint": "http://127.0.0.1:1234",
 
-  // Choices shown by /wf-clarifier model. Keep model/provider metadata here so
-  // adding or changing the clarifier model is a config-only change.
+  // Optional Pi model selector to pass directly to the child process.
+  // Leave empty to use "<provider>/<model>" from the settings above.
+  "modelSelector": "",
+
+  // Choices shown by /pe-model. Keep model/provider metadata here so adding
+  // or changing the enrichment model is a config-only change.
+  // The object key is the stable selection id persisted in the session branch.
   "modelOptions": {
     "gpt-5.6-sol-xhigh": {
       "label": "GPT-5.6 Sol xhigh (openai-codex)",
@@ -63,10 +71,22 @@
       "thinking": "xhigh",
       "tools": ["readsubagent"],
     },
+    "qwen3p7-plus": {
+      "label": "Qwen 3.7 Plus (fireworks)",
+      "provider": "fireworks",
+      "providerRegistration": "none",
+      "model": "accounts/fireworks/models/qwen3p7-plus",
+      "contextWindow": 262144,
+      "maxOutputTokens": 32768,
+      "requestTimeoutMs": 1800000,
+      "reportMaxChars": 20000,
+      "thinking": "high",
+      "tools": ["readsubagent"],
+    },
   },
 
-  // wf-clarifier should use this subagent tool for repo context. That tool
-  // spawns its own child Pi process and uses its configured model from
+  // promptenrichsubagent should use this subagent tool for repo context. That
+  // tool spawns its own child Pi process and uses its configured model from
   // readsubagent.config.jsonc.
   "tools": ["readsubagent"],
 
@@ -77,5 +97,5 @@
   "thinking": "xhigh",
 
   // Extra instructions appended to the child Pi system prompt.
-  "systemPrompt": "You are wf-clarifier, a workflow-mode clarification subagent for Pi. Clarify and enrich the user's initial workflow prompt before any implementation planning begins. Use the readsubagent tool only to gather relevant repo facts, evidence, relationships, constraints, and uncertainty. Do not ask it for implementation plans, solution proposals, recommendations, or edit strategies; planning is the responsibility of later workflow agents. The readsubagent tool uses its own configured model; do not try to replace it with raw inspection. Return only the requested JSON decision.",
+  "systemPrompt": "You are promptenrichsubagent, a standalone prompt-enrichment subagent for Pi. Clarify and enrich a user's prompt before they act on it. Use the readsubagent tool only to gather relevant repo facts, evidence, relationships, constraints, and uncertainty. Do not ask it for implementation plans, solution proposals, recommendations, or edit strategies. The readsubagent tool uses its own configured model; do not try to replace it with raw inspection. Return only the requested JSON decision.",
 }

@@ -1,10 +1,10 @@
 {
   // Registers shared LM Studio models in Pi's normal /model picker.
-  // Run /zz-model-setup setup after install to use your own endpoint/model.
+  // Run /zz-model-setup setup after install to use your own default endpoint/model.
   "enabled": true,
   "provider": "lm-studio",
   "name": "LM Studio",
-  "endpoint": "http://127.0.0.1:11444",
+  "endpoint": "http://127.0.0.1:1234",
   "apiKey": "lm-studio",
 
   // Defaults applied to model entries unless overridden per model.
@@ -15,19 +15,22 @@
   "models": [
     {
       "id": "qwen/qwen3.6-35b-a3b",
-      "name": "Qwen 3.6 35B A3B (LM Studio 127.0.0.1:11444)"
-    },
-    {
-      "id": "qwen/qwen3.6-35b-a3b",
-      "name": "Qwen 3.6 35B A3B (LM Studio 127.0.0.1)"
-    },
-    {
-      "id": "qwen/qwen3.6-35b-a3b",
-      "name": "Qwen 3.6 35B A3B (LM Studio 127.0.0.1:11444)"
+      "name": "Qwen 3.6 35B A3B via LM Studio proxy (default long context)",
+      "contextWindow": 250000,
+      "maxTokens": 32768
     },
     {
       "id": "qwen/qwen3.6-27b",
-      "name": "Qwen 3.6 27B (LM Studio)"
+      "name": "Qwen 3.6 27B via LM Studio proxy (.48 long context)",
+      "contextWindow": 250000,
+      "maxTokens": 32768
+    },
+    {
+      "id": "qwen3.6-27b-rust-v1.mlx",
+      "name": "Qwen 3.6 27B Rust v1 MLX via LM Studio proxy (.48)",
+      "contextWindow": 120000,
+      "maxTokens": 32768,
+      "reasoning": false
     }
   ]
 }

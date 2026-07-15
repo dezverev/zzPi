@@ -2,7 +2,7 @@
   // wf-implementeragent is the workflow-mode implementation worker. It consumes
   // one reviewed wf-impplanner stage at a time, mutates the repo for that stage
   // only, and returns structured JSON for wf-revieweragent.
-  "model": "gpt-5.5",
+  "model": "gpt-5.6-sol",
   "provider": "openai-codex",
   "providerRegistration": "none",
   "endpoint": "http://127.0.0.1:1234",
@@ -10,6 +10,18 @@
   // Choices shown by /wf-implementeragent model. Keep model/provider metadata here so
   // adding or changing the implementer model is a config-only change.
   "modelOptions": {
+    "gpt-5.6-sol-xhigh": {
+      "label": "GPT-5.6 Sol xhigh (openai-codex)",
+      "provider": "openai-codex",
+      "providerRegistration": "none",
+      "model": "gpt-5.6-sol",
+      "contextWindow": 272000,
+      "maxOutputTokens": 128000,
+      "requestTimeoutMs": 1800000,
+      "reportMaxChars": 32000,
+      "thinking": "xhigh",
+      "tools": ["read", "bash", "edit", "write", "grep", "find", "ls", "readsubagent"],
+    },
     "gpt-5.5-xhigh": {
       "label": "GPT-5.5 xhigh (openai-codex)",
       "provider": "openai-codex",
@@ -20,69 +32,42 @@
       "requestTimeoutMs": 1800000,
       "reportMaxChars": 32000,
       "thinking": "xhigh",
-      "tools": ["read", "bash", "edit", "write", "grep", "find", "ls", "readsubagent", "explorationsubagent"],
+      "tools": ["read", "bash", "edit", "write", "grep", "find", "ls", "readsubagent"],
     },
     "qwen-35b-a3b": {
-      "label": "Qwen 3.6 35B A3B on 127.0.0.1 (LM Studio)",
+      "label": "Qwen 3.6 35B A3B via 127.0.0.1:1234 proxy (telemetry)",
       "provider": "lm-studio",
       "providerRegistration": "none",
-      "endpoint": "http://127.0.0.1:11444",
+      "endpoint": "http://127.0.0.1:1234",
       "model": "qwen/qwen3.6-35b-a3b",
       "contextWindow": 127000,
       "maxOutputTokens": 32768,
       "requestTimeoutMs": 1800000,
       "reportMaxChars": 32000,
       "thinking": "off",
-      "tools": ["read", "bash", "edit", "write", "grep", "find", "ls", "readsubagent", "explorationsubagent"],
+      "tools": ["read", "bash", "edit", "write", "grep", "find", "ls", "readsubagent"],
     },
-    "qwen-35b-a3b-233": {
-      "label": "Qwen 3.6 35B A3B on 127.0.0.1 (LM Studio)",
-      "provider": "lm-studio",
+    "glm-5p2-xhigh": {
+      "label": "GLM 5.2 xhigh (fireworks)",
+      "provider": "fireworks",
       "providerRegistration": "none",
-      "endpoint": "http://127.0.0.1:1234",
-      "model": "qwen/qwen3.6-35b-a3b",
-      "contextWindow": 262144,
+      "model": "accounts/fireworks/models/glm-5p2",
+      "contextWindow": 1048575,
       "maxOutputTokens": 32768,
       "requestTimeoutMs": 1800000,
       "reportMaxChars": 32000,
-      "thinking": "off",
-      "tools": ["read", "bash", "edit", "write", "grep", "find", "ls", "readsubagent", "explorationsubagent"],
-    },
-    "qwen-35b-a3b-32": {
-      "label": "Qwen 3.6 35B A3B on 127.0.0.1 (LM Studio)",
-      "provider": "lm-studio",
-      "providerRegistration": "none",
-      "endpoint": "http://127.0.0.1:11444",
-      "model": "qwen/qwen3.6-35b-a3b",
-      "contextWindow": 127000,
-      "maxOutputTokens": 32768,
-      "requestTimeoutMs": 1800000,
-      "reportMaxChars": 32000,
-      "thinking": "off",
-      "tools": ["read", "bash", "edit", "write", "grep", "find", "ls", "readsubagent", "explorationsubagent"],
-    },
-    "qwen-27b": {
-      "label": "Qwen 3.6 27B on 127.0.0.1 (LM Studio)",
-      "provider": "lm-studio",
-      "providerRegistration": "none",
-      "endpoint": "http://127.0.0.1:1234",
-      "model": "qwen/qwen3.6-27b",
-      "contextWindow": 262144,
-      "maxOutputTokens": 32768,
-      "requestTimeoutMs": 1800000,
-      "reportMaxChars": 32000,
-      "thinking": "off",
-      "tools": ["read", "bash", "edit", "write", "grep", "find", "ls", "readsubagent", "explorationsubagent"],
+      "thinking": "xhigh",
+      "tools": ["read", "bash", "edit", "write", "grep", "find", "ls", "readsubagent"],
     },
   },
 
   // Mutating implementation tools. bash is used for targeted tests/checks;
-  // readsubagent/explorationsubagent are available for factual repo context.
-  "tools": ["read", "bash", "edit", "write", "grep", "find", "ls", "readsubagent", "explorationsubagent"],
+  // readsubagent is available for factual repo context.
+  "tools": ["read", "bash", "edit", "write", "grep", "find", "ls", "readsubagent"],
 
   "requestTimeoutMs": 1800000,
-  "contextWindow": 400000,
-  "maxOutputTokens": 32768,
+  "contextWindow": 272000,
+  "maxOutputTokens": 128000,
   "reportMaxChars": 32000,
   "thinking": "xhigh",
 

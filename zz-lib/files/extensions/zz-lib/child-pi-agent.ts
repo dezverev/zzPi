@@ -10,6 +10,7 @@ import {
 } from "@earendil-works/pi-coding-agent";
 import { Box, Container, Markdown, Spacer, Text } from "@earendil-works/pi-tui";
 
+import { ChildRunSemaphore } from "./child-run-semaphore.ts";
 import {
   getPositiveIntegerField,
   getStringArrayField,
@@ -18,6 +19,7 @@ import {
 } from "./jsonc-config.ts";
 
 export const CHILD_PI_AGENT_ENV = "PI_CHILD_PI_AGENT";
+export const CHILD_PI_AGENT_DEADLINE_ENV = "PI_CHILD_AGENT_DEADLINE_AT";
 export const DEFAULT_LOCAL_MODEL_ENDPOINTS_CONFIG_FILE_PATH =
   ".pi/extensions/local-model-endpoints.config.jsonc";
 export const LOCAL_MODEL_ENDPOINTS_CONFIG_FILE_PATH = DEFAULT_LOCAL_MODEL_ENDPOINTS_CONFIG_FILE_PATH;
@@ -26,6 +28,24 @@ const THINKING_LEVELS = ["off", "minimal", "low", "medium", "high", "xhigh"] as 
 const MAX_STDERR_CHARS = 8_000;
 const MAX_STATUS_TASK_CHARS = 70;
 const MAX_TOOL_SUMMARY_ITEMS = 30;
+const DEFAULT_MAX_CONCURRENT_CHILD_RUNS = 3;
+
+function getMaxConcurrentChildRuns(): number {
+  const configured = Number.parseInt(process.env.PI_CHILD_AGENT_MAX_CONCURRENCY ?? "", 10);
+  return Number.isFinite(configured) && configured > 0 ? configured : DEFAULT_MAX_CONCURRENT_CHILD_RUNS;
+}
+
+const childRunSemaphore = new ChildRunSemaphore(getMaxConcurrentChildRuns());
+
+async function closeIdleCodexWebSockets(): Promise<void> {
+  try {
+    const piAi = await import("@earendil-works/pi-ai/api/openai-codex-responses");
+    piAi.closeOpenAICodexWebSocketSessions();
+  } catch {
+    // Older Pi builds may not expose WebSocket session cleanup. Concurrency
+    // limiting still reduces connection pressure in that case.
+  }
+}
 
 type ChildAgentMessage = Parameters<MessageRenderer>[0];
 export type ChildAgentTheme = Parameters<MessageRenderer>[2];
@@ -169,6 +189,12 @@ export interface ChildAgentReportOptions {
 
 export interface RenderChildAgentOptions {
   readonly agentName: string;
+}
+
+export interface RenderChildAgentToolCallOptions extends RenderChildAgentOptions {
+  readonly model: string;
+  readonly scope?: string | undefined;
+  readonly task?: string | undefined;
 }
 
 export interface SendChildAgentReportMessageOptions {
@@ -857,7 +883,7 @@ function applyToolCallEnd(toolCalls: ToolCallSummary[], event: Record<string, un
   if (typeof event.isError === "boolean") call.isError = event.isError;
 }
 
-export async function runChildPiAgent(
+async function runChildPiAgentUnbounded(
   options: RunChildPiAgentOptions,
 ): Promise<ChildAgentRunResult> {
   const startedAt = Date.now();
@@ -965,14 +991,19 @@ export async function runChildPiAgent(
       stdio: ["ignore", "pipe", "pipe"],
     });
 
+    let terminationRequested = false;
+    let forceKillTimer: NodeJS.Timeout | undefined;
     const killProc = (nextStatus: "aborted" | "timeout") => {
       if (nextStatus === "aborted") aborted = true;
       else timedOut = true;
+      if (terminationRequested) return;
+      terminationRequested = true;
 
       proc.kill("SIGTERM");
-      setTimeout(() => {
-        if (!proc.killed) proc.kill("SIGKILL");
-      }, 5_000).unref();
+      forceKillTimer = setTimeout(() => {
+        if (proc.exitCode === null && proc.signalCode === null) proc.kill("SIGKILL");
+      }, 5_000);
+      forceKillTimer.unref();
     };
 
     const timeoutId = setTimeout(() => killProc("timeout"), options.config.requestTimeoutMs);
@@ -997,12 +1028,14 @@ export async function runChildPiAgent(
     proc.on("error", (error) => {
       spawnError = getErrorMessage(error);
       clearTimeout(timeoutId);
+      if (forceKillTimer) clearTimeout(forceKillTimer);
       options.signal?.removeEventListener("abort", abortListener);
       finish(1);
     });
 
     proc.on("close", (code) => {
       clearTimeout(timeoutId);
+      if (forceKillTimer) clearTimeout(forceKillTimer);
       options.signal?.removeEventListener("abort", abortListener);
       if (stdoutBuffer.trim()) processLine(stdoutBuffer);
       finish(code ?? 0);
@@ -1039,6 +1072,97 @@ export async function runChildPiAgent(
   if (lastStopReason) result.stopReason = lastStopReason;
 
   return result;
+}
+
+function createPreSpawnResult(
+  options: RunChildPiAgentOptions,
+  startedAt: number,
+  status: "aborted" | "timeout",
+): ChildAgentRunResult {
+  const message = status === "timeout"
+    ? `Child agent timed out after ${options.config.requestTimeoutMs}ms including queue wait`
+    : "Child agent run was aborted before it started";
+  return {
+    durationMs: Date.now() - startedAt,
+    errorMessage: message,
+    exitCode: status === "timeout" ? 124 : 143,
+    model: getModelSelector(options.config),
+    output: message,
+    rawOutput: "",
+    status,
+    stderr: "",
+    stopReason: status,
+    task: options.task,
+    toolCalls: [],
+    usage: {
+      cacheRead: 0,
+      cacheWrite: 0,
+      cost: 0,
+      estimatedInput: 0,
+      estimatedOutput: 0,
+      estimatedTotal: 0,
+      input: 0,
+      output: 0,
+      totalTokens: 0,
+      turns: 0,
+    },
+  };
+}
+
+export async function runChildPiAgent(
+  options: RunChildPiAgentOptions,
+): Promise<ChildAgentRunResult> {
+  const startedAt = Date.now();
+  const deadlineAt = startedAt + options.config.requestTimeoutMs;
+  const deadlineController = new AbortController();
+  const deadlineTimer = setTimeout(() => deadlineController.abort(), options.config.requestTimeoutMs);
+  deadlineTimer.unref();
+  const signal = options.signal
+    ? AbortSignal.any([options.signal, deadlineController.signal])
+    : deadlineController.signal;
+  let release: (() => void) | undefined;
+
+  try {
+    release = await childRunSemaphore.acquire(signal);
+    if (deadlineController.signal.aborted) return createPreSpawnResult(options, startedAt, "timeout");
+    if (options.signal?.aborted) return createPreSpawnResult(options, startedAt, "aborted");
+
+    // The parent model is idle while its tool executes. Close its cached Codex
+    // socket before spawning children so parallel workers can stay on WebSocket
+    // instead of hitting the account connection limit and falling back to SSE.
+    await closeIdleCodexWebSockets();
+
+    const remainingMs = options.config.requestTimeoutMs - (Date.now() - startedAt);
+    if (remainingMs <= 0 || deadlineController.signal.aborted) {
+      return createPreSpawnResult(options, startedAt, "timeout");
+    }
+    const result = await runChildPiAgentUnbounded({
+      ...options,
+      childEnv: {
+        ...options.childEnv,
+        [CHILD_PI_AGENT_DEADLINE_ENV]: String(deadlineAt),
+      },
+      config: { ...options.config, requestTimeoutMs: remainingMs },
+      signal,
+    });
+    const deadlineTimedOut = deadlineController.signal.aborted && !options.signal?.aborted;
+    return {
+      ...result,
+      durationMs: Date.now() - startedAt,
+      ...(deadlineTimedOut && result.status === "aborted"
+        ? { status: "timeout" as const, stopReason: "timeout" }
+        : {}),
+    };
+  } catch (error) {
+    if (deadlineController.signal.aborted && !options.signal?.aborted) {
+      return createPreSpawnResult(options, startedAt, "timeout");
+    }
+    if (options.signal?.aborted) return createPreSpawnResult(options, startedAt, "aborted");
+    throw error;
+  } finally {
+    clearTimeout(deadlineTimer);
+    release?.();
+  }
 }
 
 export function formatChildAgentReport(
@@ -1193,6 +1317,19 @@ export function renderTokenFooter(
   return new Text(theme.fg("dim", `tokens: ${formatUsage(usage)}`), 0, 0);
 }
 
+export function renderChildAgentToolCall(
+  theme: ChildAgentTheme,
+  options: RenderChildAgentToolCallOptions,
+): Text {
+  const segments = [
+    theme.fg("toolTitle", theme.bold(options.agentName)),
+    theme.fg("muted", options.model),
+    options.scope ? theme.fg("accent", options.scope) : undefined,
+    options.task ? theme.fg("dim", previewTask(options.task)) : undefined,
+  ].filter((segment): segment is string => segment !== undefined);
+  return new Text(segments.join(" "), 0, 0);
+}
+
 export function renderChildAgentMessage(
   message: ChildAgentMessage,
   expanded: boolean,
@@ -1256,14 +1393,14 @@ export function renderChildAgentToolResult(
         : "error";
   const icon = status === "completed" ? "✓" : status === "running" ? "⏳" : "✗";
   const shown = state.expanded ? content : truncateText(content, 4_000);
+  const model = typeof details?.model === "string" ? details.model : undefined;
+  const header = [
+    theme.fg(color, icon),
+    theme.fg("toolTitle", theme.bold(options.agentName)),
+    model ? theme.fg("muted", model) : undefined,
+  ].filter((segment): segment is string => segment !== undefined).join(" ");
   const container = new Container();
-  container.addChild(
-    new Text(
-      `${theme.fg(color, icon)} ${theme.fg("toolTitle", theme.bold(options.agentName))}`,
-      0,
-      0,
-    ),
-  );
+  container.addChild(new Text(header, 0, 0));
   container.addChild(new Spacer(1));
   container.addChild(new Markdown(shown, 0, 0, getMarkdownTheme()));
   if (!state.expanded && content.length > shown.length) {

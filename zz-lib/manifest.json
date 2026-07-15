@@ -2,6 +2,7 @@
   "archive": "pi-plugs.tar.gz",
   "commonFiles": [
     "extensions/zz-lib/child-pi-agent.ts",
+    "extensions/zz-lib/child-run-semaphore.ts",
     "extensions/zz-lib/jsonc-config.ts",
     "extensions/zz-lib/version.ts"
   ],
@@ -13,14 +14,19 @@
       "sha256": "86ecb3f11d0e1e7bc3b03ff1125e2e9ccd5fc57d40ab97d3d61f8a23fb2f5b8b"
     },
     {
-      "bytes": 316,
+      "bytes": 364,
       "path": "zz-lib.catalog.jsonc",
-      "sha256": "c674680120f9ee1c1da71c3836fd9858531688c8ca98d9df3c28143be0215d27"
+      "sha256": "050f0e7dce864d779d429a1b694b39059c090296fdcc3833186b9284a6f357ef"
     },
     {
-      "bytes": 41807,
+      "bytes": 47031,
       "path": "extensions/zz-lib/child-pi-agent.ts",
-      "sha256": "f1f8b46c438f5f91cfdae06e8e45f3abce31f448c2403c27f5d0c9b1fcd5d0cc"
+      "sha256": "2e654b0fd7b340b5962917643f16f006a51ee6580c07b14e1b65a007606d6ec6"
+    },
+    {
+      "bytes": 1982,
+      "path": "extensions/zz-lib/child-run-semaphore.ts",
+      "sha256": "9f1bd6cc2068bb7b0259820c3ffd2abad618df8979325b0a6262185937a83e28"
     },
     {
       "bytes": 5435,
@@ -44,7 +50,7 @@
     "version": "1.0.0"
   },
   "source": "zzPi git export",
-  "updated_at": "2026-06-20T00:48:14.653505+00:00",
+  "updated_at": "2026-07-15T00:09:38.659790+00:00",
   "visiblePlugins": [],
   "zzLibVersion": "1.0.0"
 }

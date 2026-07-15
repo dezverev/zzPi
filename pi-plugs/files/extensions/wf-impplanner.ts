@@ -49,10 +49,10 @@ const STATUS_KEY = "wf-impplanner";
 const TEMP_ARTIFACT_PATH_PARTS = [".zzwf", "tmp"] as const;
 const IMPLEMENTATION_PLAN_ARTIFACT_PATH_PARTS = ["zzwf", "implementationplans"] as const;
 const TOPIC_SLUG_MAX_LENGTH = 80;
-const DEFAULT_TOOLS = ["readsubagent", "explorationsubagent"];
+const DEFAULT_TOOLS = ["readsubagent"];
 const EXCLUDED_CHILD_TOOLS = [
-  "reviewsubagent",
-  "simpletasksubagent",
+  "vettingagents",
+  "vetting-agents",
   "wfclarifier",
   "wf-clarifier",
   "wfbrainstormer",
@@ -65,8 +65,6 @@ const EXCLUDED_CHILD_TOOLS = [
   "wf-impplanner",
   "wfimplementeragent",
   "wf-implementeragent",
-  "wfimplemnteragent",
-  "wf-implemnteragent",
   "wfrevieweragent",
   "wf-revieweragent",
   "wffinalreviewagent",
@@ -89,10 +87,10 @@ const WF_IMPPLANNER_FINAL_SCHEMA = [
 ].join("\n");
 
 const DEFAULT_WF_IMPPLANNER_CONFIG: ChildPiAgentConfig = {
-  contextWindow: 400_000,
+  contextWindow: 272_000,
   endpoint: "http://127.0.0.1:1234",
-  maxOutputTokens: 32_768,
-  model: "gpt-5.5",
+  maxOutputTokens: 128_000,
+  model: "gpt-5.6-sol",
   provider: "openai-codex",
   providerRegistration: "none",
   reportMaxChars: 32_000,
@@ -305,10 +303,11 @@ function persistState(pi: ExtensionAPI): void {
   });
 }
 
-async function selectWfImpplannerModel(
+export async function selectWfImpplannerModel(
   pi: ExtensionAPI,
   ctx: ExtensionContext,
   args: string,
+  options?: { readonly quiet?: boolean },
 ): Promise<void> {
   reloadWfImpplannerSettings(pi, ctx.cwd);
 
@@ -351,10 +350,12 @@ async function selectWfImpplannerModel(
   selectedWfImpplannerModelId = option.id;
   persistState(pi);
   reloadWfImpplannerSettings(pi, ctx.cwd);
-  ctx.ui.notify(
-    `wf-impplanner model selected: ${getChildAgentModelChoiceLabel(option)}\nactive child model selector: ${getModelSelector(currentConfig)}`,
-    "info",
-  );
+  if (!options?.quiet) {
+    ctx.ui.notify(
+      `wf-impplanner model selected: ${getChildAgentModelChoiceLabel(option)}\nactive child model selector: ${getModelSelector(currentConfig)}`,
+      "info",
+    );
+  }
 }
 
 function formatQuestionList(questions: readonly string[]): string {
@@ -407,7 +408,7 @@ function buildStepPlanPrompt(task: string): string {
     "Your job is to turn one reviewed wf-designplan stage into an individual concrete execution plan for a later implementation agent.",
     "Prefer Test Driven Development when possible: tests should appear before or alongside implementation instructions, and high-priority tests should be explicit.",
     "Find checkpoints where the implementer should pause to run tests, verify behavior, and establish a solid base before moving forward.",
-    "Use readsubagent or explorationsubagent only for factual repo context, evidence, constraints, and uncertainty. Do not ask those tools for implementation plans or solution proposals; wf-impplanner owns the execution-plan synthesis.",
+    "Use readsubagent only for factual repo context, evidence, constraints, and uncertainty. Do not ask it for implementation plans or solution proposals; wf-impplanner owns the execution-plan synthesis.",
     "Do not write code, mutate files, or produce patches. Code or pseudocode examples are allowed only as illustrative guidance inside the plan.",
     "Return JSON only. Do not wrap it in markdown. Use exactly one of these shapes:",
     `{"kind":"step_plan","summary":"short synthesis","plan":{"title":"implementation step title","sourceDesignStepTitle":"source design-plan step title","objective":"what this individual implementation step accomplishes","dependencies":["dependency/checkpoint before starting"],"instructions":["detailed execution instruction"],"highPriorityTests":["test to write or run, preferably TDD when possible"],"checkpoints":["checkpoint before continuing"],"touchpoints":["repo path/symbol/context"],"examples":["code or pseudocode example when useful"],"risks":["risk"],"validation":["validation command/check"]},"questions":["optional question to carry forward"]}`,

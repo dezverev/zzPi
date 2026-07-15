@@ -1,0 +1,18 @@
+[
+  ".zzpi-generated-paths.json",
+  "EXPORT_SOURCE.txt",
+  "claude-readsubagent",
+  "codex-readsubagent",
+  "install-claude-readsubagent.ps1",
+  "install-claude-readsubagent.sh",
+  "install-codex-readsubagent.ps1",
+  "install-codex-readsubagent.sh",
+  "install-copilot-readsubagent.ps1",
+  "install-copilot-readsubagent.sh",
+  "install-zz-readsubagent-mcp.ps1",
+  "install-zz-readsubagent-mcp.sh",
+  "install.sh",
+  "pi-plugs",
+  "zz-lib",
+  "zz-readsubagent-mcp"
+]

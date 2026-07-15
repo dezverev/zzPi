@@ -456,10 +456,10 @@ function normalizeSelectedPlugins(manifest: PlugManifest, ids: string[]): string
 }
 
 function selectedPluginsFromState(manifest: PlugManifest, state: InstallState): string[] {
-  const selected = normalizeSelectedPlugins(manifest, asStringArray(state.selected_plugins));
-  return selected.length > 0
-    ? selected
-    : normalizeSelectedPlugins(manifest, asStringArray(state.installed_plugins));
+  if (Array.isArray(state.selected_plugins)) {
+    return normalizeSelectedPlugins(manifest, asStringArray(state.selected_plugins));
+  }
+  return normalizeSelectedPlugins(manifest, asStringArray(state.installed_plugins));
 }
 
 function parsePluginRefs(input: string, manifest: PlugManifest, allowInternal = false): string[] {
@@ -559,13 +559,6 @@ async function loadState(cwd: string): Promise<InstallState> {
 function oldOwnedSet(state: InstallState): Set<string> {
   if (isRecord(state.owned_files)) return new Set(Object.keys(state.owned_files));
   return new Set((state.files ?? []).map((file) => cleanRelPath(file.path)).filter(Boolean));
-}
-
-function oldHashes(state: InstallState): Record<string, string> {
-  if (isRecord(state.file_hashes)) {
-    return Object.fromEntries(Object.entries(state.file_hashes).filter((entry): entry is [string, string] => typeof entry[1] === "string"));
-  }
-  return Object.fromEntries((state.files ?? []).map((file) => [cleanRelPath(file.path), file.sha256]));
 }
 
 function oldConfigSet(state: InstallState, oldOwned: Set<string>): Set<string> {
@@ -684,7 +677,7 @@ const MCP_ONLY_MANIFEST_REL = ".zz-mcp/zz-readsubagent-mcp-manifest.json";
 const READSUBAGENT_SERVER_REL = ".zz-mcp/zz-readsubagent-mcp.py";
 const SERVER_NAME = "zz_readsubagent";
 const SERVER_ARGS_PATH = ".zz-mcp/zz-readsubagent-mcp.py";
-const DEFAULT_LOCAL_PROVIDER_URL = "http://127.0.0.1:11444/v1";
+const DEFAULT_LOCAL_PROVIDER_URL = "http://127.0.0.1:1234/v1";
 const DEFAULT_LOCAL_MODEL_SELECTOR = "lm-studio/qwen/qwen3.6-35b-a3b";
 
 const CODEX_AGENTS_START = "<!-- zz-codex-readsubagent:start -->";
@@ -1595,7 +1588,7 @@ async function applyHarnessIntegrations(
 ): Promise<string[]> {
   const previousSelected = asStringArray(state.selected_plugins).filter(isHarnessIntegrationId);
   const previousInstalled = asStringArray(state.installed_plugins).filter(isHarnessIntegrationId);
-  const previous = previousSelected.length > 0 ? previousSelected : previousInstalled;
+  const previous = Array.isArray(state.selected_plugins) ? previousSelected : previousInstalled;
   const next = plan.selected.filter(isHarnessIntegrationId);
   const nextSet = new Set(next);
   const actions: string[] = [];
@@ -1637,7 +1630,6 @@ async function applySelection(
   const piDir = resolve(cwd, ".pi");
   const state = await loadState(cwd);
   const oldOwned = oldOwnedSet(state);
-  const previousHashes = oldHashes(state);
   const previousConfigs = oldConfigSet(state, oldOwned);
   const newOwned = new Set(Object.keys(plan.ownedFiles));
   const files = new Map(manifest.files.map((file) => [cleanRelPath(file.path), file]));
@@ -1674,11 +1666,9 @@ async function applySelection(
     const target = safeTarget(piDir, rel);
     if (!(await fileExists(target))) continue;
     if (previousConfigs.has(rel)) {
-      const previousHash = previousHashes[rel];
-      if (previousHash && (await hashFile(target)) !== previousHash) {
-        warnings.push(`kept modified config from removed plug: ${rel}`);
-        continue;
-      }
+      warnings.push(`kept config from removed plug for manual cleanup: ${rel}`);
+      preservedConfigs.push(rel);
+      continue;
     }
     await unlink(target);
     removed.push(rel);

@@ -32,23 +32,30 @@ const DEFAULT_CONTEXT_WINDOW = 127_000;
 const DEFAULT_MAX_TOKENS = 32_768;
 const DEFAULT_MODELS: readonly ZzLocalModelConfig[] = [
   {
-    contextWindow: DEFAULT_CONTEXT_WINDOW,
+    contextWindow: 250_000,
     id: "qwen/qwen3.6-35b-a3b",
     maxTokens: DEFAULT_MAX_TOKENS,
-    name: "Qwen 3.6 35B A3B (LM Studio)",
+    name: "Qwen 3.6 35B A3B (LM Studio default long context)",
     reasoning: true,
   },
   {
-    contextWindow: DEFAULT_CONTEXT_WINDOW,
+    contextWindow: 250_000,
     id: "qwen/qwen3.6-27b",
     maxTokens: DEFAULT_MAX_TOKENS,
-    name: "Qwen 3.6 27B (LM Studio)",
+    name: "Qwen 3.6 27B (LM Studio .48 long context)",
     reasoning: true,
+  },
+  {
+    contextWindow: 120_000,
+    id: "qwen3.6-27b-rust-v1.mlx",
+    maxTokens: DEFAULT_MAX_TOKENS,
+    name: "Qwen 3.6 27B Rust v1 MLX (LM Studio .48 via proxy)",
+    reasoning: false,
   },
 ];
 const DEFAULT_CONFIG: ZzLocalModelsConfig = {
   apiKey: "lm-studio",
-  baseUrl: "http://127.0.0.1:11444/v1",
+  baseUrl: "http://127.0.0.1:1234/v1",
   enabled: true,
   models: DEFAULT_MODELS,
   name: "LM Studio",

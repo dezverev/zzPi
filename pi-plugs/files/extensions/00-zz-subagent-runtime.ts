@@ -22,8 +22,8 @@ import { isConfigObject, parseJsonc } from "./zz-lib/jsonc-config.ts";
  *   import { runChildPiAgent } from "./zz-lib/child-pi-agent.ts";
  *   import { readChildAgentModelOptions } from "./lib/child-agent-model-options.ts";
  *
- * This runtime also provides /zz-model-setup so public zzPi users can point the
- * project-local configs at their own LM Studio/OpenAI-compatible endpoint.
+ * This runtime also provides /zz-model-setup so users can point project-local
+ * configs at their own LM Studio/OpenAI-compatible endpoint.
  */
 
 interface LocalModelSetup {
@@ -57,8 +57,6 @@ const ZZ_LOCAL_MODELS_CONFIG = "zzLocalModels.config.jsonc";
 const LOCAL_MODEL_ENDPOINTS_CONFIG = "local-model-endpoints.config.jsonc";
 const CHILD_AGENT_CONFIGS = [
   "readsubagent.config.jsonc",
-  "explorationsubagent.config.jsonc",
-  "implementationsubagent.config.jsonc",
   "wf-clarifier.config.jsonc",
   "wf-brainstormer.config.jsonc",
   "wf-adversarialreview.config.jsonc",
@@ -262,10 +260,10 @@ function mergeLocalModelEndpointsConfig(
     next.trueLocalEndpoint = getStringField(next, "trueLocalEndpoint") ?? "http://127.0.0.1:1234";
   }
   next.trueRemoteProvider = getStringField(next, "trueRemoteProvider") ?? "openai-codex";
-  next.trueRemoteModel = getStringField(next, "trueRemoteModel") ?? "gpt-5.5";
+  next.trueRemoteModel = getStringField(next, "trueRemoteModel") ?? "gpt-5.6-sol";
   next.trueRemoteThinking = getStringField(next, "trueRemoteThinking") ?? "xhigh";
-  next.trueRemoteContextWindow = getNumberField(next, "trueRemoteContextWindow") ?? 400_000;
-  next.trueRemoteMaxOutputTokens = getNumberField(next, "trueRemoteMaxOutputTokens") ?? 32_768;
+  next.trueRemoteContextWindow = getNumberField(next, "trueRemoteContextWindow") ?? 272_000;
+  next.trueRemoteMaxOutputTokens = getNumberField(next, "trueRemoteMaxOutputTokens") ?? 128_000;
   return next;
 }
 

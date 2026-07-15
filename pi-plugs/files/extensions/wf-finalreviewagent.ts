@@ -34,10 +34,10 @@ const CONFIG_FILE_PATH = ".pi/extensions/wf-finalreviewagent.config.jsonc";
 const WF_FINAL_REVIEW_AGENT_MESSAGE_TYPE = "wf-finalreviewagent-report";
 const WF_FINAL_REVIEW_AGENT_STATE_ENTRY_TYPE = "wf-finalreviewagent-state";
 const STATUS_KEY = "wf-finalreviewagent";
-const DEFAULT_TOOLS = ["read", "bash", "grep", "find", "ls", "readsubagent", "explorationsubagent"];
+const DEFAULT_TOOLS = ["read", "bash", "grep", "find", "ls", "readsubagent"];
 const EXCLUDED_CHILD_TOOLS = [
-  "reviewsubagent",
-  "simpletasksubagent",
+  "vettingagents",
+  "vetting-agents",
   "wfclarifier",
   "wf-clarifier",
   "wfbrainstormer",
@@ -50,8 +50,6 @@ const EXCLUDED_CHILD_TOOLS = [
   "wf-impplanner",
   "wfimplementeragent",
   "wf-implementeragent",
-  "wfimplemnteragent",
-  "wf-implemnteragent",
   "wfrevieweragent",
   "wf-revieweragent",
   "wffinalreviewagent",
@@ -61,10 +59,10 @@ const EXCLUDED_CHILD_TOOLS = [
 ] as const;
 
 const DEFAULT_WF_FINAL_REVIEW_AGENT_CONFIG: ChildPiAgentConfig = {
-  contextWindow: 400_000,
+  contextWindow: 272_000,
   endpoint: "http://127.0.0.1:1234",
-  maxOutputTokens: 32_768,
-  model: "gpt-5.5",
+  maxOutputTokens: 128_000,
+  model: "gpt-5.6-sol",
   provider: "openai-codex",
   providerRegistration: "none",
   reportMaxChars: 32_000,
@@ -241,10 +239,11 @@ function persistState(pi: ExtensionAPI): void {
   });
 }
 
-async function selectWfFinalReviewAgentModel(
+export async function selectWfFinalReviewAgentModel(
   pi: ExtensionAPI,
   ctx: ExtensionContext,
   args: string,
+  options?: { readonly quiet?: boolean },
 ): Promise<void> {
   reloadWfFinalReviewAgentSettings(pi, ctx.cwd);
 
@@ -287,10 +286,12 @@ async function selectWfFinalReviewAgentModel(
   selectedWfFinalReviewAgentModelId = option.id;
   persistState(pi);
   reloadWfFinalReviewAgentSettings(pi, ctx.cwd);
-  ctx.ui.notify(
-    `wf-finalreviewagent model selected: ${getChildAgentModelChoiceLabel(option)}\nactive child model selector: ${getModelSelector(currentConfig)}`,
-    "info",
-  );
+  if (!options?.quiet) {
+    ctx.ui.notify(
+      `wf-finalreviewagent model selected: ${getChildAgentModelChoiceLabel(option)}\nactive child model selector: ${getModelSelector(currentConfig)}`,
+      "info",
+    );
+  }
 }
 
 function buildWfFinalReviewAgentTask(options: {
@@ -310,7 +311,7 @@ function buildWfFinalReviewAgentTask(options: {
     "Review objective:",
     "- Perform a whole-branch review after all implementation-plan stages have passed their per-stage wf-revieweragent checks.",
     "- Inspect git status/diff, touched files, tests, and cross-stage integration risks.",
-    "- Use read/search/bash tools and factual subagents for evidence. Do not mutate files.",
+    "- Use read/search/bash tools and readsubagent for evidence. Do not mutate files.",
     "- If the branch is acceptable, return pass with greenSignal=true.",
     "- If fixes are needed, return needs_changes with remediationSteps that can be dispatched to wf-implementeragent. Keep each remediation step concrete, scoped, test-aware, and reviewable.",
     "- If the branch cannot be safely remediated automatically, return blocked with clear feedback.",

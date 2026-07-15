@@ -34,10 +34,10 @@ const CONFIG_FILE_PATH = ".pi/extensions/wf-testeragent.config.jsonc";
 const WF_TESTER_AGENT_MESSAGE_TYPE = "wf-testeragent-report";
 const WF_TESTER_AGENT_STATE_ENTRY_TYPE = "wf-testeragent-state";
 const STATUS_KEY = "wf-testeragent";
-const DEFAULT_TOOLS = ["read", "bash", "edit", "write", "grep", "find", "ls", "readsubagent", "explorationsubagent"];
+const DEFAULT_TOOLS = ["read", "bash", "edit", "write", "grep", "find", "ls", "readsubagent"];
 const EXCLUDED_CHILD_TOOLS = [
-  "reviewsubagent",
-  "simpletasksubagent",
+  "vettingagents",
+  "vetting-agents",
   "wfclarifier",
   "wf-clarifier",
   "wfbrainstormer",
@@ -50,8 +50,6 @@ const EXCLUDED_CHILD_TOOLS = [
   "wf-impplanner",
   "wfimplementeragent",
   "wf-implementeragent",
-  "wfimplemnteragent",
-  "wf-implemnteragent",
   "wfrevieweragent",
   "wf-revieweragent",
   "wffinalreviewagent",
@@ -61,10 +59,10 @@ const EXCLUDED_CHILD_TOOLS = [
 ] as const;
 
 const DEFAULT_WF_TESTER_AGENT_CONFIG: ChildPiAgentConfig = {
-  contextWindow: 400_000,
+  contextWindow: 272_000,
   endpoint: "http://127.0.0.1:1234",
-  maxOutputTokens: 32_768,
-  model: "gpt-5.5",
+  maxOutputTokens: 128_000,
+  model: "gpt-5.6-sol",
   provider: "openai-codex",
   providerRegistration: "none",
   reportMaxChars: 32_000,
@@ -244,10 +242,11 @@ function persistState(pi: ExtensionAPI): void {
   });
 }
 
-async function selectWfTesterAgentModel(
+export async function selectWfTesterAgentModel(
   pi: ExtensionAPI,
   ctx: ExtensionContext,
   args: string,
+  options?: { readonly quiet?: boolean },
 ): Promise<void> {
   reloadWfTesterAgentSettings(pi, ctx.cwd);
 
@@ -290,10 +289,12 @@ async function selectWfTesterAgentModel(
   selectedWfTesterAgentModelId = option.id;
   persistState(pi);
   reloadWfTesterAgentSettings(pi, ctx.cwd);
-  ctx.ui.notify(
-    `wf-testeragent model selected: ${getChildAgentModelChoiceLabel(option)}\nactive child model selector: ${getModelSelector(currentConfig)}`,
-    "info",
-  );
+  if (!options?.quiet) {
+    ctx.ui.notify(
+      `wf-testeragent model selected: ${getChildAgentModelChoiceLabel(option)}\nactive child model selector: ${getModelSelector(currentConfig)}`,
+      "info",
+    );
+  }
 }
 
 function buildWfTesterAgentTask(options: {

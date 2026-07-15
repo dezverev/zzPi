@@ -33,10 +33,10 @@ const CONFIG_FILE_PATH = ".pi/extensions/wf-clarifier.config.jsonc";
 const WF_CLARIFIER_MESSAGE_TYPE = "wf-clarifier-report";
 const WF_CLARIFIER_STATE_ENTRY_TYPE = "wf-clarifier-state";
 const STATUS_KEY = "wf-clarifier";
-const DEFAULT_TOOLS = ["readsubagent", "explorationsubagent"];
+const DEFAULT_TOOLS = ["readsubagent"];
 const EXCLUDED_CHILD_TOOLS = [
-  "reviewsubagent",
-  "simpletasksubagent",
+  "vettingagents",
+  "vetting-agents",
   "wfclarifier",
   "wf-clarifier",
   "wfbrainstormer",
@@ -49,8 +49,6 @@ const EXCLUDED_CHILD_TOOLS = [
   "wf-impplanner",
   "wfimplementeragent",
   "wf-implementeragent",
-  "wfimplemnteragent",
-  "wf-implemnteragent",
   "wfrevieweragent",
   "wf-revieweragent",
   "wffinalreviewagent",
@@ -60,16 +58,16 @@ const EXCLUDED_CHILD_TOOLS = [
 ] as const;
 
 const DEFAULT_WF_CLARIFIER_CONFIG: ChildPiAgentConfig = {
-  contextWindow: 400_000,
+  contextWindow: 272_000,
   endpoint: "http://127.0.0.1:1234",
-  maxOutputTokens: 32_768,
-  model: "gpt-5.5",
+  maxOutputTokens: 128_000,
+  model: "gpt-5.6-sol",
   provider: "openai-codex",
   providerRegistration: "none",
   reportMaxChars: 20_000,
   requestTimeoutMs: 30 * 60 * 1_000,
   systemPrompt:
-    "You are wf-clarifier, a workflow-mode clarification subagent for Pi. Clarify and enrich the user's initial workflow prompt before any implementation planning begins. Use the readsubagent and explorationsubagent tools only to gather relevant repo facts, evidence, and uncertainty; do not ask them for implementation plans or solution proposals. Return only the requested JSON decision.",
+    "You are wf-clarifier, a workflow-mode clarification subagent for Pi. Clarify and enrich the user's initial workflow prompt before any implementation planning begins. Use the readsubagent tool only to gather relevant repo facts, evidence, and uncertainty; do not ask it for implementation plans or solution proposals. Return only the requested JSON decision.",
   thinking: "xhigh",
   tools: DEFAULT_TOOLS,
 };
@@ -109,21 +107,6 @@ export interface WfClarifierRunResult {
   readonly report: string;
   readonly result: ChildAgentRunResult;
 }
-
-type InputHookResult =
-  | { readonly action: "continue" }
-  | { readonly action: "handled" }
-  | { readonly action: "transform"; readonly text: string };
-
-interface PendingOneShotPromptEnrichment {
-  readonly originalPrompt: string;
-  readonly questions: readonly string[];
-}
-
-type OneShotPromptEnrichmentResult =
-  | { readonly kind: "enriched"; readonly prompt: string }
-  | { readonly kind: "questions"; readonly questions: readonly string[] }
-  | { readonly kind: "unchanged" };
 
 let currentConfig: ChildPiAgentConfig = { ...DEFAULT_WF_CLARIFIER_CONFIG };
 let currentModelOptions: readonly WfClarifierModelOption[] = [
@@ -250,10 +233,11 @@ function persistState(pi: ExtensionAPI): void {
   });
 }
 
-async function selectWfClarifierModel(
+export async function selectWfClarifierModel(
   pi: ExtensionAPI,
   ctx: ExtensionContext,
   args: string,
+  options?: { readonly quiet?: boolean },
 ): Promise<void> {
   reloadWfClarifierSettings(pi, ctx.cwd);
 
@@ -296,10 +280,12 @@ async function selectWfClarifierModel(
   selectedWfClarifierModelId = option.id;
   persistState(pi);
   reloadWfClarifierSettings(pi, ctx.cwd);
-  ctx.ui.notify(
-    `wf-clarifier model selected: ${getChildAgentModelChoiceLabel(option)}\nactive child model selector: ${getModelSelector(currentConfig)}`,
-    "info",
-  );
+  if (!options?.quiet) {
+    ctx.ui.notify(
+      `wf-clarifier model selected: ${getChildAgentModelChoiceLabel(option)}\nactive child model selector: ${getModelSelector(currentConfig)}`,
+      "info",
+    );
+  }
 }
 
 function buildWfClarifierTask(options: {
@@ -324,7 +310,7 @@ function buildWfClarifierTask(options: {
     "",
     "Clarification objective:",
     "- Determine whether the ask is clear enough to start the workflow process.",
-    "- Compare the ask against relevant repo facts using the readsubagent and explorationsubagent tools when repo context could affect interpretation.",
+    "- Compare the ask against relevant repo facts using the readsubagent tool when repo context could affect interpretation.",
     "- Produce an enriched user prompt, not a detailed implementation plan.",
     "- If the ask is clear, return exactly one enriched prompt.",
     "- If there are a few plausible interpretations or tradeoffs, return two or three enriched prompt options for the user to choose from.",
@@ -336,11 +322,10 @@ function buildWfClarifierPrompt(task: string): string {
   return [
     "You are running as wf-clarifier, the first subagent in Pi workflow mode.",
     "Your job is clarification and prompt enrichment only. Do not produce an implementation plan, todo list, code, patch, or execution strategy.",
-    "Use the explorationsubagent tool for broad repo discovery when relevant files, architecture, conventions, commands, or existing behavior are unclear.",
-    "Use the readsubagent tool for targeted inspection of files, docs, configs, or symbols surfaced by the prompt or by exploration.",
-    "When calling readsubagent or explorationsubagent, ask only for factual repo findings, evidence, relationships, constraints, and uncertainty. Do not ask those tools for implementation plans, solution proposals, recommendations, or edit strategies; planning is the responsibility of later workflow agents.",
-    "The readsubagent and explorationsubagent tools have their own configured Qwen models; rely on them for repo investigation instead of doing raw inspection yourself.",
-    "Prefer at least one exploration/read delegation for repo-specific asks. Skip delegation only if the prompt is clearly repo-independent or the available context is already sufficient.",
+    "Use the readsubagent tool for factual inspection of relevant files, docs, configs, symbols, architecture, conventions, and existing behavior.",
+    "When calling readsubagent, ask only for factual repo findings, evidence, relationships, constraints, and uncertainty. Do not ask it for implementation plans, solution proposals, recommendations, or edit strategies; planning is the responsibility of later workflow agents.",
+    "The readsubagent tool has its own configured model; rely on it for repo investigation instead of doing raw inspection yourself.",
+    "Prefer at least one readsubagent delegation for repo-specific asks. Skip delegation only if the prompt is clearly repo-independent or the available context is already sufficient.",
     "An enriched prompt should preserve the user's intent while adding repo-specific context, relevant paths/symbols, constraints, assumptions, and known unknowns. It should be ready for the next workflow step, but it must not prescribe a detailed implementation plan.",
     "Return JSON only. Do not wrap it in markdown. Use exactly one of these shapes:",
     `{"kind":"prompts","summary":"short reason this is clear enough","prompts":[{"title":"Option title","rationale":"why this option","prompt":"enriched prompt text"}]}`,
@@ -523,232 +508,32 @@ export function sendWfClarifierReportMessage(
   });
 }
 
-function formatOneShotQuestionList(questions: readonly string[]): string {
-  return questions.map((question, index) => `${index + 1}. ${question}`).join("\n");
-}
-
-function buildOneShotClarificationFallbackPrompt(options: {
-  readonly originalPrompt: string;
-  readonly priorAnswers: string;
-  readonly priorQuestions: readonly string[];
-}): string {
-  return [
-    "Original prompt:",
-    options.originalPrompt,
-    "",
-    "Clarifying questions:",
-    formatOneShotQuestionList(options.priorQuestions),
-    "",
-    "User answers:",
-    options.priorAnswers,
-  ].join("\n");
-}
-
-async function selectOneShotPromptOption(
-  options: readonly WfClarifierPromptOption[],
-  ctx: ExtensionContext,
-): Promise<WfClarifierPromptOption | undefined> {
-  const firstOption = options[0];
-  if (!firstOption) return undefined;
-  if (options.length === 1) return firstOption;
-
-  if (!ctx.hasUI) {
-    ctx.ui.notify(
-      `wf-clarifier received ${options.length} enriched prompts but no interactive UI is available; using option 1: ${firstOption.title}`,
-      "warning",
-    );
-    return firstOption;
-  }
-
-  const labels = options.map((option, index) => `${index + 1}. ${option.title}`);
-  const choice = await ctx.ui.select("Choose enriched prompt", labels);
-  if (!choice) return undefined;
-
-  const choiceIndex = labels.indexOf(choice);
-  return choiceIndex >= 0 ? options[choiceIndex] : undefined;
-}
-
-async function runOneShotPromptEnrichment(
-  pi: ExtensionAPI,
-  ctx: ExtensionContext,
-  options: {
-    readonly priorAnswers?: string | undefined;
-    readonly priorQuestions?: readonly string[] | undefined;
-    readonly userPrompt: string;
-  },
-): Promise<OneShotPromptEnrichmentResult> {
-  const config = readActiveWfClarifierConfig(ctx.cwd);
-  registerWfClarifierProvider(pi, config);
-  const model = getModelSelector(config);
-  ctx.ui.setStatus(STATUS_KEY, `enriching ${model}: ${previewTask(options.userPrompt)}`);
-
-  try {
-    const run = await runWfClarifierForPrompt({
-      ctx,
-      pi,
-      priorAnswers: options.priorAnswers,
-      priorQuestions: options.priorQuestions,
-      userPrompt: options.userPrompt,
-      onProgress: (progress) => {
-        const toolText = progress.toolCalls > 0 ? `, ${progress.toolCalls} tool` : "";
-        ctx.ui.setStatus(
-          STATUS_KEY,
-          `enriching ${model}: ${progress.turns} turn${progress.turns === 1 ? "" : "s"}${toolText}`,
-        );
-      },
-    });
-    sendWfClarifierReportMessage(pi, ctx, run);
-
-    if (!run.decision) {
-      ctx.ui.notify(
-        "wf-clarifier could not parse an enriched prompt; continuing without further enrichment.",
-        "warning",
-      );
-      return { kind: "unchanged" };
-    }
-
-    if (run.decision.kind === "questions") {
-      ctx.ui.notify(
-        "wf-clarifier needs answers before it can enrich this prompt. Answer the questions in your next prompt, or press Alt+E to cancel.",
-        "warning",
-      );
-      return { kind: "questions", questions: run.decision.questions };
-    }
-
-    const selected = await selectOneShotPromptOption(run.decision.prompts, ctx);
-    if (!selected) {
-      ctx.ui.notify("wf-clarifier prompt enrichment cancelled; continuing without further enrichment.", "info");
-      return { kind: "unchanged" };
-    }
-
-    ctx.ui.notify(`wf-clarifier enriched next prompt: ${selected.title}`, "info");
-    return { kind: "enriched", prompt: selected.prompt };
-  } catch (error) {
-    ctx.ui.notify(
-      `wf-clarifier prompt enrichment failed: ${getErrorMessage(error)}. Continuing without further enrichment.`,
-      "error",
-    );
-    return { kind: "unchanged" };
-  } finally {
-    ctx.ui.setStatus(STATUS_KEY, undefined);
-  }
-}
-
 function formatStatus(): string {
   return [
     formatWfClarifierModelSelection(currentConfig),
-    "Commands: /wf-clarifier model [model] | config | ask <prompt>. You can also run /wf-clarifier <prompt> directly. Shortcut: Alt+E enriches the next prompt, asks follow-up questions if needed, then sends the enriched prompt normally.",
+    "Commands: /wf-clarifier model [model] | config | ask <prompt>. You can also run /wf-clarifier <prompt> directly.",
   ].join("\n");
 }
 
 export default function wfClarifierExtension(pi: ExtensionAPI): void {
-  let enrichNextPrompt = false;
-  let pendingOneShotPromptEnrichment: PendingOneShotPromptEnrichment | undefined;
-
-  const clearOneShotPromptEnrichment = (ctx: ExtensionContext): void => {
-    enrichNextPrompt = false;
-    pendingOneShotPromptEnrichment = undefined;
-    ctx.ui.setStatus(STATUS_KEY, undefined);
-  };
-
-  const waitForOneShotPromptAnswers = (
-    ctx: ExtensionContext,
-    originalPrompt: string,
-    questions: readonly string[],
-  ): void => {
-    enrichNextPrompt = false;
-    pendingOneShotPromptEnrichment = { originalPrompt, questions };
-    ctx.ui.setStatus(STATUS_KEY, "prompt enrichment waiting for answers");
-  };
-
   reloadWfClarifierSettings(pi, process.cwd());
 
   pi.on("session_start", (_event, ctx) => {
-    clearOneShotPromptEnrichment(ctx);
     restoreState(pi, ctx);
     notifyConfigErrorIfNeeded(ctx);
   });
 
   pi.on("session_tree", (_event, ctx) => {
-    clearOneShotPromptEnrichment(ctx);
     restoreState(pi, ctx);
   });
 
   pi.on("session_shutdown", (_event, ctx) => {
-    clearOneShotPromptEnrichment(ctx);
+    ctx.ui.setStatus(STATUS_KEY, undefined);
   });
 
   pi.registerMessageRenderer(WF_CLARIFIER_MESSAGE_TYPE, (message, options, theme) =>
     renderChildAgentMessage(message, options.expanded, theme, { agentName: "wf-clarifier" }),
   );
-
-  pi.registerShortcut("alt+e", {
-    description: "Enrich the next prompt with wf-clarifier, then send it normally",
-    handler: async (ctx) => {
-      const wasActive = enrichNextPrompt || pendingOneShotPromptEnrichment !== undefined;
-      clearOneShotPromptEnrichment(ctx);
-
-      if (wasActive) {
-        ctx.ui.notify("wf-clarifier next-prompt enrichment cancelled.", "info");
-        return;
-      }
-
-      enrichNextPrompt = true;
-      ctx.ui.setStatus(STATUS_KEY, "next prompt enrichment armed");
-      ctx.ui.notify(
-        "wf-clarifier will enrich the next prompt before sending it normally. If it asks questions, answer them in your following prompt; press Alt+E again to cancel.",
-        "info",
-      );
-    },
-  });
-
-  pi.on("input", async (event, ctx): Promise<InputHookResult> => {
-    if (event.source === "extension") return { action: "continue" };
-
-    const userPrompt = event.text.trim();
-    if (!userPrompt) return { action: "continue" };
-
-    if (pendingOneShotPromptEnrichment) {
-      const pending = pendingOneShotPromptEnrichment;
-      pendingOneShotPromptEnrichment = undefined;
-      const result = await runOneShotPromptEnrichment(pi, ctx, {
-        priorAnswers: event.text,
-        priorQuestions: pending.questions,
-        userPrompt: pending.originalPrompt,
-      });
-
-      if (result.kind === "questions") {
-        waitForOneShotPromptAnswers(ctx, pending.originalPrompt, result.questions);
-        return { action: "handled" };
-      }
-
-      if (result.kind === "enriched") return { action: "transform", text: result.prompt };
-
-      ctx.ui.notify("wf-clarifier continuing with the original prompt plus your answers.", "info");
-      return {
-        action: "transform",
-        text: buildOneShotClarificationFallbackPrompt({
-          originalPrompt: pending.originalPrompt,
-          priorAnswers: event.text,
-          priorQuestions: pending.questions,
-        }),
-      };
-    }
-
-    if (!enrichNextPrompt) return { action: "continue" };
-
-    enrichNextPrompt = false;
-    const result = await runOneShotPromptEnrichment(pi, ctx, { userPrompt: event.text });
-
-    if (result.kind === "questions") {
-      waitForOneShotPromptAnswers(ctx, event.text, result.questions);
-      return { action: "handled" };
-    }
-
-    if (result.kind === "enriched") return { action: "transform", text: result.prompt };
-
-    return { action: "continue" };
-  });
 
   pi.registerCommand("wf-clarifier", {
     description: "Run the workflow-mode clarification subagent or select its model",

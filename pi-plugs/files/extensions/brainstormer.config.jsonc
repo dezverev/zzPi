@@ -1,14 +1,11 @@
 {
-  // wf-revieweragent is the workflow-mode implementation review gate. It
-  // reviews code after one wf-implementeragent stage and returns a green signal
-  // only when workflow mode may advance to the next implementation-plan stage.
+  // Standalone solution-space brainstorming before a user selects one solution.
   "model": "gpt-5.6-sol",
   "provider": "openai-codex",
   "providerRegistration": "none",
   "endpoint": "http://127.0.0.1:1234",
 
-  // Choices shown by /wf-revieweragent model. Keep model/provider metadata here so
-  // adding or changing the reviewer model is a config-only change.
+  // Choices shown by /brainstormer model.
   "modelOptions": {
     "gpt-5.6-sol-xhigh": {
       "label": "GPT-5.6 Sol xhigh (openai-codex)",
@@ -18,9 +15,9 @@
       "contextWindow": 272000,
       "maxOutputTokens": 128000,
       "requestTimeoutMs": 1800000,
-      "reportMaxChars": 32000,
+      "reportMaxChars": 24000,
       "thinking": "xhigh",
-      "tools": ["read", "bash", "grep", "find", "ls", "readsubagent"],
+      "tools": ["readsubagent"],
     },
     "gpt-5.5-xhigh": {
       "label": "GPT-5.5 xhigh (openai-codex)",
@@ -30,9 +27,9 @@
       "contextWindow": 400000,
       "maxOutputTokens": 32768,
       "requestTimeoutMs": 1800000,
-      "reportMaxChars": 32000,
+      "reportMaxChars": 24000,
       "thinking": "xhigh",
-      "tools": ["read", "bash", "grep", "find", "ls", "readsubagent"],
+      "tools": ["readsubagent"],
     },
     "qwen-35b-a3b": {
       "label": "Qwen 3.6 35B A3B via 127.0.0.1:1234 proxy (telemetry)",
@@ -43,9 +40,9 @@
       "contextWindow": 127000,
       "maxOutputTokens": 32768,
       "requestTimeoutMs": 1800000,
-      "reportMaxChars": 32000,
+      "reportMaxChars": 24000,
       "thinking": "off",
-      "tools": ["read", "bash", "grep", "find", "ls", "readsubagent"],
+      "tools": ["readsubagent"],
     },
     "glm-5p2-xhigh": {
       "label": "GLM 5.2 xhigh (fireworks)",
@@ -55,20 +52,17 @@
       "contextWindow": 1048575,
       "maxOutputTokens": 32768,
       "requestTimeoutMs": 1800000,
-      "reportMaxChars": 32000,
+      "reportMaxChars": 24000,
       "thinking": "xhigh",
-      "tools": ["read", "bash", "grep", "find", "ls", "readsubagent"],
+      "tools": ["readsubagent"],
     },
   },
 
-  // Read/search/bash plus readsubagent. This agent must not mutate files.
-  "tools": ["read", "bash", "grep", "find", "ls", "readsubagent"],
-
+  "tools": ["readsubagent"],
   "requestTimeoutMs": 1800000,
   "contextWindow": 272000,
   "maxOutputTokens": 128000,
-  "reportMaxChars": 32000,
+  "reportMaxChars": 24000,
   "thinking": "xhigh",
-
-  "systemPrompt": "You are wf-revieweragent, a workflow-mode code reviewer for Pi. Review the repository after a single wf-implementeragent stage, run targeted read-only checks/tests when practical, and decide whether the workflow may advance to the next implementation-plan stage. Do not mutate files. Return only the requested JSON decision.",
+  "systemPrompt": "You are brainstormer, a standalone read-only solution brainstorming agent for Pi. Research materially distinct solutions, repository touchpoints, tradeoffs, risks, and unknowns. Use readsubagent only for factual repository context; own the solution synthesis yourself. Do not produce a detailed design, implementation plan, or code changes. Return only the requested strict JSON decision.",
 }

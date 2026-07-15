@@ -26,7 +26,7 @@ Under the hood it runs:
 ```bash
 pi --mode json -p --no-session --model lm-studio/qwen/qwen3.6-35b-a3b \
    --thinking off \
-   --exclude-tools readsubagent,explorationsubagent,reviewsubagent,simpletasksubagent \
+   --exclude-tools readsubagent,explorationsubagent \
    --tools read,grep,find,ls \
    --append-system-prompt "<readsubagent prompt>" "<delegated task>"
 ```
@@ -39,7 +39,7 @@ resolved by Pi's `zzLocalModels` extension. So the host needs:
 - `pi` on `PATH`,
 - the `lm-studio` provider available to `pi` (install the repo-local pi plugs,
   which include `zzLocalModels`, or define a global Pi `lm-studio` provider), and
-- LM Studio reachable (default `http://127.0.0.1:11444/v1`).
+- LM Studio proxy reachable (default `http://127.0.0.1:1234/v1`).
 
 ## Configuration (environment)
 

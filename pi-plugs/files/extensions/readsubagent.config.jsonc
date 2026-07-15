@@ -12,8 +12,8 @@
   "provider": "lm-studio",
   "providerRegistration": "none",
 
-  // LM Studio endpoint for the default local Qwen model.
-  "endpoint": "http://127.0.0.1:11444",
+  // Telemetry proxy endpoint for the default local Qwen model.
+  "endpoint": "http://127.0.0.1:1234",
 
   // Optional Pi model selector to pass directly to the child process.
   // Leave empty to use "<provider>/<model>" from the settings above.
@@ -24,40 +24,27 @@
   // The object key is the stable selection id persisted in the session branch.
   "modelOptions": {
     "qwen": {
-      "label": "Qwen 3.6 35B A3B on 127.0.0.1 (LM Studio)",
-      "provider": "lm-studio",
-      "providerRegistration": "none",
-      "endpoint": "http://127.0.0.1:11444",
-      "model": "qwen/qwen3.6-35b-a3b",
-      "contextWindow": 127000,
-      "maxOutputTokens": 32768,
-      "requestTimeoutMs": 1800000,
-      "reportMaxChars": 16000,
-      "thinking": "off",
-    },
-    "qwen-233": {
-      "label": "Qwen 3.6 35B A3B on 127.0.0.1 (LM Studio)",
+      "label": "Qwen 3.6 35B A3B via 127.0.0.1:1234 proxy (telemetry)",
       "provider": "lm-studio",
       "providerRegistration": "none",
       "endpoint": "http://127.0.0.1:1234",
       "model": "qwen/qwen3.6-35b-a3b",
-      "contextWindow": 262144,
-      "maxOutputTokens": 32768,
-      "requestTimeoutMs": 1800000,
-      "reportMaxChars": 16000,
-      "thinking": "off",
-    },
-    "qwen-32": {
-      "label": "Qwen 3.6 35B A3B on 127.0.0.1 (LM Studio)",
-      "provider": "lm-studio",
-      "providerRegistration": "none",
-      "endpoint": "http://127.0.0.1:11444",
-      "model": "qwen/qwen3.6-35b-a3b",
       "contextWindow": 127000,
       "maxOutputTokens": 32768,
       "requestTimeoutMs": 1800000,
       "reportMaxChars": 16000,
       "thinking": "off",
+    },
+    "gpt-5.6-sol-xhigh": {
+      "label": "GPT-5.6 Sol xhigh (openai-codex)",
+      "provider": "openai-codex",
+      "providerRegistration": "none",
+      "model": "gpt-5.6-sol",
+      "contextWindow": 272000,
+      "maxOutputTokens": 128000,
+      "requestTimeoutMs": 1800000,
+      "reportMaxChars": 16000,
+      "thinking": "xhigh",
     },
     "gpt-5.5-xhigh": {
       "label": "GPT-5.5 xhigh (openai-codex)",
@@ -69,6 +56,28 @@
       "requestTimeoutMs": 1800000,
       "reportMaxChars": 16000,
       "thinking": "xhigh",
+    },
+    "glm-5p2-xhigh": {
+      "label": "GLM 5.2 xhigh (fireworks)",
+      "provider": "fireworks",
+      "providerRegistration": "none",
+      "model": "accounts/fireworks/models/glm-5p2",
+      "contextWindow": 1048575,
+      "maxOutputTokens": 32768,
+      "requestTimeoutMs": 1800000,
+      "reportMaxChars": 16000,
+      "thinking": "xhigh",
+    },
+    "qwen3p7-plus": {
+      "label": "Qwen 3.7 Plus (fireworks)",
+      "provider": "fireworks",
+      "providerRegistration": "none",
+      "model": "accounts/fireworks/models/qwen3p7-plus",
+      "contextWindow": 262144,
+      "maxOutputTokens": 32768,
+      "requestTimeoutMs": 1800000,
+      "reportMaxChars": 16000,
+      "thinking": "high",
     },
   },
 
