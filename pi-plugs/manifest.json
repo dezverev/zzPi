@@ -4,14 +4,14 @@
   "default": "all-visible",
   "files": [
     {
-      "bytes": 7632,
+      "bytes": 8159,
       "path": "README.md",
-      "sha256": "04e510be68eec42b1d3e1514cc0265d73ee2c83e0219aca90ac6aad5727d94f8"
+      "sha256": "a069e99c4b5170eda9f12da6c190a79fb6ff0a34d1ee5d66cc1cc8c06ca0ceeb"
     },
     {
-      "bytes": 11840,
+      "bytes": 11921,
       "path": "pi-plugs.catalog.jsonc",
-      "sha256": "9e8c46cadd3a3f0117a19ee9f11a7e43b684c84a8a86f58b800b93000fb17fbc"
+      "sha256": "0a1ea1e16d4588e83c4f342ab86c4c9f5c8579f0672705fe59f74a06f338b426"
     },
     {
       "bytes": 257,
@@ -54,9 +54,9 @@
       "sha256": "a51762211917232cdc5f6b02fc0dd1b0703e685c77eb511f1e47094d412bd235"
     },
     {
-      "bytes": 7774,
+      "bytes": 7878,
       "path": "extensions/design-loop.ts",
-      "sha256": "4019f3ce63766107bf52a46558deb8b1216440af45ce94bc85c4002becc8d95e"
+      "sha256": "b4913e1f188c410354cb742d2528b21c525a0876a1ce01860dacd08b8116e718"
     },
     {
       "bytes": 2816,
@@ -79,14 +79,14 @@
       "sha256": "467739069f3ebb9277ed5d7a4cb3ecbf1c83604807e0bd565db5a9124b845c16"
     },
     {
-      "bytes": 3669,
+      "bytes": 4166,
       "path": "extensions/implementationsubagent.config.jsonc",
-      "sha256": "8f479c48d3c52f7c45db40da0d52bc6345ce325507a148f0cfa1e6b4db2f7669"
+      "sha256": "f91d5bd334d9e42a4b8538517c562f933ba068f09a2965cf5cfe9922d62a2cc7"
     },
     {
-      "bytes": 17366,
+      "bytes": 22489,
       "path": "extensions/implementationsubagent.ts",
-      "sha256": "b817b4d6da9bb00f79185a7a1ea32a66236dcf2e6553724b7cd019753c857106"
+      "sha256": "2371503cbeee843374e756d282d3c979b37c1fc6f8402e0e4a625d0a0f4aae5d"
     },
     {
       "bytes": 1083,
@@ -199,6 +199,11 @@
       "sha256": "cdd61344443533208b1c0c9bbff80d16a597b9c5382fb62f371be3ce040da81a"
     },
     {
+      "bytes": 2089,
+      "path": "extensions/lib/implementation-piece.ts",
+      "sha256": "da43d3a1a8f957ff6a505662295e034f55b39143dff59d1cf0fc19d8ec552a7c"
+    },
+    {
       "bytes": 2241,
       "path": "extensions/lib/planning-artifact-paths.ts",
       "sha256": "8e0a733a3a112fe5030e7c88201875d747ce1c514d0694a73b3f770fc27432d0"
@@ -209,9 +214,9 @@
       "sha256": "4afbf24627b1a9b8b1b459f8ec212a2cf63b2fd9c1cb072606575f1e2fc3c0b9"
     },
     {
-      "bytes": 19123,
+      "bytes": 19618,
       "path": "extensions/lib/standalone-agent-common.ts",
-      "sha256": "f9ca0ea9af8be79fa92937ee38829bf246cfd85b57ea2387f7746bcb5c87ca82"
+      "sha256": "8e6e6b9a79adb8eac75625d150ea521be8713d5ededb5aa6e87bf9f0f7b73a46"
     }
   ],
   "install_target": "./.pi",
@@ -436,13 +441,14 @@
       "configFiles": [
         "extensions/implementationsubagent.config.jsonc"
       ],
-      "description": "Provides a main-agent-controlled implementation worker for one bounded piece from a Markdown implementation document, with a persistent progress ledger and nested read/debug tools.",
+      "description": "Provides a main-agent-controlled implementation worker for one medium-to-small independently vettable piece from a Markdown implementation document, with a persistent progress ledger and nested read/debug tools.",
       "entry": "extensions/implementationsubagent.ts",
       "fileDeps": [
         "extensions/implementationsubagent.config.jsonc",
         "extensions/lib/agent-mode.ts",
         "extensions/lib/child-agent-model-options.ts",
         "extensions/lib/implementation-docs.ts",
+        "extensions/lib/implementation-piece.ts",
         "extensions/lib/planning-artifact-paths.ts",
         "extensions/lib/standalone-agent-common.ts"
       ],
@@ -695,7 +701,7 @@
   ],
   "schemaVersion": 2,
   "source": "zzPi git export",
-  "updated_at": "2026-07-16T10:52:02.029416+00:00",
+  "updated_at": "2026-07-16T23:52:49.151740+00:00",
   "visiblePlugins": [
     "zz-local-models",
     "context-tools",
