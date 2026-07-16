@@ -3,7 +3,6 @@
   // agent. /pe <prompt> runs a clarification/enrichment pass (using the
   // readsubagent for repo context) and returns
   // enriched prompt options or clarifying questions into the main context.
-  // It is independent of workflow mode and does not alter wf-clarifier.
 
   // Default remote Pi model for the enrichment pass.
   "model": "gpt-5.6-sol",

@@ -39,24 +39,6 @@ const DEFAULT_TOOLS = ["readsubagent"];
 const EXCLUDED_CHILD_TOOLS = [
   "promptenrichsubagent",
   "pe",
-  "wfclarifier",
-  "wf-clarifier",
-  "wfbrainstormer",
-  "wf-brainstormer",
-  "wfadversarialreview",
-  "wf-adversarialreview",
-  "wfdesignplan",
-  "wf-designplan",
-  "wfimpplanner",
-  "wf-impplanner",
-  "wfimplementeragent",
-  "wf-implementeragent",
-  "wfrevieweragent",
-  "wf-revieweragent",
-  "wffinalreviewagent",
-  "wf-finalreviewagent",
-  "wftesteragent",
-  "wf-testeragent",
 ] as const;
 
 const DEFAULT_PROMPTENRICH_CONFIG: ChildPiAgentConfig = {

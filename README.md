@@ -1,5 +1,3 @@
-# THIS IS A FROZEN EXAMPLE AND WILL NOT BE UPDATED, FEEL FREE TO FORK FOR OWN PURPOSES.
-
 # zzPi
 
 `zzPi` is a context-routing toolkit for coding agents.
@@ -30,7 +28,7 @@ Most coding-agent waste starts with reads:
 3. It returns a concise map: relevant files, line ranges, symbols, search terms, related areas to avoid, and uncertainty.
 4. The main model reads only the small, targeted slices it needs.
 
-The current system is built around focused repository inspection (`readsubagent`), standalone debugging and design agents, adversarial vetting, and the larger workflow pipeline. The broader design is **token/context flow control**: decide which work belongs in the main thread and which work should be delegated.
+The current system is built around focused repository inspection (`readsubagent`) plus standalone brainstorming, design, implementation, debugging, and adversarial-vetting agents. The parent agent dynamically composes only the callable stages a task needs, while prompt enrichment remains an explicit user-triggered step. The broader design is **token/context flow control**: decide which work belongs in the main thread and which work should be delegated.
 
 <figure>
      <img src="repoAssets/fullview.png" alt="Full view screenshot" width="80%">
@@ -61,7 +59,7 @@ Pi is flexible enough to act as a local, harness-agnostic subagent runner:
 - Some agents can stay local while others use remote providers.
 - Config lives in the repo under `.pi/`, so each project can tune its own routing.
 
-In Pi itself this is first-class: `/readsubagent`, `/debuggersubagent`, `/design-loop`, workflow-mode agents, vetting agents, and `/zz-model-setup` can route work to local or remote models with fine-grained control.
+In Pi itself this is first-class: `/readsubagent`, `/debuggersubagent`, `/design-loop`, `/implementation-mode`, prompt enrichment, vetting agents, and `/zz-model-setup` can route work to local or remote models with fine-grained control.
 
 For closed or harder-to-customize harnesses, `zzPi` exposes the same idea in a reduced form:
 
@@ -88,7 +86,24 @@ The important user-facing commands are:
 - `/readsubagent ask ...` — ask a local read-only file-inspection agent for a focused answer/map.
 - `/debuggersubagent ask ...` — delegate read-only root-cause diagnosis.
 - `/design-loop` — enable or inspect the standalone brainstorm/design workflow.
-- `/workflowmode` — run the larger staged workflow using the configured agent stack.
+- `/implementation-mode` — toggle parent-directed delegation of bounded implementation pieces.
+
+## Why workflow mode was retired
+
+When explicitly enabled, the original workflow mode intercepted the next normal prompt and ran it through one fixed, stateful pipeline. That was useful before the individual agents were mature, but it became redundant once the standalone agents were tuned and the parent agent could orchestrate them directly.
+
+The standalone stack now supersedes the old mode:
+
+- `readsubagent` gathers focused repository context when the parent needs it.
+- `promptenrichsubagent` provides optional user-triggered clarification through `/pe` or `Alt+E`; the parent does not invoke it automatically.
+- `brainstormer`, `designplanner`, and `design-loop` handle explicit solution exploration and design.
+- `implementationsubagent` executes parent-decomposed, bounded implementation work.
+- `debuggersubagent` performs focused root-cause analysis.
+- `vettingagents` provides independent adversarial review when the change warrants it.
+
+This dynamic approach avoids mandatory stages, duplicate context, and fixed review loops. Each agent remains independently configurable, while the parent retains control of sequencing, integration, verification, and git operations.
+
+On a managed upgrade through `/zz-plugs update` or `install.sh`, the plug manager removes the retired workflow runtime and agent files. Former `workflow-tree.config.jsonc` and `wf-*.config.jsonc` files are preserved intentionally in case they contain local customization; they can be deleted manually after updating. Legacy `.zzwf/workflows/` and `.zzwf/tmp/` artifacts are also left for manual cleanup.
 
 ## Install Pi plugs
 
@@ -206,7 +221,6 @@ Codex/Claude/Copilot/MCP integrations require `pi` on PATH with a usable local-m
 - `zz-lib/pi-plugs.tar.gz` — generated shared runtime archive.
 - `zz-lib/files/` — exported shared runtime source files.
 - `pi-plugs/files/README.md` — exported plugin catalog documentation.
-- `pi-plugs/files/WORKFLOWMODE.md` — exported workflow mode documentation.
 - `install-codex-readsubagent.{sh,ps1}` + `codex-readsubagent/readsubagent.toml` — Codex readsubagent installer, agent, `.codex/config.toml` MCP registration, and `.zz-mcp/` server.
 - `install-claude-readsubagent.{sh,ps1}` + `claude-readsubagent/readsubagent.md` — Claude Code readsubagent installer + subagent.
 - `install-copilot-readsubagent.{sh,ps1}` — Copilot/VS Code readsubagent installer + workspace MCP instructions.
@@ -215,4 +229,3 @@ Codex/Claude/Copilot/MCP integrations require `pi` on PATH with a usable local-m
 ## Related docs
 
 - [Plugin source README](pi-plugs/files/README.md)
-- [Workflow mode guide](pi-plugs/files/WORKFLOWMODE.md)

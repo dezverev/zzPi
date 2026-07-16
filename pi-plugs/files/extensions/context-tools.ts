@@ -12,15 +12,6 @@ import {
   readJsoncConfig,
 } from "./zz-lib/jsonc-config.ts";
 import {
-  WORKFLOW_TREE_LIFECYCLES,
-  WORKFLOW_TREE_QUERY_EVENT,
-  WORKFLOW_TREE_SNAPSHOT_EVENT,
-  WORKFLOW_TREE_SNAPSHOT_SCHEMA_VERSION,
-  type WorkflowTreeLifecycle,
-  type WorkflowTreeSnapshot,
-  type WorkflowTreeSnapshotQuery,
-} from "./lib/workflow-tree-state.ts";
-import {
   registerRightOverlayPane,
   type RightOverlayPaneClient,
   type RightOverlayRenderState,
@@ -139,7 +130,6 @@ const TOOL_BUCKET: BucketDescriptor = { key: "tools", label: "Tool calls & resul
 let contextTree = createContextTreeState();
 let detailsVisible = false;
 let autoShowDetailsPane = true;
-let workflowContextSuppressed = false;
 let lastContext: ExtensionContext | undefined;
 let overlayTiler: RightOverlayPaneClient | undefined;
 
@@ -189,27 +179,6 @@ function estimatedImageTokens(): number {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
-}
-
-function isWorkflowTreeLifecycle(value: unknown): value is WorkflowTreeLifecycle {
-  return (
-    typeof value === "string" &&
-    WORKFLOW_TREE_LIFECYCLES.includes(value as WorkflowTreeLifecycle)
-  );
-}
-
-function isWorkflowTreeSnapshotPayload(payload: unknown): payload is WorkflowTreeSnapshot {
-  return (
-    isRecord(payload) &&
-    payload.schemaVersion === WORKFLOW_TREE_SNAPSHOT_SCHEMA_VERSION &&
-    typeof payload.workflowModeEnabled === "boolean" &&
-    typeof payload.hasWorkflowState === "boolean" &&
-    isWorkflowTreeLifecycle(payload.lifecycle) &&
-    typeof payload.overlayVisible === "boolean" &&
-    typeof payload.suppressContextTree === "boolean" &&
-    typeof payload.source === "string" &&
-    typeof payload.emittedAt === "string"
-  );
 }
 
 function isToolCallBlock(value: unknown): value is ToolCallBlock {
@@ -1105,32 +1074,13 @@ function getEffectiveContext(ctx?: ExtensionContext): ExtensionContext | undefin
 
 function isDetailsPaneActuallyVisible(ctx?: ExtensionContext): boolean {
   const effectiveContext = getEffectiveContext(ctx);
-  return (effectiveContext?.hasUI ?? true) && detailsVisible && !workflowContextSuppressed;
+  return (effectiveContext?.hasUI ?? true) && detailsVisible;
 }
 
 function syncDetailsPaneVisibility(ctx?: ExtensionContext): void {
   const actualVisible = isDetailsPaneActuallyVisible(ctx);
   overlayTiler?.setVisible(actualVisible);
   if (actualVisible) overlayTiler?.requestRender();
-}
-
-function setWorkflowContextSuppressed(suppressed: boolean, ctx?: ExtensionContext): void {
-  const effectiveContext = getEffectiveContext(ctx);
-  const wasSuppressed = workflowContextSuppressed;
-  workflowContextSuppressed = suppressed;
-
-  if (
-    wasSuppressed &&
-    !suppressed &&
-    !detailsVisible &&
-    autoShowDetailsPane &&
-    effectiveContext?.hasUI
-  ) {
-    showDetailsPane(effectiveContext);
-    return;
-  }
-
-  syncDetailsPaneVisibility(effectiveContext);
 }
 
 function applyContextTools(ctx: ExtensionContext): void {
@@ -1164,28 +1114,12 @@ function clearContextTools(ctx: ExtensionContext): void {
 }
 
 function maybeShowDefaultDetailsPane(ctx: ExtensionContext): void {
-  if (workflowContextSuppressed) return;
   if (autoShowDetailsPane) showDetailsPane(ctx);
 }
 
-function emitWorkflowTreeSnapshotQuery(pi: ExtensionAPI, reason: string): void {
-  const query: WorkflowTreeSnapshotQuery = {
-    requester: PANE_ID,
-    reason,
-    requestedAt: new Date().toISOString(),
-  };
-  pi.events.emit(WORKFLOW_TREE_QUERY_EVENT, query);
-}
-
 export default function contextToolsExtension(pi: ExtensionAPI) {
-  pi.events.on(WORKFLOW_TREE_SNAPSHOT_EVENT, (payload) => {
-    if (!isWorkflowTreeSnapshotPayload(payload)) return;
-    setWorkflowContextSuppressed(payload.suppressContextTree === true);
-  });
-
   pi.on("session_start", (_event, ctx) => {
     lastContext = ctx;
-    workflowContextSuppressed = false;
     loadConfig(ctx);
     overlayTiler ??= registerRightOverlayPane(pi, {
       id: PANE_ID,
@@ -1199,7 +1133,6 @@ export default function contextToolsExtension(pi: ExtensionAPI) {
 
     rebuildContextTree(ctx, pi);
     applyContextTools(ctx);
-    emitWorkflowTreeSnapshotQuery(pi, "session_start");
 
     if (!ctx.hasUI) return;
     maybeShowDefaultDetailsPane(ctx);
@@ -1250,7 +1183,6 @@ export default function contextToolsExtension(pi: ExtensionAPI) {
 
   pi.on("session_shutdown", (_event, ctx) => {
     detailsVisible = false;
-    workflowContextSuppressed = false;
     clearContextTools(ctx);
     hideDetailsPane();
     overlayTiler?.dispose();

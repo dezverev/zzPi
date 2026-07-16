@@ -37,12 +37,7 @@ const DEFAULT_TOOLS = [
 
 const EXCLUDED_CHILD_TOOLS = [
   "implementationsubagent", "vettingagents",
-  "workflowmode", "design-loop", "brainstormer", "designplanner", "promptenrichsubagent",
-  "wfclarifier", "wf-clarifier", "wfbrainstormer", "wf-brainstormer",
-  "wfadversarialreview", "wf-adversarialreview", "wfdesignplan", "wf-designplan",
-  "wfimpplanner", "wf-impplanner", "wfimplementeragent", "wf-implementeragent",
-  "wfrevieweragent", "wf-revieweragent", "wffinalreviewagent", "wf-finalreviewagent",
-  "wftesteragent", "wf-testeragent",
+  "design-loop", "brainstormer", "designplanner", "promptenrichsubagent",
 ] as const;
 
 const PARENT_PROMPT = [
