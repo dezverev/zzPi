@@ -43,6 +43,7 @@ interface StandaloneAgentSavedState {
 
 interface StandaloneAgentDefinition<Decision> {
   readonly agentName: string;
+  readonly allowCommandRun?: boolean | undefined;
   readonly buildPrompt: (task: string) => string;
   readonly commandDescription: string;
   readonly commandUsage: string;
@@ -432,7 +433,10 @@ export function createStandaloneChildAgent<Decision>(definition: StandaloneAgent
 
         if (trimmed.includes(" ") || hasTrailingSpace) return null;
 
-        return ["model", "ask", "config", "status"]
+        const commands = definition.allowCommandRun === false
+          ? ["model", "config", "status"]
+          : ["model", "ask", "config", "status"];
+        return commands
           .filter((item) => item.startsWith(normalizedFirst))
           .map((value) => ({ value, label: value }));
       },
@@ -467,6 +471,13 @@ export function createStandaloneChildAgent<Decision>(definition: StandaloneAgent
         const task = normalized === "ask" ? rest.join(" ").trim() : trimmed;
         if (!task) {
           ctx.ui.notify(`Usage: ${definition.commandUsage}`, "warning");
+          return;
+        }
+        if (definition.allowCommandRun === false) {
+          ctx.ui.notify(
+            `${definition.displayName} execution is parent-tool only. Provide a validated implementation document through the ${definition.agentName} tool.`,
+            "warning",
+          );
           return;
         }
 

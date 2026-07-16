@@ -98,6 +98,7 @@ type WorkflowAgentModelSelector = (
 
 const WORKFLOW_MODEL_OPTIONS = [
   { id: "gpt-5.6-sol-xhigh", label: "GPT-5.6 Sol xhigh (openai-codex)" },
+  { id: "gpt-5.6-sol-max", label: "GPT-5.6 Sol max (openai-codex)" },
   { id: "gpt-5.5-xhigh", label: "GPT-5.5 xhigh (openai-codex)" },
   { id: "qwen-35b-a3b", label: "Qwen 3.6 35B A3B via proxy" },
   { id: "glm-5p2-xhigh", label: "GLM 5.2 xhigh (fireworks)" },
@@ -109,6 +110,8 @@ const WORKFLOW_MODEL_ALIASES: Record<string, string> = {
   "gpt-5.5-xhigh": "gpt-5.5-xhigh",
   "gpt-5.6-sol": "gpt-5.6-sol-xhigh",
   "gpt-5.6-sol-xhigh": "gpt-5.6-sol-xhigh",
+  "gpt-5.6-sol-max": "gpt-5.6-sol-max",
+  "gpt-max": "gpt-5.6-sol-max",
   "qwen": "qwen-35b-a3b",
   "qwen-35b-a3b": "qwen-35b-a3b",
   "qwen/qwen3.6-35b-a3b": "qwen-35b-a3b",

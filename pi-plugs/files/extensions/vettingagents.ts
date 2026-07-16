@@ -77,7 +77,7 @@ const VETTINGAGENTS_EVENT_END = "vettingagents:end";
 const VETTINGAGENTS_EVENT_ERROR = "vettingagents:error";
 const VETTINGAGENTS_EVENT_PROGRESS = "vettingagents:progress";
 const VETTINGAGENTS_EVENT_START = "vettingagents:start";
-const DEFAULT_VETTING_LENS_TIMEOUT_MS = 6 * 60 * 1_000;
+const DEFAULT_VETTING_LENS_TIMEOUT_MS = 30 * 60 * 1_000;
 
 function getVettingLensTimeoutMs(): number {
   const configured = Number.parseInt(process.env.PI_VETTING_LENS_TIMEOUT_MS ?? "", 10);
