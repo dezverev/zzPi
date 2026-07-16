@@ -4,19 +4,14 @@
   "default": "all-visible",
   "files": [
     {
-      "bytes": 12136,
+      "bytes": 7632,
       "path": "README.md",
-      "sha256": "859be2867e6308bad9704b350824f9fb0d1e384055aaa0fe556d8c2cef0ef42c"
+      "sha256": "04e510be68eec42b1d3e1514cc0265d73ee2c83e0219aca90ac6aad5727d94f8"
     },
     {
-      "bytes": 20123,
-      "path": "WORKFLOWMODE.md",
-      "sha256": "81a86970884a85b1835a6f7841f0822016e987c0c16842e36b25e459ecc01512"
-    },
-    {
-      "bytes": 20759,
+      "bytes": 11840,
       "path": "pi-plugs.catalog.jsonc",
-      "sha256": "5456d346fce9da62257f9bde4760fcbcd76e9f2299324ae5b905eb0e81f771a3"
+      "sha256": "9e8c46cadd3a3f0117a19ee9f11a7e43b684c84a8a86f58b800b93000fb17fbc"
     },
     {
       "bytes": 257,
@@ -24,9 +19,9 @@
       "sha256": "1342ca9b09a234b66bdb07fd651c0af75eac673ca7619bb6d47f95f16bb182aa"
     },
     {
-      "bytes": 20808,
+      "bytes": 20496,
       "path": "extensions/00-zz-subagent-runtime.ts",
-      "sha256": "af112044bbb60b791102b39ab6a9d601e006120d54d1e31ec89af67cb0f2ff99"
+      "sha256": "d7b94bff6b071cacad3070bcf537b47191b15df169fad2ecbaf262474d6c726d"
     },
     {
       "bytes": 2796,
@@ -44,9 +39,9 @@
       "sha256": "ca9a5e589a3f43ac80f2c4ff6528c765c714d3c32bfd1bb447d1eb6102700305"
     },
     {
-      "bytes": 39805,
+      "bytes": 37592,
       "path": "extensions/context-tools.ts",
-      "sha256": "5ccfeb5167f39487b6c5edeeb1b5b7d9174c373575bf5cc74a5ff56d39028f02"
+      "sha256": "dbcf1cf829f261e79d280d915cc6e681d8f3247d9b4ae9e48f77cc45508e6718"
     },
     {
       "bytes": 3016,
@@ -59,9 +54,9 @@
       "sha256": "a51762211917232cdc5f6b02fc0dd1b0703e685c77eb511f1e47094d412bd235"
     },
     {
-      "bytes": 7809,
+      "bytes": 7774,
       "path": "extensions/design-loop.ts",
-      "sha256": "683a4d09773c704e65a424fd8743eef8d4c34be7055630315a13a0727d02c79e"
+      "sha256": "4019f3ce63766107bf52a46558deb8b1216440af45ce94bc85c4002becc8d95e"
     },
     {
       "bytes": 2816,
@@ -89,9 +84,9 @@
       "sha256": "8f479c48d3c52f7c45db40da0d52bc6345ce325507a148f0cfa1e6b4db2f7669"
     },
     {
-      "bytes": 17737,
+      "bytes": 17366,
       "path": "extensions/implementationsubagent.ts",
-      "sha256": "4e65ceb5f6413e316dc80b61d6cdde62a2ba6286921f15d9dacc91b14f078658"
+      "sha256": "b817b4d6da9bb00f79185a7a1ea32a66236dcf2e6553724b7cd019753c857106"
     },
     {
       "bytes": 1083,
@@ -109,14 +104,14 @@
       "sha256": "ef76e8961f48a9795e5131676828a2cda5bc44d5b00ae816ee89c563b3d3e1d7"
     },
     {
-      "bytes": 4309,
+      "bytes": 4236,
       "path": "extensions/promptenrichsubagent.config.jsonc",
-      "sha256": "a04b0971c3b80558c878461ada798eedd574849c98df2d709eb9e8657d10e304"
+      "sha256": "1c5ca2ecdb9e985cd8b7f193f753a22ceabb0a1953519cd861d871deb11bde21"
     },
     {
-      "bytes": 28953,
+      "bytes": 28572,
       "path": "extensions/promptenrichsubagent.ts",
-      "sha256": "0974a66f2cefbac3a34ede6bcb98380f38b1aa0f67de1f1c58e5f337faf0a2df"
+      "sha256": "12aba1d22a1c963df3fe2589c2aae8a9ff89f345d6562699b4212b7fb497e5d4"
     },
     {
       "bytes": 5794,
@@ -154,114 +149,9 @@
       "sha256": "7dac50f1ca77bc5afd267a5ee0f83995f50b1a479797ef9777e44cde705bc7d4"
     },
     {
-      "bytes": 37857,
+      "bytes": 37476,
       "path": "extensions/vettingagents.ts",
-      "sha256": "0a34c588c946754f7de15cab46b0b5cf275e34d2d79c5f78d36d7d97140ebb7c"
-    },
-    {
-      "bytes": 3560,
-      "path": "extensions/wf-adversarialreview.config.jsonc",
-      "sha256": "a08d7d093aeb961190c1ce418852dbd1aa79c3a489c4a8f8c9db60351f854fd1"
-    },
-    {
-      "bytes": 23410,
-      "path": "extensions/wf-adversarialreview.ts",
-      "sha256": "76b3e675562011e442683a90e2babe2221cba6a8479e140a114851ca8022f809"
-    },
-    {
-      "bytes": 3617,
-      "path": "extensions/wf-brainstormer.config.jsonc",
-      "sha256": "36f670d272ef7a0f415d4d4c3c59f83b3381c35d7131cacf66b92479e08955ff"
-    },
-    {
-      "bytes": 23929,
-      "path": "extensions/wf-brainstormer.ts",
-      "sha256": "0aa695a79865fef9749aea407537b0b49c93bbb104c49e9d44a86fafd271c0ea"
-    },
-    {
-      "bytes": 3568,
-      "path": "extensions/wf-clarifier.config.jsonc",
-      "sha256": "e68d98f66a177e56c2dc5cc1d64fe1249f0ddee44a5839f1cf9865b92f138e95"
-    },
-    {
-      "bytes": 22085,
-      "path": "extensions/wf-clarifier.ts",
-      "sha256": "5889e4857c588881fc99ac66b7f29896570660847ca49bc65fcad22cddc2bcb5"
-    },
-    {
-      "bytes": 3766,
-      "path": "extensions/wf-designplan.config.jsonc",
-      "sha256": "cf40ab48365b7ec7e1c4416925a2b767e09acce9d5f9b11be37e900efe142df0"
-    },
-    {
-      "bytes": 35090,
-      "path": "extensions/wf-designplan.ts",
-      "sha256": "7575df1b286477ed8a4ad2d962000df22d43d1b5fdd03cdd33ff8420fa6d47ec"
-    },
-    {
-      "bytes": 3496,
-      "path": "extensions/wf-finalreviewagent.config.jsonc",
-      "sha256": "8c201d8ded5d5fa50f16ccc1154acdca034bfd5ac4e706b665d7fd329235320c"
-    },
-    {
-      "bytes": 28421,
-      "path": "extensions/wf-finalreviewagent.ts",
-      "sha256": "2286dcaf5b9dadcf0506b6ec84ee6f103625141a5e110e3b7f18e656da65b381"
-    },
-    {
-      "bytes": 3529,
-      "path": "extensions/wf-implementeragent.config.jsonc",
-      "sha256": "4b1333d11534cb768d82a27247d68d86712042f206a263097668f3d1ea212abd"
-    },
-    {
-      "bytes": 24761,
-      "path": "extensions/wf-implementeragent.ts",
-      "sha256": "8669598207c8a53f3b93f33df27621ea0b3110b5ae76149d9859096918241bfc"
-    },
-    {
-      "bytes": 3767,
-      "path": "extensions/wf-impplanner.config.jsonc",
-      "sha256": "8c300d46f0d187f56082efa6c40724d58393cebf4f393c42a708d10945b3e845"
-    },
-    {
-      "bytes": 53624,
-      "path": "extensions/wf-impplanner.ts",
-      "sha256": "16b140fd08b8f6b2baa92cfb208b4dc172b4c5c2d61b4e33a67b3dfe6959a03e"
-    },
-    {
-      "bytes": 3300,
-      "path": "extensions/wf-revieweragent.config.jsonc",
-      "sha256": "35cd860722f8fa92b7908b90323306a59b3b2c78a047ad26362c758c5b0f0b5f"
-    },
-    {
-      "bytes": 26076,
-      "path": "extensions/wf-revieweragent.ts",
-      "sha256": "3c9b278a0df193c43cdefab56fbeaa32b70026af9eb4fe603874aacb0888ba56"
-    },
-    {
-      "bytes": 3604,
-      "path": "extensions/wf-testeragent.config.jsonc",
-      "sha256": "ccd2665cbf872cc5c12625fc35a72113ebfa9eb8ea07a6bc063c89a4dc174a28"
-    },
-    {
-      "bytes": 25200,
-      "path": "extensions/wf-testeragent.ts",
-      "sha256": "87a0c7484b89ae09adda3a5a0444abc59310239d4cecf2b7d416ee3a11c1efa8"
-    },
-    {
-      "bytes": 738,
-      "path": "extensions/workflow-tree.config.jsonc",
-      "sha256": "706ad2ca20b3d0ae6370e4a584081b5b8660a97b2b511031b12153162d4512e9"
-    },
-    {
-      "bytes": 34570,
-      "path": "extensions/workflow-tree.ts",
-      "sha256": "8d68ee77fb02dd6daace7d17d683ce96fb27805a3d5af06532dc543923fcba14"
-    },
-    {
-      "bytes": 130312,
-      "path": "extensions/workflowmode.ts",
-      "sha256": "cfbb64d240138ffe04421d081270aa046a6e31dfb201f75d2cd05294dca50369"
+      "sha256": "b6f0fbc5309960702316b572c096da08fbdeb2b7ad8dbc40b29979ddda928d77"
     },
     {
       "bytes": 491,
@@ -319,14 +209,9 @@
       "sha256": "4afbf24627b1a9b8b1b459f8ec212a2cf63b2fd9c1cb072606575f1e2fc3c0b9"
     },
     {
-      "bytes": 19494,
+      "bytes": 19123,
       "path": "extensions/lib/standalone-agent-common.ts",
-      "sha256": "5940206ae5056e49b89039033f7efb376b78df67368f26c4c3b0c9057fea35ae"
-    },
-    {
-      "bytes": 4409,
-      "path": "extensions/lib/workflow-tree-state.ts",
-      "sha256": "148e25877bca91a2527284f825ff995af764d2052b39894400186fe1b59eec3d"
+      "sha256": "f9ca0ea9af8be79fa92937ee38829bf246cfd85b57ea2387f7746bcb5c87ca82"
     }
   ],
   "install_target": "./.pi",
@@ -442,8 +327,7 @@
       "entry": "extensions/context-tools.ts",
       "fileDeps": [
         "extensions/context-tools.config.jsonc",
-        "extensions/lib/right-overlay-tiler.ts",
-        "extensions/lib/workflow-tree-state.ts"
+        "extensions/lib/right-overlay-tiler.ts"
       ],
       "id": "context-tools",
       "internal": false,
@@ -463,36 +347,6 @@
         "overlay"
       ],
       "title": "Context tools"
-    },
-    {
-      "configFiles": [
-        "extensions/workflow-tree.config.jsonc"
-      ],
-      "description": "Shows workflow mode lifecycle, prompts, progress, and terminal state in a right-side pane.",
-      "entry": "extensions/workflow-tree.ts",
-      "fileDeps": [
-        "extensions/workflow-tree.config.jsonc",
-        "extensions/lib/right-overlay-tiler.ts",
-        "extensions/lib/workflow-tree-state.ts"
-      ],
-      "id": "workflow-tree",
-      "internal": false,
-      "optionalPluginDeps": [],
-      "pluginDeps": [
-        "right-overlay-tiler"
-      ],
-      "sharedDeps": [
-        {
-          "id": "zz-lib",
-          "minVersion": "1.0.0"
-        }
-      ],
-      "tags": [
-        "ui",
-        "workflow",
-        "overlay"
-      ],
-      "title": "Workflow Tree"
     },
     {
       "configFiles": [
@@ -546,275 +400,6 @@
         "context"
       ],
       "title": "PI.md context"
-    },
-    {
-      "configFiles": [
-        "extensions/wf-clarifier.config.jsonc"
-      ],
-      "description": "Runs the first workflow-mode clarification pass, using readsubagent to produce enriched prompts or questions; Alt+E enriches the next prompt, asks follow-up questions if needed, then sends it normally.",
-      "entry": "extensions/wf-clarifier.ts",
-      "fileDeps": [
-        "extensions/wf-clarifier.config.jsonc",
-        "extensions/lib/child-agent-model-options.ts"
-      ],
-      "id": "wf-clarifier",
-      "internal": true,
-      "optionalPluginDeps": [],
-      "pluginDeps": [
-        "readsubagent"
-      ],
-      "sharedDeps": [
-        {
-          "id": "zz-lib",
-          "minVersion": "1.0.0"
-        }
-      ],
-      "tags": [
-        "agent",
-        "workflow"
-      ],
-      "title": "Workflow clarifier"
-    },
-    {
-      "configFiles": [
-        "extensions/wf-brainstormer.config.jsonc"
-      ],
-      "description": "Runs the second workflow-mode phase, researching solution options and tradeoffs from the clarified prompt.",
-      "entry": "extensions/wf-brainstormer.ts",
-      "fileDeps": [
-        "extensions/wf-brainstormer.config.jsonc",
-        "extensions/lib/child-agent-model-options.ts"
-      ],
-      "id": "wf-brainstormer",
-      "internal": true,
-      "optionalPluginDeps": [],
-      "pluginDeps": [
-        "readsubagent"
-      ],
-      "sharedDeps": [
-        {
-          "id": "zz-lib",
-          "minVersion": "1.0.0"
-        }
-      ],
-      "tags": [
-        "agent",
-        "workflow"
-      ],
-      "title": "Workflow brainstormer"
-    },
-    {
-      "configFiles": [
-        "extensions/wf-adversarialreview.config.jsonc"
-      ],
-      "description": "Runs a stage-aware workflow-mode review gate before selected wf-* stage outputs are shown as final user-facing output.",
-      "entry": "extensions/wf-adversarialreview.ts",
-      "fileDeps": [
-        "extensions/wf-adversarialreview.config.jsonc",
-        "extensions/lib/child-agent-model-options.ts"
-      ],
-      "id": "wf-adversarialreview",
-      "internal": true,
-      "optionalPluginDeps": [],
-      "pluginDeps": [
-        "readsubagent"
-      ],
-      "sharedDeps": [
-        {
-          "id": "zz-lib",
-          "minVersion": "1.0.0"
-        }
-      ],
-      "tags": [
-        "agent",
-        "workflow",
-        "review"
-      ],
-      "title": "Workflow adversarial review"
-    },
-    {
-      "configFiles": [
-        "extensions/wf-designplan.config.jsonc"
-      ],
-      "description": "Runs the next workflow-mode phase, turning the selected brainstorm option into a reviewed development design plan.",
-      "entry": "extensions/wf-designplan.ts",
-      "fileDeps": [
-        "extensions/wf-designplan.config.jsonc",
-        "extensions/lib/child-agent-model-options.ts"
-      ],
-      "id": "wf-designplan",
-      "internal": true,
-      "optionalPluginDeps": [],
-      "pluginDeps": [
-        "readsubagent",
-        "wf-adversarialreview"
-      ],
-      "sharedDeps": [
-        {
-          "id": "zz-lib",
-          "minVersion": "1.0.0"
-        }
-      ],
-      "tags": [
-        "agent",
-        "workflow"
-      ],
-      "title": "Workflow design plan"
-    },
-    {
-      "configFiles": [
-        "extensions/wf-impplanner.config.jsonc"
-      ],
-      "description": "Turns a reviewed design plan into reviewed per-step implementation plans and a concrete merged implementation plan.",
-      "entry": "extensions/wf-impplanner.ts",
-      "fileDeps": [
-        "extensions/wf-impplanner.config.jsonc",
-        "extensions/lib/child-agent-model-options.ts"
-      ],
-      "id": "wf-impplanner",
-      "internal": true,
-      "optionalPluginDeps": [],
-      "pluginDeps": [
-        "readsubagent",
-        "wf-adversarialreview",
-        "wf-designplan"
-      ],
-      "sharedDeps": [
-        {
-          "id": "zz-lib",
-          "minVersion": "1.0.0"
-        }
-      ],
-      "tags": [
-        "agent",
-        "workflow"
-      ],
-      "title": "Workflow implementation planner"
-    },
-    {
-      "configFiles": [
-        "extensions/wf-implementeragent.config.jsonc"
-      ],
-      "description": "Implements one reviewed wf-impplanner stage at a time and returns structured implementation results for workflow review.",
-      "entry": "extensions/wf-implementeragent.ts",
-      "fileDeps": [
-        "extensions/wf-implementeragent.config.jsonc",
-        "extensions/lib/child-agent-model-options.ts"
-      ],
-      "id": "wf-implementeragent",
-      "internal": true,
-      "optionalPluginDeps": [],
-      "pluginDeps": [
-        "zz-subagent-runtime",
-        "readsubagent",
-        "wf-impplanner"
-      ],
-      "sharedDeps": [
-        {
-          "id": "zz-lib",
-          "minVersion": "1.0.0"
-        }
-      ],
-      "tags": [
-        "agent",
-        "workflow",
-        "implementation"
-      ],
-      "title": "Workflow implementer agent"
-    },
-    {
-      "configFiles": [
-        "extensions/wf-revieweragent.config.jsonc"
-      ],
-      "description": "Reviews each wf-implementeragent stage and returns a green signal before workflow mode advances.",
-      "entry": "extensions/wf-revieweragent.ts",
-      "fileDeps": [
-        "extensions/wf-revieweragent.config.jsonc",
-        "extensions/lib/child-agent-model-options.ts"
-      ],
-      "id": "wf-revieweragent",
-      "internal": true,
-      "optionalPluginDeps": [],
-      "pluginDeps": [
-        "zz-subagent-runtime",
-        "readsubagent",
-        "wf-impplanner",
-        "wf-implementeragent"
-      ],
-      "sharedDeps": [
-        {
-          "id": "zz-lib",
-          "minVersion": "1.0.0"
-        }
-      ],
-      "tags": [
-        "agent",
-        "workflow",
-        "review"
-      ],
-      "title": "Workflow reviewer agent"
-    },
-    {
-      "configFiles": [
-        "extensions/wf-finalreviewagent.config.jsonc"
-      ],
-      "description": "Performs a whole-branch final review after all implementation stages pass, dispatching remediation loops until green.",
-      "entry": "extensions/wf-finalreviewagent.ts",
-      "fileDeps": [
-        "extensions/wf-finalreviewagent.config.jsonc",
-        "extensions/lib/child-agent-model-options.ts"
-      ],
-      "id": "wf-finalreviewagent",
-      "internal": true,
-      "optionalPluginDeps": [],
-      "pluginDeps": [
-        "zz-subagent-runtime",
-        "readsubagent",
-        "wf-impplanner"
-      ],
-      "sharedDeps": [
-        {
-          "id": "zz-lib",
-          "minVersion": "1.0.0"
-        }
-      ],
-      "tags": [
-        "agent",
-        "workflow",
-        "review"
-      ],
-      "title": "Workflow final review agent"
-    },
-    {
-      "configFiles": [
-        "extensions/wf-testeragent.config.jsonc"
-      ],
-      "description": "Analyzes branch changes for reasonable test gaps and fills them before whole-branch final review.",
-      "entry": "extensions/wf-testeragent.ts",
-      "fileDeps": [
-        "extensions/wf-testeragent.config.jsonc",
-        "extensions/lib/child-agent-model-options.ts"
-      ],
-      "id": "wf-testeragent",
-      "internal": true,
-      "optionalPluginDeps": [],
-      "pluginDeps": [
-        "zz-subagent-runtime",
-        "readsubagent",
-        "wf-impplanner"
-      ],
-      "sharedDeps": [
-        {
-          "id": "zz-lib",
-          "minVersion": "1.0.0"
-        }
-      ],
-      "tags": [
-        "agent",
-        "workflow",
-        "testing"
-      ],
-      "title": "Workflow tester agent"
     },
     {
       "configFiles": [
@@ -976,39 +561,6 @@
       "title": "Design loop"
     },
     {
-      "configFiles": [],
-      "description": "Adds /workflowmode and input-focused Alt+W to clarify, enrich, brainstorm, select, design-plan, implementation-plan, then implement/review each plan stage, fill test gaps, and run whole-branch final review until green.",
-      "entry": "extensions/workflowmode.ts",
-      "fileDeps": [
-        "extensions/lib/workflow-tree-state.ts"
-      ],
-      "id": "workflowmode",
-      "internal": false,
-      "optionalPluginDeps": [],
-      "pluginDeps": [
-        "workflow-tree",
-        "wf-clarifier",
-        "wf-brainstormer",
-        "wf-adversarialreview",
-        "wf-designplan",
-        "wf-impplanner",
-        "wf-implementeragent",
-        "wf-revieweragent",
-        "wf-finalreviewagent",
-        "wf-testeragent"
-      ],
-      "sharedDeps": [
-        {
-          "id": "zz-lib",
-          "minVersion": "1.0.0"
-        }
-      ],
-      "tags": [
-        "workflow"
-      ],
-      "title": "Workflow mode"
-    },
-    {
       "configFiles": [
         "extensions/readsubagent.config.jsonc",
         "extensions/local-model-endpoints.config.jsonc"
@@ -1076,7 +628,7 @@
         "extensions/promptenrichsubagent.config.jsonc",
         "extensions/local-model-endpoints.config.jsonc"
       ],
-      "description": "Standalone, manually-triggered prompt-enrichment agent. /pe <prompt> runs a clarification/enrichment pass (using readsubagent for repo context) and returns enriched prompt options or clarifying questions. Independent of workflow mode; does not alter wf-clarifier.",
+      "description": "Standalone, manually-triggered prompt-enrichment agent. /pe <prompt> runs a clarification/enrichment pass (using readsubagent for repo context) and returns enriched prompt options or clarifying questions.",
       "entry": "extensions/promptenrichsubagent.ts",
       "fileDeps": [
         "extensions/promptenrichsubagent.config.jsonc",
@@ -1143,11 +695,10 @@
   ],
   "schemaVersion": 2,
   "source": "zzPi git export",
-  "updated_at": "2026-07-16T09:17:05.430730+00:00",
+  "updated_at": "2026-07-16T10:52:02.029416+00:00",
   "visiblePlugins": [
     "zz-local-models",
     "context-tools",
-    "workflow-tree",
     "git-status",
     "pi-context",
     "debuggersubagent",
@@ -1155,7 +706,6 @@
     "brainstormer",
     "designplanner",
     "design-loop",
-    "workflowmode",
     "readsubagent",
     "vettingagents",
     "promptenrichsubagent",

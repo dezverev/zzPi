@@ -90,14 +90,9 @@ export interface StandaloneChildAgent<Decision> {
 }
 
 export const STANDALONE_AGENT_EXCLUDED_TOOLS = [
-  "workflowmode", "design-loop",
+  "design-loop",
   "brainstormer", "designplanner",
   "vettingagents", "debuggersubagent", "promptenrichsubagent",
-  "wfclarifier", "wf-clarifier", "wfbrainstormer", "wf-brainstormer",
-  "wfadversarialreview", "wf-adversarialreview", "wfdesignplan", "wf-designplan",
-  "wfimpplanner", "wf-impplanner", "wfimplementeragent", "wf-implementeragent",
-  "wfrevieweragent", "wf-revieweragent", "wffinalreviewagent", "wf-finalreviewagent",
-  "wftesteragent", "wf-testeragent",
 ] as const;
 
 export function extractJsonCandidate(text: string): string | undefined {

@@ -57,15 +57,6 @@ const ZZ_LOCAL_MODELS_CONFIG = "zzLocalModels.config.jsonc";
 const LOCAL_MODEL_ENDPOINTS_CONFIG = "local-model-endpoints.config.jsonc";
 const CHILD_AGENT_CONFIGS = [
   "readsubagent.config.jsonc",
-  "wf-clarifier.config.jsonc",
-  "wf-brainstormer.config.jsonc",
-  "wf-adversarialreview.config.jsonc",
-  "wf-designplan.config.jsonc",
-  "wf-impplanner.config.jsonc",
-  "wf-implementeragent.config.jsonc",
-  "wf-revieweragent.config.jsonc",
-  "wf-finalreviewagent.config.jsonc",
-  "wf-testeragent.config.jsonc",
 ] as const;
 
 function extensionConfigPath(cwd: string, filename: string): string {

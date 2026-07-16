@@ -111,8 +111,7 @@
       ],
       "fileDeps": [
         "extensions/context-tools.config.jsonc",
-        "extensions/lib/right-overlay-tiler.ts",
-        "extensions/lib/workflow-tree-state.ts"
+        "extensions/lib/right-overlay-tiler.ts"
       ],
       "configFiles": [
         "extensions/context-tools.config.jsonc"
@@ -120,34 +119,6 @@
       "tags": [
         "ui",
         "context",
-        "overlay"
-      ],
-      "sharedDeps": [
-        {
-          "id": "zz-lib",
-          "minVersion": "1.0.0"
-        }
-      ]
-    },
-    {
-      "id": "workflow-tree",
-      "title": "Workflow Tree",
-      "description": "Shows workflow mode lifecycle, prompts, progress, and terminal state in a right-side pane.",
-      "entry": "extensions/workflow-tree.ts",
-      "pluginDeps": [
-        "right-overlay-tiler"
-      ],
-      "fileDeps": [
-        "extensions/workflow-tree.config.jsonc",
-        "extensions/lib/right-overlay-tiler.ts",
-        "extensions/lib/workflow-tree-state.ts"
-      ],
-      "configFiles": [
-        "extensions/workflow-tree.config.jsonc"
-      ],
-      "tags": [
-        "ui",
-        "workflow",
         "overlay"
       ],
       "sharedDeps": [
@@ -198,266 +169,6 @@
       ],
       "tags": [
         "context"
-      ],
-      "sharedDeps": [
-        {
-          "id": "zz-lib",
-          "minVersion": "1.0.0"
-        }
-      ]
-    },
-    {
-      "id": "wf-clarifier",
-      "title": "Workflow clarifier",
-      "description": "Runs the first workflow-mode clarification pass, using readsubagent to produce enriched prompts or questions; Alt+E enriches the next prompt, asks follow-up questions if needed, then sends it normally.",
-      "entry": "extensions/wf-clarifier.ts",
-      "internal": true,
-      "pluginDeps": [
-        "readsubagent"
-      ],
-      "fileDeps": [
-        "extensions/wf-clarifier.config.jsonc",
-        "extensions/lib/child-agent-model-options.ts"
-      ],
-      "configFiles": [
-        "extensions/wf-clarifier.config.jsonc"
-      ],
-      "tags": [
-        "agent",
-        "workflow"
-      ],
-      "sharedDeps": [
-        {
-          "id": "zz-lib",
-          "minVersion": "1.0.0"
-        }
-      ]
-    },
-    {
-      "id": "wf-brainstormer",
-      "title": "Workflow brainstormer",
-      "description": "Runs the second workflow-mode phase, researching solution options and tradeoffs from the clarified prompt.",
-      "entry": "extensions/wf-brainstormer.ts",
-      "internal": true,
-      "pluginDeps": [
-        "readsubagent"
-      ],
-      "fileDeps": [
-        "extensions/wf-brainstormer.config.jsonc",
-        "extensions/lib/child-agent-model-options.ts"
-      ],
-      "configFiles": [
-        "extensions/wf-brainstormer.config.jsonc"
-      ],
-      "tags": [
-        "agent",
-        "workflow"
-      ],
-      "sharedDeps": [
-        {
-          "id": "zz-lib",
-          "minVersion": "1.0.0"
-        }
-      ]
-    },
-    {
-      "id": "wf-adversarialreview",
-      "title": "Workflow adversarial review",
-      "description": "Runs a stage-aware workflow-mode review gate before selected wf-* stage outputs are shown as final user-facing output.",
-      "entry": "extensions/wf-adversarialreview.ts",
-      "internal": true,
-      "pluginDeps": [
-        "readsubagent"
-      ],
-      "fileDeps": [
-        "extensions/wf-adversarialreview.config.jsonc",
-        "extensions/lib/child-agent-model-options.ts"
-      ],
-      "configFiles": [
-        "extensions/wf-adversarialreview.config.jsonc"
-      ],
-      "tags": [
-        "agent",
-        "workflow",
-        "review"
-      ],
-      "sharedDeps": [
-        {
-          "id": "zz-lib",
-          "minVersion": "1.0.0"
-        }
-      ]
-    },
-    {
-      "id": "wf-designplan",
-      "title": "Workflow design plan",
-      "description": "Runs the next workflow-mode phase, turning the selected brainstorm option into a reviewed development design plan.",
-      "entry": "extensions/wf-designplan.ts",
-      "internal": true,
-      "pluginDeps": [
-        "readsubagent",
-        "wf-adversarialreview"
-      ],
-      "fileDeps": [
-        "extensions/wf-designplan.config.jsonc",
-        "extensions/lib/child-agent-model-options.ts"
-      ],
-      "configFiles": [
-        "extensions/wf-designplan.config.jsonc"
-      ],
-      "tags": [
-        "agent",
-        "workflow"
-      ],
-      "sharedDeps": [
-        {
-          "id": "zz-lib",
-          "minVersion": "1.0.0"
-        }
-      ]
-    },
-    {
-      "id": "wf-impplanner",
-      "title": "Workflow implementation planner",
-      "description": "Turns a reviewed design plan into reviewed per-step implementation plans and a concrete merged implementation plan.",
-      "entry": "extensions/wf-impplanner.ts",
-      "internal": true,
-      "pluginDeps": [
-        "readsubagent",
-        "wf-adversarialreview",
-        "wf-designplan"
-      ],
-      "fileDeps": [
-        "extensions/wf-impplanner.config.jsonc",
-        "extensions/lib/child-agent-model-options.ts"
-      ],
-      "configFiles": [
-        "extensions/wf-impplanner.config.jsonc"
-      ],
-      "tags": [
-        "agent",
-        "workflow"
-      ],
-      "sharedDeps": [
-        {
-          "id": "zz-lib",
-          "minVersion": "1.0.0"
-        }
-      ]
-    },
-    {
-      "id": "wf-implementeragent",
-      "title": "Workflow implementer agent",
-      "description": "Implements one reviewed wf-impplanner stage at a time and returns structured implementation results for workflow review.",
-      "entry": "extensions/wf-implementeragent.ts",
-      "internal": true,
-      "pluginDeps": [
-        "zz-subagent-runtime",
-        "readsubagent",
-        "wf-impplanner"
-      ],
-      "fileDeps": [
-        "extensions/wf-implementeragent.config.jsonc",
-        "extensions/lib/child-agent-model-options.ts"
-      ],
-      "configFiles": [
-        "extensions/wf-implementeragent.config.jsonc"
-      ],
-      "tags": [
-        "agent",
-        "workflow",
-        "implementation"
-      ],
-      "sharedDeps": [
-        {
-          "id": "zz-lib",
-          "minVersion": "1.0.0"
-        }
-      ]
-    },
-    {
-      "id": "wf-revieweragent",
-      "title": "Workflow reviewer agent",
-      "description": "Reviews each wf-implementeragent stage and returns a green signal before workflow mode advances.",
-      "entry": "extensions/wf-revieweragent.ts",
-      "internal": true,
-      "pluginDeps": [
-        "zz-subagent-runtime",
-        "readsubagent",
-        "wf-impplanner",
-        "wf-implementeragent"
-      ],
-      "fileDeps": [
-        "extensions/wf-revieweragent.config.jsonc",
-        "extensions/lib/child-agent-model-options.ts"
-      ],
-      "configFiles": [
-        "extensions/wf-revieweragent.config.jsonc"
-      ],
-      "tags": [
-        "agent",
-        "workflow",
-        "review"
-      ],
-      "sharedDeps": [
-        {
-          "id": "zz-lib",
-          "minVersion": "1.0.0"
-        }
-      ]
-    },
-    {
-      "id": "wf-finalreviewagent",
-      "title": "Workflow final review agent",
-      "description": "Performs a whole-branch final review after all implementation stages pass, dispatching remediation loops until green.",
-      "entry": "extensions/wf-finalreviewagent.ts",
-      "internal": true,
-      "pluginDeps": [
-        "zz-subagent-runtime",
-        "readsubagent",
-        "wf-impplanner"
-      ],
-      "fileDeps": [
-        "extensions/wf-finalreviewagent.config.jsonc",
-        "extensions/lib/child-agent-model-options.ts"
-      ],
-      "configFiles": [
-        "extensions/wf-finalreviewagent.config.jsonc"
-      ],
-      "tags": [
-        "agent",
-        "workflow",
-        "review"
-      ],
-      "sharedDeps": [
-        {
-          "id": "zz-lib",
-          "minVersion": "1.0.0"
-        }
-      ]
-    },
-    {
-      "id": "wf-testeragent",
-      "title": "Workflow tester agent",
-      "description": "Analyzes branch changes for reasonable test gaps and fills them before whole-branch final review.",
-      "entry": "extensions/wf-testeragent.ts",
-      "internal": true,
-      "pluginDeps": [
-        "zz-subagent-runtime",
-        "readsubagent",
-        "wf-impplanner"
-      ],
-      "fileDeps": [
-        "extensions/wf-testeragent.config.jsonc",
-        "extensions/lib/child-agent-model-options.ts"
-      ],
-      "configFiles": [
-        "extensions/wf-testeragent.config.jsonc"
-      ],
-      "tags": [
-        "agent",
-        "workflow",
-        "testing"
       ],
       "sharedDeps": [
         {
@@ -572,37 +283,6 @@
       "sharedDeps": [{"id": "zz-lib", "minVersion": "1.0.0"}]
     },
     {
-      "id": "workflowmode",
-      "title": "Workflow mode",
-      "description": "Adds /workflowmode and input-focused Alt+W to clarify, enrich, brainstorm, select, design-plan, implementation-plan, then implement/review each plan stage, fill test gaps, and run whole-branch final review until green.",
-      "entry": "extensions/workflowmode.ts",
-      "pluginDeps": [
-        "workflow-tree",
-        "wf-clarifier",
-        "wf-brainstormer",
-        "wf-adversarialreview",
-        "wf-designplan",
-        "wf-impplanner",
-        "wf-implementeragent",
-        "wf-revieweragent",
-        "wf-finalreviewagent",
-        "wf-testeragent"
-      ],
-      "fileDeps": [
-        "extensions/lib/workflow-tree-state.ts"
-      ],
-      "configFiles": [],
-      "tags": [
-        "workflow"
-      ],
-      "sharedDeps": [
-        {
-          "id": "zz-lib",
-          "minVersion": "1.0.0"
-        }
-      ]
-    },
-    {
       "id": "readsubagent",
       "title": "Read subagent",
       "description": "Adds /readsubagent and a readsubagent tool for targeted file-inspection questions through a child Pi process.",
@@ -664,7 +344,7 @@
     {
       "id": "promptenrichsubagent",
       "title": "Prompt enrich subagent",
-      "description": "Standalone, manually-triggered prompt-enrichment agent. /pe <prompt> runs a clarification/enrichment pass (using readsubagent for repo context) and returns enriched prompt options or clarifying questions. Independent of workflow mode; does not alter wf-clarifier.",
+      "description": "Standalone, manually-triggered prompt-enrichment agent. /pe <prompt> runs a clarification/enrichment pass (using readsubagent for repo context) and returns enriched prompt options or clarifying questions.",
       "entry": "extensions/promptenrichsubagent.ts",
       "pluginDeps": [
         "zz-subagent-runtime",
