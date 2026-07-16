@@ -209,7 +209,7 @@
     {
       "id": "implementationsubagent",
       "title": "Implementation subagent",
-      "description": "Provides a main-agent-controlled implementation worker for one bounded piece from a Markdown implementation document, with a persistent progress ledger and nested read/debug tools.",
+      "description": "Provides a main-agent-controlled implementation worker for one medium-to-small independently vettable piece from a Markdown implementation document, with a persistent progress ledger and nested read/debug tools.",
       "entry": "extensions/implementationsubagent.ts",
       "pluginDeps": [
         "zz-subagent-runtime",
@@ -221,6 +221,7 @@
         "extensions/lib/agent-mode.ts",
         "extensions/lib/child-agent-model-options.ts",
         "extensions/lib/implementation-docs.ts",
+        "extensions/lib/implementation-piece.ts",
         "extensions/lib/planning-artifact-paths.ts",
         "extensions/lib/standalone-agent-common.ts"
       ],

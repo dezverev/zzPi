@@ -57,6 +57,7 @@ interface StandaloneAgentDefinition<Decision> {
     readonly parseError?: string | undefined;
     readonly result: ChildAgentRunResult;
   }) => string;
+  readonly mandatorySystemPrompt?: string | undefined;
   readonly messageType: string;
   readonly modelDisplaySuffix: string;
   readonly parseDecision: (text: string) => Decision | undefined;
@@ -189,7 +190,17 @@ export function truncateReport(lines: readonly string[], config: ChildPiAgentCon
 }
 
 export function createStandaloneChildAgent<Decision>(definition: StandaloneAgentDefinition<Decision>): StandaloneChildAgent<Decision> {
-  let currentConfig: ChildPiAgentConfig = { ...definition.defaultConfig };
+  const appendMandatorySystemPrompt = (config: ChildPiAgentConfig): ChildPiAgentConfig => {
+    const mandatory = definition.mandatorySystemPrompt?.trim() ?? "";
+    if (!mandatory) return config;
+    const configured = config.systemPrompt.trim();
+    return {
+      ...config,
+      systemPrompt: configured ? `${configured}\n\n${mandatory}` : mandatory,
+    };
+  };
+
+  let currentConfig: ChildPiAgentConfig = appendMandatorySystemPrompt({ ...definition.defaultConfig });
   let currentModelOptions: readonly ChildAgentModelOption[] = [
     createChildAgentModelOptionFromConfig(definition.defaultConfig),
   ];
@@ -219,7 +230,9 @@ export function createStandaloneChildAgent<Decision>(definition: StandaloneAgent
     formatChildAgentModelSelection({ config: currentConfig, modelOptions: currentModelOptions, selectedModelId });
 
   const applyModelSelection = (config: ChildPiAgentConfig): ChildPiAgentConfig =>
-    applyChildAgentModelSelection(config, getModelOption(selectedModelId));
+    appendMandatorySystemPrompt(
+      applyChildAgentModelSelection(config, getModelOption(selectedModelId)),
+    );
 
   const readConfig = (cwd: string): ChildPiAgentConfig => {
     const result = readChildPiAgentConfig({
