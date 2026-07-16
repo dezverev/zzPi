@@ -2,7 +2,7 @@ import { realpath } from "node:fs/promises";
 import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
 
 function fail(message: string): never {
-  throw new Error(`design artifact path invalid: ${message}`);
+  throw new Error(`artifact path invalid: ${message}`);
 }
 
 function isInside(root: string, candidate: string): boolean {

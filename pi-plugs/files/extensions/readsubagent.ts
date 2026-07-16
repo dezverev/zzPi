@@ -807,7 +807,7 @@ export default function readSubagentExtension(pi: ExtensionAPI) {
 
       if (normalized === "endpoint" || normalized === "endpoints") {
         ctx.ui.notify(
-          "Readsubagent endpoints are selected through /readsubagent model entries in .pi/extensions/readsubagent.config.jsonc. Use /readsubagent model qwen or /readsubagent model gpt-5.6-sol-xhigh.",
+          "Readsubagent endpoints are selected through /readsubagent model entries in .pi/extensions/readsubagent.config.jsonc. Use /readsubagent model qwen, /readsubagent model gpt-5.6-sol-xhigh, or /readsubagent model gpt-5.6-sol-max.",
           "info",
         );
         return;

@@ -19,9 +19,9 @@
       "sha256": "050f0e7dce864d779d429a1b694b39059c090296fdcc3833186b9284a6f357ef"
     },
     {
-      "bytes": 47031,
+      "bytes": 47038,
       "path": "extensions/zz-lib/child-pi-agent.ts",
-      "sha256": "2e654b0fd7b340b5962917643f16f006a51ee6580c07b14e1b65a007606d6ec6"
+      "sha256": "7ef8784ea2d32bbe5ac48c2775ade09f7c8a50098f0ef9c3d54555818ee3524e"
     },
     {
       "bytes": 1982,
@@ -50,7 +50,7 @@
     "version": "1.0.0"
   },
   "source": "zzPi git export",
-  "updated_at": "2026-07-15T00:09:38.659790+00:00",
+  "updated_at": "2026-07-16T09:17:05.565295+00:00",
   "visiblePlugins": [],
   "zzLibVersion": "1.0.0"
 }

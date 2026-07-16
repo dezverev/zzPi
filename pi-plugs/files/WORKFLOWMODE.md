@@ -11,7 +11,7 @@ It lives entirely in the pi-plugs extension bundle under `clients/pi-plugs/exten
 - `/workflowmode off` — turns workflow mode off and clears workflow state.
 - `/workflowmode reset` — keeps workflow mode on/off as-is but clears pending workflow state.
 - `/workflowmode status` — shows current workflow state.
-- `/workflowmode model <model>` — selects the same configured child model for every `wf-*` stage agent. Current shared model ids are `gpt-5.6-sol-xhigh`, `gpt-5.5-xhigh`, `qwen-35b-a3b`, and `glm-5p2-xhigh`.
+- `/workflowmode model <model>` — selects the same configured child model for every `wf-*` stage agent. Current shared model ids are `gpt-5.6-sol-xhigh`, `gpt-5.6-sol-max`, `gpt-5.5-xhigh`, `qwen-35b-a3b`, and `glm-5p2-xhigh`.
 - `Alt+W` — input-focused shortcut that toggles workflow mode.
 
 After workflow mode is on, the next normal user prompt is intercepted by the workflow pipeline. Once the current workflow reaches a terminal state, later prompts pass through normally until workflow mode is reset or toggled again.

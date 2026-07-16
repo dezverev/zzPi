@@ -24,7 +24,7 @@ export const DEFAULT_LOCAL_MODEL_ENDPOINTS_CONFIG_FILE_PATH =
   ".pi/extensions/local-model-endpoints.config.jsonc";
 export const LOCAL_MODEL_ENDPOINTS_CONFIG_FILE_PATH = DEFAULT_LOCAL_MODEL_ENDPOINTS_CONFIG_FILE_PATH;
 
-const THINKING_LEVELS = ["off", "minimal", "low", "medium", "high", "xhigh"] as const;
+const THINKING_LEVELS = ["off", "minimal", "low", "medium", "high", "xhigh", "max"] as const;
 const MAX_STDERR_CHARS = 8_000;
 const MAX_STATUS_TASK_CHARS = 70;
 const MAX_TOOL_SUMMARY_ITEMS = 30;

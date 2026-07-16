@@ -18,7 +18,7 @@ const PARENT_PROMPT = [
   "Call brainstormer first to research and present materially distinct solutions and tradeoffs.",
   "Before calling designplanner, the user must select exactly one brainstormed solution. Do not silently treat the brainstormer's recommendation as user selection. If the user already named one solution explicitly, that counts as selection.",
   "Call designplanner with that one complete selectedSolution object. It designs only the selected solution; it does not compare alternatives, implement code, or mutate files.",
-  "Keep brainstorming and design separate from implementation. When implementation is requested, continue through normal parent-agent work or workflowmode.",
+  "Keep brainstorming and design separate from implementation. When implementation is requested, continue through normal parent-agent work, use implementationsubagent for parent-decomposed bounded pieces, or use workflowmode for the full staged workflow.",
   "</design_loop>",
 ].join("\n");
 
