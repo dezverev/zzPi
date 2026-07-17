@@ -238,13 +238,20 @@ export function getChildAgentModelCompletions(
   prefix: string,
 ) {
   const normalized = prefix.trim().toLowerCase();
-  return options
+  const modelCompletions = options
     .filter((option) =>
       [option.id, option.label, option.model, getChildAgentModelSelector(option)].some(
         (candidate) => candidate.toLowerCase().startsWith(normalized),
       ),
     )
     .map((option) => ({ value: option.id, label: getChildAgentModelChoiceLabel(option) }));
+  const resetCompletions = [
+    { value: "default", label: "default (clear persistent model override)" },
+    { value: "reset", label: "reset (clear persistent model override)" },
+  ].filter((completion) => completion.value.startsWith(normalized));
+  return Array.from(
+    new Map([...modelCompletions, ...resetCompletions].map((completion) => [completion.value, completion])).values(),
+  );
 }
 
 export function formatAvailableChildAgentModels(options: readonly ChildAgentModelOption[]): string {
@@ -259,7 +266,9 @@ export function formatChildAgentModelSelection(options: {
   readonly selectedModelId?: string | undefined;
 }): string {
   const selectedOption = getChildAgentModelOption(options.modelOptions, options.selectedModelId);
-  const selectedText = selectedOption ? `${selectedOption.label} (${selectedOption.id})` : "config default";
+  const selectedText = selectedOption
+    ? `workspace-persistent override: ${selectedOption.label} (${selectedOption.id})`
+    : "config default (no persistent override)";
   const endpointText = options.config.providerRegistration === "none"
     ? "active endpoint: (none; using Pi's configured provider/auth)"
     : `active endpoint: ${options.config.endpoint}`;

@@ -4,14 +4,14 @@
   "default": "all-visible",
   "files": [
     {
-      "bytes": 8159,
+      "bytes": 9240,
       "path": "README.md",
-      "sha256": "a069e99c4b5170eda9f12da6c190a79fb6ff0a34d1ee5d66cc1cc8c06ca0ceeb"
+      "sha256": "cb88ffdbf3cc5ad39c740f91b2cf23e5952c9feedcbbe79fd2357d6f0aa66eec"
     },
     {
-      "bytes": 11921,
+      "bytes": 12313,
       "path": "pi-plugs.catalog.jsonc",
-      "sha256": "0a1ea1e16d4588e83c4f342ab86c4c9f5c8579f0672705fe59f74a06f338b426"
+      "sha256": "4cf98b72610f76ba2dbc8e8abb913d057d6e7b20ac1ba3702a3084a5cc6c6e97"
     },
     {
       "bytes": 257,
@@ -24,14 +24,14 @@
       "sha256": "d7b94bff6b071cacad3070bcf537b47191b15df169fad2ecbaf262474d6c726d"
     },
     {
-      "bytes": 2796,
+      "bytes": 3547,
       "path": "extensions/brainstormer.config.jsonc",
-      "sha256": "20ac6e84b3b6b735951ce379ca54e034d4f3ca9d6c35a49edb4e11eb3856cb3d"
+      "sha256": "468b2529deb38fd16be93a9946d9a465db8ad90f73914bb58881957456709737"
     },
     {
-      "bytes": 8669,
+      "bytes": 8677,
       "path": "extensions/brainstormer.ts",
-      "sha256": "f429c8462af12d9cd5e3aa9696e41f6f9f23a8896c3d38e26b128288b5669e0a"
+      "sha256": "043296b799f615e79414695c66d7301014f03187540c182dde82a749e43d26de"
     },
     {
       "bytes": 1091,
@@ -44,14 +44,14 @@
       "sha256": "dbcf1cf829f261e79d280d915cc6e681d8f3247d9b4ae9e48f77cc45508e6718"
     },
     {
-      "bytes": 3016,
+      "bytes": 3843,
       "path": "extensions/debuggersubagent.config.jsonc",
-      "sha256": "ba5eb478a49a8cd33a8d8bc391c701347979822e81bb9c66fd22f50cfb7dbcd3"
+      "sha256": "caf809ee76e4a983aa31652ae135df41a473d4fc4aa7fa44958aef77eca1ce74"
     },
     {
-      "bytes": 13640,
+      "bytes": 13648,
       "path": "extensions/debuggersubagent.ts",
-      "sha256": "a51762211917232cdc5f6b02fc0dd1b0703e685c77eb511f1e47094d412bd235"
+      "sha256": "65061b84c018da64ea08e339e45aec5c9415dca430036337da3c86a687fec9e3"
     },
     {
       "bytes": 7878,
@@ -59,14 +59,14 @@
       "sha256": "b4913e1f188c410354cb742d2528b21c525a0876a1ce01860dacd08b8116e718"
     },
     {
-      "bytes": 2816,
+      "bytes": 3567,
       "path": "extensions/designplanner.config.jsonc",
-      "sha256": "c5adfc47f86a70977d63b2f0a682e756887fa5037c31895fbb444c919e876e25"
+      "sha256": "47807336cfc64f0cd08f41d1fafc7da6e023d68e39314ec9e2689df3bde0e6af"
     },
     {
-      "bytes": 10150,
+      "bytes": 10158,
       "path": "extensions/designplanner.ts",
-      "sha256": "b45617ded4937dcafa34698440a4181423f7bf167213c4d0e366a7efb28f186f"
+      "sha256": "95338d9ed95c5d765c5bc26594450f0cfa9e02b935513adad6afd750b2e98a74"
     },
     {
       "bytes": 819,
@@ -79,14 +79,14 @@
       "sha256": "467739069f3ebb9277ed5d7a4cb3ecbf1c83604807e0bd565db5a9124b845c16"
     },
     {
-      "bytes": 4166,
+      "bytes": 6295,
       "path": "extensions/implementationsubagent.config.jsonc",
-      "sha256": "f91d5bd334d9e42a4b8538517c562f933ba068f09a2965cf5cfe9922d62a2cc7"
+      "sha256": "450dbe73220f603e2cb0c175652bb77e288da21cc780c7c0d9eec59578c8804a"
     },
     {
-      "bytes": 22489,
+      "bytes": 31342,
       "path": "extensions/implementationsubagent.ts",
-      "sha256": "2371503cbeee843374e756d282d3c979b37c1fc6f8402e0e4a625d0a0f4aae5d"
+      "sha256": "b4fa83b7a30814b180473b13a5c31cc9e131830f4e3e4e7b9abec97a17106faf"
     },
     {
       "bytes": 1083,
@@ -104,24 +104,24 @@
       "sha256": "ef76e8961f48a9795e5131676828a2cda5bc44d5b00ae816ee89c563b3d3e1d7"
     },
     {
-      "bytes": 4236,
+      "bytes": 4989,
       "path": "extensions/promptenrichsubagent.config.jsonc",
-      "sha256": "1c5ca2ecdb9e985cd8b7f193f753a22ceabb0a1953519cd861d871deb11bde21"
+      "sha256": "9e0665f36415f187d41e7eccd729769e4c06ff9b8951738e267472d8902b8b96"
     },
     {
-      "bytes": 28572,
+      "bytes": 31448,
       "path": "extensions/promptenrichsubagent.ts",
-      "sha256": "12aba1d22a1c963df3fe2589c2aae8a9ff89f345d6562699b4212b7fb497e5d4"
+      "sha256": "5de1e872a3bfd600ecde33edbd80965d12ed598bfb2e6f469d6025513b036678"
     },
     {
-      "bytes": 5794,
+      "bytes": 6841,
       "path": "extensions/readsubagent.config.jsonc",
-      "sha256": "3db59a34b6674fe2f4a53d0ca754730c1588d52d163786e4eeb33e6c4bfbc012"
+      "sha256": "c89526d02e4f931b7c574ef619aa4bb01f7fd9c8d553cbcb3db8d885eb8223a8"
     },
     {
-      "bytes": 42184,
+      "bytes": 45043,
       "path": "extensions/readsubagent.ts",
-      "sha256": "a809ec644d0535de973e32e00973f524af87b95f63123d55215cb92ba9c77097"
+      "sha256": "e8fecf1c32f7c67ded1387cf2b361ed8b088ca7185a2e20f3f6b5279493d4ed6"
     },
     {
       "bytes": 1496,
@@ -144,14 +144,14 @@
       "sha256": "ebcaf1c4135ab183c1556a359df1456fa2b615e0012abbace02be86b6656596e"
     },
     {
-      "bytes": 4482,
+      "bytes": 5363,
       "path": "extensions/vettingagents.config.jsonc",
-      "sha256": "7dac50f1ca77bc5afd267a5ee0f83995f50b1a479797ef9777e44cde705bc7d4"
+      "sha256": "71a03713702c79d4fd775d7ef498f3a83ebd19c0e0e338cf010c963837955162"
     },
     {
-      "bytes": 37476,
+      "bytes": 40325,
       "path": "extensions/vettingagents.ts",
-      "sha256": "b6f0fbc5309960702316b572c096da08fbdeb2b7ad8dbc40b29979ddda928d77"
+      "sha256": "580d94f64438aa98fd3de8361c717b1592b18f64ee9a77c72033121b0257b81d"
     },
     {
       "bytes": 491,
@@ -179,9 +179,9 @@
       "sha256": "1d5c1ff4590043f9f94701d3744027f1c3ccefb370db06c8a61988a5b4e5d250"
     },
     {
-      "bytes": 12442,
+      "bytes": 12918,
       "path": "extensions/lib/child-agent-model-options.ts",
-      "sha256": "32c283bc086dded242cfeaff0af78aaf797529990d9c19a36fc7b4920f12244a"
+      "sha256": "7582d1bd3d05a8b65e814f9a584b3c4d2076027c0d49dd8ff1063abebebe4327"
     },
     {
       "bytes": 4171,
@@ -199,9 +199,9 @@
       "sha256": "cdd61344443533208b1c0c9bbff80d16a597b9c5382fb62f371be3ce040da81a"
     },
     {
-      "bytes": 2089,
+      "bytes": 10849,
       "path": "extensions/lib/implementation-piece.ts",
-      "sha256": "da43d3a1a8f957ff6a505662295e034f55b39143dff59d1cf0fc19d8ec552a7c"
+      "sha256": "e413d89ef38a2426a3d9414ed31b4192802fb0f51004144df24944ba4a51c48d"
     },
     {
       "bytes": 2241,
@@ -214,9 +214,14 @@
       "sha256": "4afbf24627b1a9b8b1b459f8ec212a2cf63b2fd9c1cb072606575f1e2fc3c0b9"
     },
     {
-      "bytes": 19618,
+      "bytes": 22355,
       "path": "extensions/lib/standalone-agent-common.ts",
-      "sha256": "8e6e6b9a79adb8eac75625d150ea521be8713d5ededb5aa6e87bf9f0f7b73a46"
+      "sha256": "87f7258d078408e08c8a3d04549e1db6b1e6783b120b710b16c7fbcc33ea180b"
+    },
+    {
+      "bytes": 6521,
+      "path": "extensions/lib/subagent-model-preferences.ts",
+      "sha256": "be4b68115013dfdc9a8da7d46371b011f662492905892e176fbf1911c1547089"
     }
   ],
   "install_target": "./.pi",
@@ -415,7 +420,8 @@
       "fileDeps": [
         "extensions/debuggersubagent.config.jsonc",
         "extensions/lib/child-agent-model-options.ts",
-        "extensions/lib/standalone-agent-common.ts"
+        "extensions/lib/standalone-agent-common.ts",
+        "extensions/lib/subagent-model-preferences.ts"
       ],
       "id": "debuggersubagent",
       "internal": false,
@@ -450,7 +456,8 @@
         "extensions/lib/implementation-docs.ts",
         "extensions/lib/implementation-piece.ts",
         "extensions/lib/planning-artifact-paths.ts",
-        "extensions/lib/standalone-agent-common.ts"
+        "extensions/lib/standalone-agent-common.ts",
+        "extensions/lib/subagent-model-preferences.ts"
       ],
       "id": "implementationsubagent",
       "internal": false,
@@ -483,7 +490,8 @@
         "extensions/brainstormer.config.jsonc",
         "extensions/lib/child-agent-model-options.ts",
         "extensions/lib/design-loop-types.ts",
-        "extensions/lib/standalone-agent-common.ts"
+        "extensions/lib/standalone-agent-common.ts",
+        "extensions/lib/subagent-model-preferences.ts"
       ],
       "id": "brainstormer",
       "internal": false,
@@ -515,7 +523,8 @@
         "extensions/designplanner.config.jsonc",
         "extensions/lib/child-agent-model-options.ts",
         "extensions/lib/design-loop-types.ts",
-        "extensions/lib/standalone-agent-common.ts"
+        "extensions/lib/standalone-agent-common.ts",
+        "extensions/lib/subagent-model-preferences.ts"
       ],
       "id": "designplanner",
       "internal": false,
@@ -576,7 +585,8 @@
       "fileDeps": [
         "extensions/readsubagent.config.jsonc",
         "extensions/local-model-endpoints.config.jsonc",
-        "extensions/lib/agent-mode.ts"
+        "extensions/lib/agent-mode.ts",
+        "extensions/lib/subagent-model-preferences.ts"
       ],
       "id": "readsubagent",
       "internal": false,
@@ -608,7 +618,8 @@
         "extensions/vettingagents.config.jsonc",
         "extensions/local-model-endpoints.config.jsonc",
         "extensions/lib/child-agent-model-options.ts",
-        "extensions/lib/agent-mode.ts"
+        "extensions/lib/agent-mode.ts",
+        "extensions/lib/subagent-model-preferences.ts"
       ],
       "id": "vettingagents",
       "internal": false,
@@ -638,7 +649,8 @@
       "entry": "extensions/promptenrichsubagent.ts",
       "fileDeps": [
         "extensions/promptenrichsubagent.config.jsonc",
-        "extensions/local-model-endpoints.config.jsonc"
+        "extensions/local-model-endpoints.config.jsonc",
+        "extensions/lib/subagent-model-preferences.ts"
       ],
       "id": "promptenrichsubagent",
       "internal": false,
@@ -701,7 +713,7 @@
   ],
   "schemaVersion": 2,
   "source": "zzPi git export",
-  "updated_at": "2026-07-16T23:52:49.151740+00:00",
+  "updated_at": "2026-07-17T18:58:27.823735+00:00",
   "visiblePlugins": [
     "zz-local-models",
     "context-tools",

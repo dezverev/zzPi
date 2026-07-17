@@ -135,7 +135,7 @@ const brainstormerAgent = createStandaloneChildAgent<BrainstormerDecision>({
   agentName: "brainstormer",
   buildPrompt,
   commandDescription: "Run/configure the standalone solution brainstorming agent.",
-  commandUsage: "/brainstormer model [model] | config | status | ask <problem>",
+  commandUsage: "/brainstormer model [model|default] | config | status | ask <problem>",
   configFilePath: CONFIG_FILE_PATH,
   defaultConfig: DEFAULT_CONFIG,
   displayName: "Standalone solution brainstormer",

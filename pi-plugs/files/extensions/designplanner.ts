@@ -149,7 +149,7 @@ const designplannerAgent = createStandaloneChildAgent<DesignplannerDecision>({
   agentName: "designplanner",
   buildPrompt,
   commandDescription: "Run/configure the standalone selected-solution technical design agent.",
-  commandUsage: "/designplanner model [model] | config | status | ask <selected-solution design task>",
+  commandUsage: "/designplanner model [model|default] | config | status | ask <selected-solution design task>",
   configFilePath: CONFIG_FILE_PATH,
   defaultConfig: DEFAULT_CONFIG,
   displayName: "Standalone selected-solution design planner",
