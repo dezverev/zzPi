@@ -38,6 +38,14 @@ import {
   getChildAgentModelOption,
   readChildAgentModelOptions,
 } from "./lib/child-agent-model-options.ts";
+import {
+  CONFIG_DEFAULT_MODEL_CHOICE,
+  isSubagentModelPreferenceReset,
+  readSubagentModelPreference,
+  resolveSubagentModelPreference,
+  writeSubagentModelPreference,
+} from "./lib/subagent-model-preferences.ts";
+
 const CONFIG_FILE_PATH = ".pi/extensions/vettingagents.config.jsonc";
 const VETTINGAGENTS_MESSAGE_TYPE = "vettingagents-report";
 const VETTINGAGENTS_STATE_ENTRY_TYPE = "vettingagents-state";
@@ -161,6 +169,7 @@ let currentModelOptions: readonly VettingAgentsModelOption[] = [
   createVettingAgentsModelOptionFromConfig(DEFAULT_VETTINGAGENTS_CONFIG),
 ];
 let lastConfigError: string | undefined;
+let lastModelPreferenceError: string | undefined;
 let selectedVettingAgentsModelId: string | undefined;
 let vettingAgentsRunCounter = 0;
 
@@ -251,6 +260,7 @@ function notifyConfigErrorIfNeeded(ctx: ExtensionContext): void {
   if (lastConfigError) {
     ctx.ui.notify(`vettingagents config ignored: ${lastConfigError}`, "warning");
   }
+  if (lastModelPreferenceError) ctx.ui.notify(lastModelPreferenceError, "warning");
 }
 
 function isChildPiAgentProcess(): boolean {
@@ -282,15 +292,44 @@ function restoreState(pi: ExtensionAPI, ctx: ExtensionContext): void {
   currentModelOptions = readVettingAgentsModelOptions(ctx.cwd, baseConfig);
 
   const saved = getSavedStateFromBranch(ctx);
-  selectedVettingAgentsModelId = saved.selectedModelId;
+  const preferenceParams = {
+    agentName: "vettingagents",
+    configFilePath: CONFIG_FILE_PATH,
+    cwd: ctx.cwd,
+  };
+  const preference = readSubagentModelPreference(preferenceParams);
+  const resolution = resolveSubagentModelPreference(
+    "vettingagents",
+    preference,
+    currentModelOptions,
+    saved.selectedModelId,
+  );
+  selectedVettingAgentsModelId = resolution.selectedModelId;
+  lastModelPreferenceError = resolution.warning;
+  if (resolution.migrateSessionSelection) {
+    const migrated = writeSubagentModelPreference(preferenceParams, selectedVettingAgentsModelId);
+    if (migrated.error) {
+      lastModelPreferenceError = `Could not migrate the vettingagents model override: ${migrated.error}`;
+    }
+  }
   currentConfig = applyVettingAgentsModelSelection(baseConfig);
   registerVettingAgentsProvider(pi, currentConfig);
 }
 
-function persistState(pi: ExtensionAPI): void {
+function persistState(pi: ExtensionAPI, cwd: string): boolean {
+  const persisted = writeSubagentModelPreference({
+    agentName: "vettingagents",
+    configFilePath: CONFIG_FILE_PATH,
+    cwd,
+  }, selectedVettingAgentsModelId);
+  lastModelPreferenceError = persisted.error
+    ? `Could not persist the vettingagents model override: ${persisted.error}`
+    : undefined;
+  if (lastModelPreferenceError) return false;
   pi.appendEntry<VettingAgentsState>(VETTINGAGENTS_STATE_ENTRY_TYPE, {
     ...(selectedVettingAgentsModelId ? { selectedModelId: selectedVettingAgentsModelId } : {}),
   });
+  return true;
 }
 
 async function selectVettingAgentsModel(
@@ -301,9 +340,10 @@ async function selectVettingAgentsModel(
   reloadVettingAgentsSettings(pi, ctx.cwd);
 
   const requested = args.trim();
-  let option = requested ? findVettingAgentsModelOption(requested) : undefined;
+  let resetToDefault = isSubagentModelPreferenceReset(requested);
+  let option = requested && !resetToDefault ? findVettingAgentsModelOption(requested) : undefined;
 
-  if (requested && !option) {
+  if (requested && !resetToDefault && !option) {
     ctx.ui.notify(
       `Unknown vettingagents model "${requested}". Available: ${formatAvailableVettingAgentsModels()}`,
       "error",
@@ -311,24 +351,44 @@ async function selectVettingAgentsModel(
     return;
   }
 
-  if (!option) {
+  if (!requested) {
     if (!ctx.hasUI) {
       ctx.ui.notify(
-        `Usage: /vettingagents model <model>. Available: ${formatAvailableVettingAgentsModels()}`,
+        `Usage: /vettingagents model <model|default>. Available: ${formatAvailableVettingAgentsModels()}`,
         "warning",
       );
       return;
     }
 
-    const choices = currentModelOptions.map(getVettingAgentsModelChoiceLabel);
+    const modelChoices = currentModelOptions.map(getVettingAgentsModelChoiceLabel);
+    const choices = [CONFIG_DEFAULT_MODEL_CHOICE, ...modelChoices];
     const choice = await ctx.ui.select("Select vettingagents model", choices);
     if (!choice) {
       ctx.ui.notify("vettingagents model selection cancelled", "info");
       return;
     }
 
-    const choiceIndex = choices.indexOf(choice);
+    resetToDefault = choice === CONFIG_DEFAULT_MODEL_CHOICE;
+    const choiceIndex = modelChoices.indexOf(choice);
     option = choiceIndex >= 0 ? currentModelOptions[choiceIndex] : undefined;
+  }
+
+  if (resetToDefault) {
+    const previousModelId = selectedVettingAgentsModelId;
+    selectedVettingAgentsModelId = undefined;
+    if (!persistState(pi, ctx.cwd)) {
+      selectedVettingAgentsModelId = previousModelId;
+      reloadVettingAgentsSettings(pi, ctx.cwd);
+      ctx.ui.notify(lastModelPreferenceError ?? "Could not clear the vettingagents model override", "error");
+      lastModelPreferenceError = undefined;
+      return;
+    }
+    reloadVettingAgentsSettings(pi, ctx.cwd);
+    ctx.ui.notify(
+      `vettingagents persistent model override cleared; using config default ${getModelSelector(currentConfig)}`,
+      "info",
+    );
+    return;
   }
 
   if (!option) {
@@ -336,11 +396,18 @@ async function selectVettingAgentsModel(
     return;
   }
 
+  const previousModelId = selectedVettingAgentsModelId;
   selectedVettingAgentsModelId = option.id;
-  persistState(pi);
+  if (!persistState(pi, ctx.cwd)) {
+    selectedVettingAgentsModelId = previousModelId;
+    reloadVettingAgentsSettings(pi, ctx.cwd);
+    ctx.ui.notify(lastModelPreferenceError ?? "Could not persist the vettingagents model override", "error");
+    lastModelPreferenceError = undefined;
+    return;
+  }
   reloadVettingAgentsSettings(pi, ctx.cwd);
   ctx.ui.notify(
-    `vettingagents model selected: ${getVettingAgentsModelChoiceLabel(option)}\nactive child model selector: ${getModelSelector(currentConfig)}`,
+    `vettingagents persistent model override selected: ${getVettingAgentsModelChoiceLabel(option)}\nactive child model selector: ${getModelSelector(currentConfig)}`,
     "info",
   );
 }
@@ -448,7 +515,7 @@ function buildVettingLensPrompt(lens: VettingLens, task: string): string {
 function formatStatus(): string {
   return [
     formatVettingAgentsModelSelection(currentConfig),
-    "Commands: /vettingagents on|off|toggle|status|model [model] | config | ask <vetting request>. You can also run /vettingagents <request> directly.",
+    "Commands: /vettingagents on|off|toggle|status|model [model|default] | config | ask <vetting request>. Model overrides persist for this workspace across `/new`; `model default` (or `model reset`) clears the override. You can also run /vettingagents <request> directly.",
   ].join("\n");
 }
 
@@ -751,6 +818,7 @@ export default function vettingAgentsExtension(pi: ExtensionAPI) {
   pi.on("session_tree", (_event, ctx) => {
     restoreState(pi, ctx);
     mode.restore(ctx);
+    notifyConfigErrorIfNeeded(ctx);
   });
 
   pi.on("session_shutdown", (_event, ctx) => {
@@ -839,7 +907,7 @@ export default function vettingAgentsExtension(pi: ExtensionAPI) {
       const task = normalized === "ask" ? rest.join(" ").trim() : trimmed;
       if (!task) {
         ctx.ui.notify(
-          "Usage: /vettingagents on|off|toggle|status|model [model]|config|ask <vetting request>; or /vettingagents <request>",
+          "Usage: /vettingagents on|off|toggle|status|model [model|default]|config|ask <vetting request>; or /vettingagents <request>",
           "warning",
         );
         return;

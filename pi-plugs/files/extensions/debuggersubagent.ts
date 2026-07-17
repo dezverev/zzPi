@@ -166,7 +166,7 @@ const debuggerSubagent = createStandaloneChildAgent<DebuggerSubagentDecision>({
   agentName: "debuggersubagent",
   buildPrompt: buildDebuggerSubagentPrompt,
   commandDescription: "Run the standalone root-cause debugging specialist, inspect its config, or select its model",
-  commandUsage: "/debuggersubagent model [model] | config | ask <problem>; or /debuggersubagent <problem>",
+  commandUsage: "/debuggersubagent model [model|default] | config | ask <problem>; or /debuggersubagent <problem>",
   configFilePath: CONFIG_FILE_PATH,
   defaultConfig: DEFAULT_DEBUGGERSUBAGENT_CONFIG,
   displayName: "Debugger subagent",

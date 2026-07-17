@@ -189,7 +189,8 @@
       "fileDeps": [
         "extensions/debuggersubagent.config.jsonc",
         "extensions/lib/child-agent-model-options.ts",
-        "extensions/lib/standalone-agent-common.ts"
+        "extensions/lib/standalone-agent-common.ts",
+        "extensions/lib/subagent-model-preferences.ts"
       ],
       "configFiles": [
         "extensions/debuggersubagent.config.jsonc"
@@ -223,7 +224,8 @@
         "extensions/lib/implementation-docs.ts",
         "extensions/lib/implementation-piece.ts",
         "extensions/lib/planning-artifact-paths.ts",
-        "extensions/lib/standalone-agent-common.ts"
+        "extensions/lib/standalone-agent-common.ts",
+        "extensions/lib/subagent-model-preferences.ts"
       ],
       "configFiles": [
         "extensions/implementationsubagent.config.jsonc"
@@ -250,7 +252,8 @@
         "extensions/brainstormer.config.jsonc",
         "extensions/lib/child-agent-model-options.ts",
         "extensions/lib/design-loop-types.ts",
-        "extensions/lib/standalone-agent-common.ts"
+        "extensions/lib/standalone-agent-common.ts",
+        "extensions/lib/subagent-model-preferences.ts"
       ],
       "configFiles": ["extensions/brainstormer.config.jsonc"],
       "tags": ["agent", "design", "standalone"],
@@ -266,7 +269,8 @@
         "extensions/designplanner.config.jsonc",
         "extensions/lib/child-agent-model-options.ts",
         "extensions/lib/design-loop-types.ts",
-        "extensions/lib/standalone-agent-common.ts"
+        "extensions/lib/standalone-agent-common.ts",
+        "extensions/lib/subagent-model-preferences.ts"
       ],
       "configFiles": ["extensions/designplanner.config.jsonc"],
       "tags": ["agent", "design", "standalone"],
@@ -295,7 +299,8 @@
       "fileDeps": [
         "extensions/readsubagent.config.jsonc",
         "extensions/local-model-endpoints.config.jsonc",
-        "extensions/lib/agent-mode.ts"
+        "extensions/lib/agent-mode.ts",
+        "extensions/lib/subagent-model-preferences.ts"
       ],
       "configFiles": [
         "extensions/readsubagent.config.jsonc",
@@ -324,7 +329,8 @@
         "extensions/vettingagents.config.jsonc",
         "extensions/local-model-endpoints.config.jsonc",
         "extensions/lib/child-agent-model-options.ts",
-        "extensions/lib/agent-mode.ts"
+        "extensions/lib/agent-mode.ts",
+        "extensions/lib/subagent-model-preferences.ts"
       ],
       "configFiles": [
         "extensions/vettingagents.config.jsonc",
@@ -354,7 +360,8 @@
       ],
       "fileDeps": [
         "extensions/promptenrichsubagent.config.jsonc",
-        "extensions/local-model-endpoints.config.jsonc"
+        "extensions/local-model-endpoints.config.jsonc",
+        "extensions/lib/subagent-model-preferences.ts"
       ],
       "configFiles": [
         "extensions/promptenrichsubagent.config.jsonc",

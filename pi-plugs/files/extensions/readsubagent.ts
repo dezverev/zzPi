@@ -40,6 +40,13 @@ import {
   readChildAgentModelOptions,
 } from "./lib/child-agent-model-options.ts";
 import {
+  CONFIG_DEFAULT_MODEL_CHOICE,
+  isSubagentModelPreferenceReset,
+  readSubagentModelPreference,
+  resolveSubagentModelPreference,
+  writeSubagentModelPreference,
+} from "./lib/subagent-model-preferences.ts";
+import {
   getBooleanField,
   getPositiveIntegerField,
   getStringField,
@@ -136,6 +143,7 @@ let currentModelOptions: readonly ReadSubagentModelOption[] = [
 ];
 let lastConfigError: string | undefined;
 let lastMainConfigError: string | undefined;
+let lastModelPreferenceError: string | undefined;
 let readSubagentEnabled = false;
 let readSubagentMode: AgentModeController;
 let selectedReadSubagentModelId: string | undefined;
@@ -292,6 +300,7 @@ function notifyConfigErrors(ctx: ExtensionContext): void {
   if (lastMainConfigError && lastMainConfigError !== lastConfigError) {
     ctx.ui.notify(`readsubagent direct-read config ignored: ${lastMainConfigError}`, "warning");
   }
+  if (lastModelPreferenceError) ctx.ui.notify(lastModelPreferenceError, "warning");
 }
 
 function isChildPiAgentProcess(): boolean {
@@ -336,17 +345,46 @@ function restoreState(pi: ExtensionAPI, ctx: ExtensionContext): void {
   currentMainConfig = readReadSubagentMainConfig(ctx.cwd);
 
   const saved = getSavedStateFromBranch(ctx);
-  selectedReadSubagentModelId = saved.selectedModelId;
+  const preferenceParams = {
+    agentName: "readsubagent",
+    configFilePath: CONFIG_FILE_PATH,
+    cwd: ctx.cwd,
+  };
+  const preference = readSubagentModelPreference(preferenceParams);
+  const resolution = resolveSubagentModelPreference(
+    "readsubagent",
+    preference,
+    currentModelOptions,
+    saved.selectedModelId,
+  );
+  selectedReadSubagentModelId = resolution.selectedModelId;
+  lastModelPreferenceError = resolution.warning;
+  if (resolution.migrateSessionSelection) {
+    const migrated = writeSubagentModelPreference(preferenceParams, selectedReadSubagentModelId);
+    if (migrated.error) {
+      lastModelPreferenceError = `Could not migrate the readsubagent model override: ${migrated.error}`;
+    }
+  }
   currentConfig = applyReadSubagentModelSelection(baseConfig);
   registerReadSubagentProvider(pi, currentConfig);
   readSubagentMode.restore(ctx);
 }
 
-function persistState(pi: ExtensionAPI): void {
+function persistState(pi: ExtensionAPI, cwd: string): boolean {
+  const persisted = writeSubagentModelPreference({
+    agentName: "readsubagent",
+    configFilePath: CONFIG_FILE_PATH,
+    cwd,
+  }, selectedReadSubagentModelId);
+  lastModelPreferenceError = persisted.error
+    ? `Could not persist the readsubagent model override: ${persisted.error}`
+    : undefined;
+  if (lastModelPreferenceError) return false;
   pi.appendEntry<ReadSubagentState>(READSUBAGENT_STATE_ENTRY_TYPE, {
     enabled: readSubagentEnabled,
     ...(selectedReadSubagentModelId ? { selectedModelId: selectedReadSubagentModelId } : {}),
   });
+  return true;
 }
 
 function setEnabled(_pi: ExtensionAPI, ctx: ExtensionContext, enabled: boolean): void {
@@ -361,9 +399,10 @@ async function selectReadSubagentModel(
   reloadReadSubagentSettings(pi, ctx.cwd);
 
   const requested = args.trim();
-  let option = requested ? findReadSubagentModelOption(requested) : undefined;
+  let resetToDefault = isSubagentModelPreferenceReset(requested);
+  let option = requested && !resetToDefault ? findReadSubagentModelOption(requested) : undefined;
 
-  if (requested && !option) {
+  if (requested && !resetToDefault && !option) {
     ctx.ui.notify(
       `Unknown readsubagent model "${requested}". Available: ${formatAvailableReadSubagentModels()}`,
       "error",
@@ -371,24 +410,46 @@ async function selectReadSubagentModel(
     return;
   }
 
-  if (!option) {
+  if (!requested) {
     if (!ctx.hasUI) {
       ctx.ui.notify(
-        `Usage: /readsubagent model <model>. Available: ${formatAvailableReadSubagentModels()}`,
+        `Usage: /readsubagent model <model|default>. Available: ${formatAvailableReadSubagentModels()}`,
         "warning",
       );
       return;
     }
 
-    const choices = currentModelOptions.map(getReadSubagentModelChoiceLabel);
+    const modelChoices = currentModelOptions.map(getReadSubagentModelChoiceLabel);
+    const choices = [CONFIG_DEFAULT_MODEL_CHOICE, ...modelChoices];
     const choice = await ctx.ui.select("Select readsubagent model", choices);
     if (!choice) {
       ctx.ui.notify("readsubagent model selection cancelled", "info");
       return;
     }
 
-    const choiceIndex = choices.indexOf(choice);
+    resetToDefault = choice === CONFIG_DEFAULT_MODEL_CHOICE;
+    const choiceIndex = modelChoices.indexOf(choice);
     option = choiceIndex >= 0 ? currentModelOptions[choiceIndex] : undefined;
+  }
+
+  if (resetToDefault) {
+    const previousModelId = selectedReadSubagentModelId;
+    selectedReadSubagentModelId = undefined;
+    if (!persistState(pi, ctx.cwd)) {
+      selectedReadSubagentModelId = previousModelId;
+      reloadReadSubagentSettings(pi, ctx.cwd);
+      applyStatus(ctx);
+      ctx.ui.notify(lastModelPreferenceError ?? "Could not clear the readsubagent model override", "error");
+      lastModelPreferenceError = undefined;
+      return;
+    }
+    reloadReadSubagentSettings(pi, ctx.cwd);
+    applyStatus(ctx);
+    ctx.ui.notify(
+      `readsubagent persistent model override cleared; using config default ${getModelSelector(currentConfig)}`,
+      "info",
+    );
+    return;
   }
 
   if (!option) {
@@ -396,12 +457,20 @@ async function selectReadSubagentModel(
     return;
   }
 
+  const previousModelId = selectedReadSubagentModelId;
   selectedReadSubagentModelId = option.id;
-  persistState(pi);
+  if (!persistState(pi, ctx.cwd)) {
+    selectedReadSubagentModelId = previousModelId;
+    reloadReadSubagentSettings(pi, ctx.cwd);
+    applyStatus(ctx);
+    ctx.ui.notify(lastModelPreferenceError ?? "Could not persist the readsubagent model override", "error");
+    lastModelPreferenceError = undefined;
+    return;
+  }
   reloadReadSubagentSettings(pi, ctx.cwd);
   applyStatus(ctx);
   ctx.ui.notify(
-    `readsubagent model selected: ${getReadSubagentModelChoiceLabel(option)}\nactive child model selector: ${getModelSelector(currentConfig)}`,
+    `readsubagent persistent model override selected: ${getReadSubagentModelChoiceLabel(option)}\nactive child model selector: ${getModelSelector(currentConfig)}`,
     "info",
   );
 }
@@ -505,7 +574,7 @@ function formatStatus(): string {
     formatReadSubagentModelSelection(currentConfig),
     `direct read policy: ${formatDirectReadPolicy(currentMainConfig)}`,
     "When on, the main agent is instructed to use readsubagent for answers from files when raw contents are not needed, while keeping direct read available for exact contents, ranges, and verification unless the policy is block. A saved /readsubagent on/off state overrides enabledByDefault for that session branch.",
-    "Commands: /readsubagent on | off | toggle | status | model [model] | ask <question>. The model subcommand chooses the readsubagent model/endpoint.",
+    "Commands: /readsubagent on | off | toggle | status | model [model|default] | ask <question>. The model subcommand sets a workspace-persistent model/endpoint override; `model default` (or `model reset`) clears it.",
   ].join("\n");
 }
 
@@ -672,6 +741,7 @@ export default function readSubagentExtension(pi: ExtensionAPI) {
 
   pi.on("session_tree", (_event, ctx) => {
     restoreState(pi, ctx);
+    notifyConfigErrors(ctx);
   });
 
   pi.on("session_shutdown", (_event, ctx) => {
@@ -807,7 +877,7 @@ export default function readSubagentExtension(pi: ExtensionAPI) {
 
       if (normalized === "endpoint" || normalized === "endpoints") {
         ctx.ui.notify(
-          "Readsubagent endpoints are selected through /readsubagent model entries in .pi/extensions/readsubagent.config.jsonc. Use /readsubagent model qwen, /readsubagent model gpt-5.6-sol-xhigh, or /readsubagent model gpt-5.6-sol-max.",
+          `Readsubagent endpoints are selected through /readsubagent model entries in .pi/extensions/readsubagent.config.jsonc. Use /readsubagent model <id>, or /readsubagent model default to clear the workspace override. ${formatAvailableReadSubagentModels()}`,
           "info",
         );
         return;
@@ -815,7 +885,7 @@ export default function readSubagentExtension(pi: ExtensionAPI) {
 
       if (normalized !== "ask") {
         ctx.ui.notify(
-          "Usage: /readsubagent on | off | toggle | status | model [model] | ask <question>",
+          "Usage: /readsubagent on | off | toggle | status | model [model|default] | ask <question>",
           "warning",
         );
         return;

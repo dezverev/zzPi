@@ -28,6 +28,13 @@ import {
   getChildAgentModelOption,
   readChildAgentModelOptions,
 } from "./child-agent-model-options.ts";
+import {
+  CONFIG_DEFAULT_MODEL_CHOICE,
+  isSubagentModelPreferenceReset,
+  readSubagentModelPreference,
+  resolveSubagentModelPreference,
+  writeSubagentModelPreference,
+} from "./subagent-model-preferences.ts";
 
 export interface StandaloneAgentRunResult<Decision> {
   readonly config: ChildPiAgentConfig;
@@ -205,6 +212,7 @@ export function createStandaloneChildAgent<Decision>(definition: StandaloneAgent
     createChildAgentModelOptionFromConfig(definition.defaultConfig),
   ];
   let lastConfigError: string | undefined;
+  let lastPreferenceError: string | undefined;
   let selectedModelId: string | undefined;
 
   const readModelOptions = (cwd: string, baseConfig: ChildPiAgentConfig): readonly ChildAgentModelOption[] => {
@@ -270,6 +278,7 @@ export function createStandaloneChildAgent<Decision>(definition: StandaloneAgent
 
   const notifyConfigErrorIfNeeded = (ctx: ExtensionContext): void => {
     if (lastConfigError) ctx.ui.notify(`${definition.agentName} config ignored: ${lastConfigError}`, "warning");
+    if (lastPreferenceError) ctx.ui.notify(lastPreferenceError, "warning");
   };
 
   const getSavedStateFromBranch = (ctx: ExtensionContext): StandaloneAgentSavedState => {
@@ -291,15 +300,44 @@ export function createStandaloneChildAgent<Decision>(definition: StandaloneAgent
     const baseConfig = readConfig(ctx.cwd);
     currentModelOptions = readModelOptions(ctx.cwd, baseConfig);
     const saved = getSavedStateFromBranch(ctx);
-    selectedModelId = saved.selectedModelId;
+    const preferenceParams = {
+      agentName: definition.agentName,
+      configFilePath: definition.configFilePath,
+      cwd: ctx.cwd,
+    };
+    const preference = readSubagentModelPreference(preferenceParams);
+    const resolution = resolveSubagentModelPreference(
+      definition.agentName,
+      preference,
+      currentModelOptions,
+      saved.selectedModelId,
+    );
+    selectedModelId = resolution.selectedModelId;
+    lastPreferenceError = resolution.warning;
+    if (resolution.migrateSessionSelection) {
+      const migrated = writeSubagentModelPreference(preferenceParams, selectedModelId);
+      if (migrated.error) {
+        lastPreferenceError = `Could not migrate the ${definition.agentName} model override: ${migrated.error}`;
+      }
+    }
     currentConfig = applyModelSelection(baseConfig);
     registerProvider(pi, currentConfig);
   };
 
-  const persistState = (pi: ExtensionAPI): void => {
+  const persistState = (pi: ExtensionAPI, cwd: string): boolean => {
+    const persisted = writeSubagentModelPreference({
+      agentName: definition.agentName,
+      configFilePath: definition.configFilePath,
+      cwd,
+    }, selectedModelId);
+    lastPreferenceError = persisted.error
+      ? `Could not persist the ${definition.agentName} model override: ${persisted.error}`
+      : undefined;
+    if (lastPreferenceError) return false;
     pi.appendEntry<StandaloneAgentSavedState>(definition.stateEntryType, {
       ...(selectedModelId ? { selectedModelId } : {}),
     });
+    return true;
   };
 
   const selectModel = async (
@@ -311,28 +349,51 @@ export function createStandaloneChildAgent<Decision>(definition: StandaloneAgent
     reloadSettings(pi, ctx.cwd);
 
     const requested = args.trim();
-    let option = requested ? findModelOption(requested) : undefined;
+    let resetToDefault = isSubagentModelPreferenceReset(requested);
+    let option = requested && !resetToDefault ? findModelOption(requested) : undefined;
 
-    if (requested && !option) {
+    if (requested && !resetToDefault && !option) {
       ctx.ui.notify(`Unknown ${definition.agentName} model "${requested}". Available: ${formatAvailableModels()}`, "error");
       return;
     }
 
-    if (!option) {
+    if (!requested) {
       if (!ctx.hasUI) {
-        ctx.ui.notify(`Usage: /${definition.agentName} model <model>. Available: ${formatAvailableModels()}`, "warning");
+        ctx.ui.notify(`Usage: /${definition.agentName} model <model|default>. Available: ${formatAvailableModels()}`, "warning");
         return;
       }
 
-      const choices = currentModelOptions.map(getChildAgentModelChoiceLabel);
+      const modelChoices = currentModelOptions.map(getChildAgentModelChoiceLabel);
+      const choices = [CONFIG_DEFAULT_MODEL_CHOICE, ...modelChoices];
       const choice = await ctx.ui.select(`Select ${definition.agentName} model`, choices);
       if (!choice) {
         ctx.ui.notify(`${definition.agentName} model selection cancelled`, "info");
         return;
       }
 
-      const choiceIndex = choices.indexOf(choice);
+      resetToDefault = choice === CONFIG_DEFAULT_MODEL_CHOICE;
+      const choiceIndex = modelChoices.indexOf(choice);
       option = choiceIndex >= 0 ? currentModelOptions[choiceIndex] : undefined;
+    }
+
+    if (resetToDefault) {
+      const previousModelId = selectedModelId;
+      selectedModelId = undefined;
+      if (!persistState(pi, ctx.cwd)) {
+        selectedModelId = previousModelId;
+        reloadSettings(pi, ctx.cwd);
+        ctx.ui.notify(lastPreferenceError ?? `Could not clear the ${definition.agentName} model override`, "error");
+        lastPreferenceError = undefined;
+        return;
+      }
+      reloadSettings(pi, ctx.cwd);
+      if (!options?.quiet) {
+        ctx.ui.notify(
+          `${definition.agentName} persistent model override cleared; using config default ${getModelSelector(currentConfig)}`,
+          "info",
+        );
+      }
+      return;
     }
 
     if (!option) {
@@ -340,12 +401,19 @@ export function createStandaloneChildAgent<Decision>(definition: StandaloneAgent
       return;
     }
 
+    const previousModelId = selectedModelId;
     selectedModelId = option.id;
-    persistState(pi);
+    if (!persistState(pi, ctx.cwd)) {
+      selectedModelId = previousModelId;
+      reloadSettings(pi, ctx.cwd);
+      ctx.ui.notify(lastPreferenceError ?? `Could not persist the ${definition.agentName} model override`, "error");
+      lastPreferenceError = undefined;
+      return;
+    }
     reloadSettings(pi, ctx.cwd);
     if (!options?.quiet) {
       ctx.ui.notify(
-        `${definition.agentName} model selected: ${getChildAgentModelChoiceLabel(option)}\nactive child model selector: ${getModelSelector(currentConfig)}`,
+        `${definition.agentName} persistent model override selected: ${getChildAgentModelChoiceLabel(option)}\nactive child model selector: ${getModelSelector(currentConfig)}`,
         "info",
       );
     }

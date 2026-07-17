@@ -30,6 +30,13 @@ import {
   getChildAgentModelOption,
   readChildAgentModelOptions,
 } from "./lib/child-agent-model-options.ts";
+import {
+  CONFIG_DEFAULT_MODEL_CHOICE,
+  isSubagentModelPreferenceReset,
+  readSubagentModelPreference,
+  resolveSubagentModelPreference,
+  writeSubagentModelPreference,
+} from "./lib/subagent-model-preferences.ts";
 
 const CONFIG_FILE_PATH = ".pi/extensions/promptenrichsubagent.config.jsonc";
 const PROMPTENRICH_MESSAGE_TYPE = "promptenrichsubagent-report";
@@ -112,6 +119,7 @@ let currentModelOptions: readonly PromptEnrichModelOption[] = [
   createPromptEnrichModelOptionFromConfig(DEFAULT_PROMPTENRICH_CONFIG),
 ];
 let lastConfigError: string | undefined;
+let lastModelPreferenceError: string | undefined;
 let selectedPromptEnrichModelId: string | undefined;
 
 function createPromptEnrichModelOptionFromConfig(
@@ -200,6 +208,7 @@ function notifyConfigErrorIfNeeded(ctx: ExtensionContext): void {
   if (lastConfigError) {
     ctx.ui.notify(`promptenrichsubagent config ignored: ${lastConfigError}`, "warning");
   }
+  if (lastModelPreferenceError) ctx.ui.notify(lastModelPreferenceError, "warning");
 }
 
 function getSavedStateFromBranch(ctx: ExtensionContext): PromptEnrichSavedState {
@@ -227,15 +236,44 @@ function restoreState(pi: ExtensionAPI, ctx: ExtensionContext): void {
   currentModelOptions = readPromptEnrichModelOptions(ctx.cwd, baseConfig);
 
   const saved = getSavedStateFromBranch(ctx);
-  selectedPromptEnrichModelId = saved.selectedModelId;
+  const preferenceParams = {
+    agentName: "promptenrichsubagent",
+    configFilePath: CONFIG_FILE_PATH,
+    cwd: ctx.cwd,
+  };
+  const preference = readSubagentModelPreference(preferenceParams);
+  const resolution = resolveSubagentModelPreference(
+    "promptenrichsubagent",
+    preference,
+    currentModelOptions,
+    saved.selectedModelId,
+  );
+  selectedPromptEnrichModelId = resolution.selectedModelId;
+  lastModelPreferenceError = resolution.warning;
+  if (resolution.migrateSessionSelection) {
+    const migrated = writeSubagentModelPreference(preferenceParams, selectedPromptEnrichModelId);
+    if (migrated.error) {
+      lastModelPreferenceError = `Could not migrate the promptenrichsubagent model override: ${migrated.error}`;
+    }
+  }
   currentConfig = applyPromptEnrichModelSelection(baseConfig);
   registerPromptEnrichProvider(pi, currentConfig);
 }
 
-function persistState(pi: ExtensionAPI): void {
+function persistState(pi: ExtensionAPI, cwd: string): boolean {
+  const persisted = writeSubagentModelPreference({
+    agentName: "promptenrichsubagent",
+    configFilePath: CONFIG_FILE_PATH,
+    cwd,
+  }, selectedPromptEnrichModelId);
+  lastModelPreferenceError = persisted.error
+    ? `Could not persist the promptenrichsubagent model override: ${persisted.error}`
+    : undefined;
+  if (lastModelPreferenceError) return false;
   pi.appendEntry<PromptEnrichState>(PROMPTENRICH_STATE_ENTRY_TYPE, {
     ...(selectedPromptEnrichModelId ? { selectedModelId: selectedPromptEnrichModelId } : {}),
   });
+  return true;
 }
 
 async function selectPromptEnrichModel(
@@ -246,9 +284,10 @@ async function selectPromptEnrichModel(
   reloadPromptEnrichSettings(pi, ctx.cwd);
 
   const requested = args.trim();
-  let option = requested ? findPromptEnrichModelOption(requested) : undefined;
+  let resetToDefault = isSubagentModelPreferenceReset(requested);
+  let option = requested && !resetToDefault ? findPromptEnrichModelOption(requested) : undefined;
 
-  if (requested && !option) {
+  if (requested && !resetToDefault && !option) {
     ctx.ui.notify(
       `Unknown promptenrichsubagent model "${requested}". Available: ${formatAvailablePromptEnrichModels()}`,
       "error",
@@ -256,24 +295,44 @@ async function selectPromptEnrichModel(
     return;
   }
 
-  if (!option) {
+  if (!requested) {
     if (!ctx.hasUI) {
       ctx.ui.notify(
-        `Usage: /pe-model <model>. Available: ${formatAvailablePromptEnrichModels()}`,
+        `Usage: /pe-model <model|default>. Available: ${formatAvailablePromptEnrichModels()}`,
         "warning",
       );
       return;
     }
 
-    const choices = currentModelOptions.map(getChildAgentModelChoiceLabel);
+    const modelChoices = currentModelOptions.map(getChildAgentModelChoiceLabel);
+    const choices = [CONFIG_DEFAULT_MODEL_CHOICE, ...modelChoices];
     const choice = await ctx.ui.select("Select promptenrichsubagent model", choices);
     if (!choice) {
       ctx.ui.notify("promptenrichsubagent model selection cancelled", "info");
       return;
     }
 
-    const choiceIndex = choices.indexOf(choice);
+    resetToDefault = choice === CONFIG_DEFAULT_MODEL_CHOICE;
+    const choiceIndex = modelChoices.indexOf(choice);
     option = choiceIndex >= 0 ? currentModelOptions[choiceIndex] : undefined;
+  }
+
+  if (resetToDefault) {
+    const previousModelId = selectedPromptEnrichModelId;
+    selectedPromptEnrichModelId = undefined;
+    if (!persistState(pi, ctx.cwd)) {
+      selectedPromptEnrichModelId = previousModelId;
+      reloadPromptEnrichSettings(pi, ctx.cwd);
+      ctx.ui.notify(lastModelPreferenceError ?? "Could not clear the promptenrichsubagent model override", "error");
+      lastModelPreferenceError = undefined;
+      return;
+    }
+    reloadPromptEnrichSettings(pi, ctx.cwd);
+    ctx.ui.notify(
+      `promptenrichsubagent persistent model override cleared; using config default ${getModelSelector(currentConfig)}`,
+      "info",
+    );
+    return;
   }
 
   if (!option) {
@@ -281,11 +340,18 @@ async function selectPromptEnrichModel(
     return;
   }
 
+  const previousModelId = selectedPromptEnrichModelId;
   selectedPromptEnrichModelId = option.id;
-  persistState(pi);
+  if (!persistState(pi, ctx.cwd)) {
+    selectedPromptEnrichModelId = previousModelId;
+    reloadPromptEnrichSettings(pi, ctx.cwd);
+    ctx.ui.notify(lastModelPreferenceError ?? "Could not persist the promptenrichsubagent model override", "error");
+    lastModelPreferenceError = undefined;
+    return;
+  }
   reloadPromptEnrichSettings(pi, ctx.cwd);
   ctx.ui.notify(
-    `promptenrichsubagent model selected: ${getChildAgentModelChoiceLabel(option)}\nactive child model selector: ${getModelSelector(currentConfig)}`,
+    `promptenrichsubagent persistent model override selected: ${getChildAgentModelChoiceLabel(option)}\nactive child model selector: ${getModelSelector(currentConfig)}`,
     "info",
   );
 }
@@ -658,6 +724,7 @@ export default function promptEnrichSubagentExtension(pi: ExtensionAPI): void {
   pi.on("session_tree", (_event, ctx) => {
     clearOneShotPromptEnrichment(ctx);
     restoreState(pi, ctx);
+    notifyConfigErrorIfNeeded(ctx);
   });
 
   pi.on("session_shutdown", (_event, ctx) => {
@@ -752,7 +819,7 @@ export default function promptEnrichSubagentExtension(pi: ExtensionAPI): void {
   });
 
   pi.registerCommand("pe-model", {
-    description: "Show or select the promptenrichsubagent child model",
+    description: "Show or set the workspace-persistent promptenrichsubagent child model override",
     getArgumentCompletions: (prefix) => {
       return getPromptEnrichModelCompletions(prefix.trimStart());
     },
@@ -769,7 +836,7 @@ export default function promptEnrichSubagentExtension(pi: ExtensionAPI): void {
       const userPrompt = args.trim();
       if (!userPrompt) {
         ctx.ui.notify(
-          "Usage: /pe <prompt to enrich>. Also: /pe-config, /pe-model [model]. Shortcut: Alt+E enriches the next prompt, asks follow-up questions if needed, then sends the enriched prompt normally.",
+          "Usage: /pe <prompt to enrich>. Also: /pe-config, /pe-model [model|default]. Model overrides persist across `/new`; use `/pe-model default` to clear one. Shortcut: Alt+E enriches the next prompt, asks follow-up questions if needed, then sends the enriched prompt normally.",
           "warning",
         );
         return;
