@@ -42,14 +42,14 @@ const DEFAULT_MODELS: readonly ZzLocalModelConfig[] = [
     contextWindow: 250_000,
     id: "qwen/qwen3.6-27b",
     maxTokens: DEFAULT_MAX_TOKENS,
-    name: "Qwen 3.6 27B (LM Studio .48 long context)",
+    name: "Qwen 3.6 27B (LM Studio, long context)",
     reasoning: true,
   },
   {
     contextWindow: 120_000,
     id: "qwen3.6-27b-rust-v1.mlx",
     maxTokens: DEFAULT_MAX_TOKENS,
-    name: "Qwen 3.6 27B Rust v1 MLX (LM Studio .48 via proxy)",
+    name: "Qwen 3.6 27B Rust v1 MLX (LM Studio local endpoint)",
     reasoning: false,
   },
 ];

@@ -13,7 +13,7 @@
   // "/v1/chat/completions" URL.
   "trueLocalEndpoint": "http://127.0.0.1:1234",
 
-  // Telemetry proxy for local Qwen routing.
+  // Local OpenAI-compatible endpoint for Qwen routing.
   "remoteLocalEndpoint": "http://127.0.0.1:1234",
 
   // True remote fallback that uses Pi's configured provider/auth.

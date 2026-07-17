@@ -9,9 +9,9 @@
   "default": "all-visible",
   "files": [
     {
-      "bytes": 824,
+      "bytes": 1284,
       "path": "README.md",
-      "sha256": "86ecb3f11d0e1e7bc3b03ff1125e2e9ccd5fc57d40ab97d3d61f8a23fb2f5b8b"
+      "sha256": "4d6cc25c57eb0a488ec7db2970f3723b423942e3e52e60e41117fdc964eeb3ec"
     },
     {
       "bytes": 364,
@@ -50,7 +50,7 @@
     "version": "1.0.0"
   },
   "source": "zzPi git export",
-  "updated_at": "2026-07-17T18:58:27.951591+00:00",
+  "updated_at": "2026-07-17T22:33:18.775379+00:00",
   "visiblePlugins": [],
   "zzLibVersion": "1.0.0"
 }

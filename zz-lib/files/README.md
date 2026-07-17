@@ -1,23 +1,23 @@
 # zz-lib
 
-Shared runtime helpers for project-local Pi applications.
+`zz-lib` is the shared runtime for project-local Pi applications. It installs
+common helpers under `.pi/extensions/zz-lib/` and records ownership in
+`.pi/zz-lib-manifest.json`. Consumer bundles declare a `sharedDeps` requirement
+and import helpers from `./zz-lib/...`.
 
-`zz-lib` is the shared layer used by `zz-plugs`, `zz-refs`, and future app
-bundles. It installs common files under `.pi/extensions/zz-lib/` and records
-ownership in `.pi/zz-lib-manifest.json`. Consumer bundles declare a `sharedDeps`
-requirement and import helpers from `./zz-lib/...`.
+The public zzPi installer resolves and installs `zz-lib` automatically whenever
+a selected plug requires it. Public runtime files, the manifest, and the archive
+are generated from the maintained `zzHostWebsite/clients/zz-lib` source.
 
-## Docs
+## Maintainer documentation
 
-Start with the documentation set in [`../../docs/zz-lib/`](../../docs/zz-lib/):
+The architecture and authoring documentation lives in the source repository:
 
-- [Overview](../../docs/zz-lib/README.md)
-- [Architecture and ownership](../../docs/zz-lib/architecture.md)
-- [Consumer app guide](../../docs/zz-lib/consumer-apps.md)
-- [Authoring shared APIs](../../docs/zz-lib/authoring.md)
+- [zz-lib overview](https://github.com/dezverev/zzHostWebsite/blob/master/docs/zz-lib/README.md)
+- [Architecture and ownership](https://github.com/dezverev/zzHostWebsite/blob/master/docs/zz-lib/architecture.md)
+- [Consumer app guide](https://github.com/dezverev/zzHostWebsite/blob/master/docs/zz-lib/consumer-apps.md)
+- [Authoring shared APIs](https://github.com/dezverev/zzHostWebsite/blob/master/docs/zz-lib/authoring.md)
 
-## Build locally
-
-```bash
-python3 tools/build-pi-plugs.py --src clients/zz-lib --catalog clients/zz-lib/zz-lib.catalog.jsonc --dest /tmp/test-zz-lib
-```
+Those maintainer docs and source build tools are not duplicated into the public
+runtime archive. Change the canonical source and use the zzPi export workflow;
+do not edit generated `zz-lib/files/`, manifest, or archive content directly.

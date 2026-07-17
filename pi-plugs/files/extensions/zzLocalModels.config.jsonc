@@ -15,19 +15,19 @@
   "models": [
     {
       "id": "qwen/qwen3.6-35b-a3b",
-      "name": "Qwen 3.6 35B A3B via LM Studio proxy (default long context)",
+      "name": "Qwen 3.6 35B A3B via LM Studio (default long context)",
       "contextWindow": 250000,
       "maxTokens": 32768
     },
     {
       "id": "qwen/qwen3.6-27b",
-      "name": "Qwen 3.6 27B via LM Studio proxy (.48 long context)",
+      "name": "Qwen 3.6 27B via LM Studio (long context)",
       "contextWindow": 250000,
       "maxTokens": 32768
     },
     {
       "id": "qwen3.6-27b-rust-v1.mlx",
-      "name": "Qwen 3.6 27B Rust v1 MLX via LM Studio proxy (.48)",
+      "name": "Qwen 3.6 27B Rust v1 MLX via LM Studio",
       "contextWindow": 120000,
       "maxTokens": 32768,
       "reasoning": false
