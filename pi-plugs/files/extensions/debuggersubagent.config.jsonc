@@ -68,7 +68,7 @@
       "tools": ["read", "bash", "grep", "find", "ls", "readsubagent"],
     },
     "qwen-35b-a3b": {
-      "label": "Qwen 3.6 35B A3B via 127.0.0.1:1234 proxy (telemetry)",
+      "label": "Qwen 3.6 35B A3B via local OpenAI-compatible endpoint",
       "provider": "lm-studio",
       "providerRegistration": "none",
       "endpoint": "http://127.0.0.1:1234",

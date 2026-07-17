@@ -9,9 +9,9 @@ newline-delimited JSON fallback used by some harnesses. It exposes one tool,
 This is the reusable core. Any MCP-capable harness (Claude Code, Copilot/VS
 Code, Codex, Cursor, Zed, your own client) can register this one server and
 consume it — directly, or wrapped in that harness's own subagent / instructions.
-The Claude Code and Copilot wrappers that ship in this repo
-(`clients/install-claude-readsubagent.*`, `clients/install-copilot-readsubagent.*`)
-are examples.
+The [Claude Code](../install-claude-readsubagent.sh) and
+[Copilot/VS Code](../install-copilot-readsubagent.sh) wrapper installers that
+ship beside this directory are examples.
 
 ## What the tool does
 
@@ -137,6 +137,6 @@ enabled_tools = ["readsubagent"]
 Then wrap it however your harness prefers — a dedicated subagent restricted to
 `mcp__zz_readsubagent__readsubagent`, or a directive in your project/system
 instructions telling the main agent to use it for read planning before focused
-reads. The Claude Code wrapper here does the former; the Copilot wrapper writes
-project instructions for the latter. See `clients/CLAUDE_READSUBAGENT_INSTALL.md`
-and `clients/COPILOT_READSUBAGENT_INSTALL.md`.
+reads. The [Claude Code wrapper](../install-claude-readsubagent.sh) does the former;
+the [Copilot/VS Code wrapper](../install-copilot-readsubagent.sh) writes project
+instructions for the latter.

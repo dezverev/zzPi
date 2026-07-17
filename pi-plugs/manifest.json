@@ -4,9 +4,9 @@
   "default": "all-visible",
   "files": [
     {
-      "bytes": 9240,
+      "bytes": 7739,
       "path": "README.md",
-      "sha256": "cb88ffdbf3cc5ad39c740f91b2cf23e5952c9feedcbbe79fd2357d6f0aa66eec"
+      "sha256": "cee1bf4b8a87afc53a56661636d6644808ad24bf2043a5a471e7f32f6454c346"
     },
     {
       "bytes": 12313,
@@ -26,7 +26,7 @@
     {
       "bytes": 3547,
       "path": "extensions/brainstormer.config.jsonc",
-      "sha256": "468b2529deb38fd16be93a9946d9a465db8ad90f73914bb58881957456709737"
+      "sha256": "a1d4720e3a9086ca48f3735bf831a2b319ef77fdb53dbb9aac3b9a903305523d"
     },
     {
       "bytes": 8677,
@@ -46,7 +46,7 @@
     {
       "bytes": 3843,
       "path": "extensions/debuggersubagent.config.jsonc",
-      "sha256": "caf809ee76e4a983aa31652ae135df41a473d4fc4aa7fa44958aef77eca1ce74"
+      "sha256": "6a17c066497cddc836f45dd9c52d0a35cb0c072638b8daa51427c667a9c7c415"
     },
     {
       "bytes": 13648,
@@ -61,7 +61,7 @@
     {
       "bytes": 3567,
       "path": "extensions/designplanner.config.jsonc",
-      "sha256": "47807336cfc64f0cd08f41d1fafc7da6e023d68e39314ec9e2689df3bde0e6af"
+      "sha256": "23a7c546fbac97aa9be95f9fcf812f62bffb0884ee2db5a2ed64db86807fc3d0"
     },
     {
       "bytes": 10158,
@@ -81,7 +81,7 @@
     {
       "bytes": 6295,
       "path": "extensions/implementationsubagent.config.jsonc",
-      "sha256": "450dbe73220f603e2cb0c175652bb77e288da21cc780c7c0d9eec59578c8804a"
+      "sha256": "4f84929dc45a3bd417688a32be718b1b0b792a06ae8308571de7eebe17a0de60"
     },
     {
       "bytes": 31342,
@@ -89,9 +89,9 @@
       "sha256": "b4fa83b7a30814b180473b13a5c31cc9e131830f4e3e4e7b9abec97a17106faf"
     },
     {
-      "bytes": 1083,
+      "bytes": 1094,
       "path": "extensions/local-model-endpoints.config.jsonc",
-      "sha256": "899238534facc812e5ff5ccc809cefadd96ee922e7251d4d266cbf20c38b3539"
+      "sha256": "a958ded7de9d3452b8c253dfe3cc2cb6096b8613bd5f0602d225dba90b4b37ef"
     },
     {
       "bytes": 674,
@@ -106,7 +106,7 @@
     {
       "bytes": 4989,
       "path": "extensions/promptenrichsubagent.config.jsonc",
-      "sha256": "9e0665f36415f187d41e7eccd729769e4c06ff9b8951738e267472d8902b8b96"
+      "sha256": "db6388b24d25179f74ab3160cfc0a001547248683bf61e10588b5b283b59cc05"
     },
     {
       "bytes": 31448,
@@ -114,14 +114,14 @@
       "sha256": "5de1e872a3bfd600ecde33edbd80965d12ed598bfb2e6f469d6025513b036678"
     },
     {
-      "bytes": 6841,
+      "bytes": 6843,
       "path": "extensions/readsubagent.config.jsonc",
-      "sha256": "c89526d02e4f931b7c574ef619aa4bb01f7fd9c8d553cbcb3db8d885eb8223a8"
+      "sha256": "e937dfb74b1b20665dd153f6e445d8b0b10318ff1e0ea76a51b43b8cf916d600"
     },
     {
-      "bytes": 45043,
+      "bytes": 45354,
       "path": "extensions/readsubagent.ts",
-      "sha256": "e8fecf1c32f7c67ded1387cf2b361ed8b088ca7185a2e20f3f6b5279493d4ed6"
+      "sha256": "29cf57dff801d3ba0285539e36eaabbf21ef411406a077d96223e348e24b446a"
     },
     {
       "bytes": 1496,
@@ -146,7 +146,7 @@
     {
       "bytes": 5363,
       "path": "extensions/vettingagents.config.jsonc",
-      "sha256": "71a03713702c79d4fd775d7ef498f3a83ebd19c0e0e338cf010c963837955162"
+      "sha256": "874e7340d0546e5be89a0b809ab5d4419e7df9b3cb0d1e1760d9d55e4a8a40dc"
     },
     {
       "bytes": 40325,
@@ -164,14 +164,14 @@
       "sha256": "f72be8f356a8886cf7c33aa77ff76d4fe73ee288aebc8bacf5101415b5ee4fb6"
     },
     {
-      "bytes": 1002,
+      "bytes": 974,
       "path": "extensions/zzLocalModels.config.jsonc",
-      "sha256": "5bd2728d00a90500a33714d144d8c5f454131ebc4998999b79defd3f1d294156"
+      "sha256": "4f77cfde84ad32b4467ed2ec6881254ec51d0aee1613eba2917be1dbf0a61741"
     },
     {
-      "bytes": 6512,
+      "bytes": 6510,
       "path": "extensions/zzLocalModels.ts",
-      "sha256": "2a9bd6fb9a85da02fa4ededb911b325b1e0f20e9c80cbc826656762572ca7d69"
+      "sha256": "2a5be5ee7ee806133cf528217fab7961533bc84fecfd5841aeaafb70dc0fc00d"
     },
     {
       "bytes": 4050,
@@ -713,7 +713,7 @@
   ],
   "schemaVersion": 2,
   "source": "zzPi git export",
-  "updated_at": "2026-07-17T18:58:27.823735+00:00",
+  "updated_at": "2026-07-17T22:33:18.626301+00:00",
   "visiblePlugins": [
     "zz-local-models",
     "context-tools",
