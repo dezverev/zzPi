@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { basename } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import {
   getMarkdownTheme,
@@ -10,6 +11,7 @@ import {
 } from "@earendil-works/pi-coding-agent";
 import { Box, Container, Markdown, Spacer, Text } from "@earendil-works/pi-tui";
 
+import { CHILD_PROVIDER_CONFIG_ENV } from "./child-provider-bootstrap.ts";
 import { ChildRunSemaphore } from "./child-run-semaphore.ts";
 import {
   getPositiveIntegerField,
@@ -20,6 +22,9 @@ import {
 
 export const CHILD_PI_AGENT_ENV = "PI_CHILD_PI_AGENT";
 export const CHILD_PI_AGENT_DEADLINE_ENV = "PI_CHILD_AGENT_DEADLINE_AT";
+export const CHILD_PROVIDER_BOOTSTRAP_PATH = fileURLToPath(
+  new URL("./child-provider-bootstrap.ts", import.meta.url),
+);
 export const DEFAULT_LOCAL_MODEL_ENDPOINTS_CONFIG_FILE_PATH =
   ".pi/extensions/local-model-endpoints.config.jsonc";
 export const LOCAL_MODEL_ENDPOINTS_CONFIG_FILE_PATH = DEFAULT_LOCAL_MODEL_ENDPOINTS_CONFIG_FILE_PATH;
@@ -838,21 +843,21 @@ export function buildDefaultChildPrompt(task: string, commandName: string): stri
   ].join("\n\n");
 }
 
-function buildChildArgs(
+export function buildChildArgs(
   config: ChildPiAgentConfig,
   prompt: string,
   excludeTools: readonly string[],
 ): string[] {
-  const args = [
-    "--mode",
-    "json",
-    "-p",
-    "--no-session",
+  const args = ["--mode", "json", "-p", "--no-session"];
+  if (config.providerRegistration !== "none") {
+    args.push("--extension", CHILD_PROVIDER_BOOTSTRAP_PATH);
+  }
+  args.push(
     "--model",
     getModelSelector(config),
     "--thinking",
     config.thinking,
-  ];
+  );
 
   if (excludeTools.length > 0) args.push("--exclude-tools", excludeTools.join(","));
   if (config.tools.length > 0) args.push("--tools", config.tools.join(","));
@@ -860,6 +865,34 @@ function buildChildArgs(
 
   args.push(prompt);
   return args;
+}
+
+function serializeChildProviderConfig(config: ChildPiAgentConfig): string {
+  return JSON.stringify({
+    provider: config.provider,
+    baseUrl: getOpenAiBaseUrl(config.endpoint),
+    model: config.model,
+    contextWindow: config.contextWindow,
+    maxOutputTokens: config.maxOutputTokens,
+  });
+}
+
+export function buildChildEnv(
+  config: ChildPiAgentConfig,
+  overrides: Readonly<Record<string, string | undefined>> = {},
+): NodeJS.ProcessEnv {
+  const childEnv: NodeJS.ProcessEnv = {
+    ...process.env,
+    [CHILD_PI_AGENT_ENV]: "1",
+  };
+  for (const [key, value] of Object.entries(overrides)) {
+    if (value === undefined) delete childEnv[key];
+    else childEnv[key] = value;
+  }
+
+  if (config.providerRegistration === "none") delete childEnv[CHILD_PROVIDER_CONFIG_ENV];
+  else childEnv[CHILD_PROVIDER_CONFIG_ENV] = serializeChildProviderConfig(config);
+  return childEnv;
 }
 
 function parseToolCallStart(event: Record<string, unknown>): ToolCallSummary | undefined {
@@ -975,14 +1008,7 @@ async function runChildPiAgentUnbounded(
       resolvePromise(code);
     };
 
-    const childEnv: NodeJS.ProcessEnv = {
-      ...process.env,
-      [CHILD_PI_AGENT_ENV]: "1",
-    };
-    for (const [key, value] of Object.entries(options.childEnv ?? {})) {
-      if (value === undefined) delete childEnv[key];
-      else childEnv[key] = value;
-    }
+    const childEnv = buildChildEnv(options.config, options.childEnv);
 
     const proc = spawn(invocation.command, invocation.args, {
       cwd: options.cwd ?? options.defaultCwd,

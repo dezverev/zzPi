@@ -6,14 +6,19 @@ newline-delimited JSON fallback used by some harnesses. It exposes one tool,
 `readsubagent`, that spawns a headless `pi` child running on a **local model**
 (Qwen via LM Studio) and returns its concise, cited factual report.
 
-This is the reusable core. Any MCP-capable harness (Claude Code, Copilot/VS
-Code, Codex, Cursor, Zed, your own client) can register this one server and
+This is the reusable core. Any MCP-capable harness (Claude Code, GitHub Copilot
+CLI, Codex, Cursor, Zed, your own client) can register this one server and
 consume it — directly, or wrapped in that harness's own subagent / instructions.
 The [Claude Code](../install-claude-readsubagent.sh) and
-[Copilot/VS Code](../install-copilot-readsubagent.sh) wrapper installers that
+[GitHub Copilot CLI](../install-copilot-readsubagent.sh) wrapper installers that
 ship beside this directory are examples.
 
 ## What the tool does
+
+The server negotiates MCP protocol versions `2025-11-25`, `2025-06-18`,
+`2025-03-26`, and `2024-11-05`, preferring `2025-11-25` for unknown newer or
+older clients. It supports both newline-delimited JSON and Content-Length framed
+JSON-RPC transports.
 
 `readsubagent` takes a targeted factual question (plus optional `paths`,
 `symbols`, `searchTerms`, `lineRanges`, `output`, `maxReportChars`, `cwd`) and
@@ -26,7 +31,7 @@ Under the hood it runs:
 ```bash
 pi --mode json -p --no-session --model lm-studio/qwen/qwen3.6-35b-a3b \
    --thinking off \
-   --exclude-tools readsubagent,explorationsubagent \
+   --exclude-tools readsubagent \
    --tools read,grep,find,ls \
    --append-system-prompt "<readsubagent prompt>" "<delegated task>"
 ```
@@ -125,18 +130,19 @@ enabled_tools = ["readsubagent"]
 # zz-codex-readsubagent-mcp:end
 ```
 
-**Copilot / VS Code** — workspace `.vscode/mcp.json`:
+**GitHub Copilot CLI** — project `.mcp.json`:
 
 ```json
-{ "servers": { "zz_readsubagent": { "type": "stdio",
+{ "mcpServers": { "zz_readsubagent": { "type": "local",
   "command": "python3",
   "args": [".zz-mcp/zz-readsubagent-mcp.py"],
-  "env": { "ZZ_READSUBAGENT_MODEL": "lm-studio/qwen/qwen3.6-35b-a3b" } } } }
+  "env": { "ZZ_READSUBAGENT_MODEL": "lm-studio/qwen/qwen3.6-35b-a3b" },
+  "tools": ["readsubagent"] } } }
 ```
 
-Then wrap it however your harness prefers — a dedicated subagent restricted to
-`mcp__zz_readsubagent__readsubagent`, or a directive in your project/system
-instructions telling the main agent to use it for read planning before focused
-reads. The [Claude Code wrapper](../install-claude-readsubagent.sh) does the former;
-the [Copilot/VS Code wrapper](../install-copilot-readsubagent.sh) writes project
-instructions for the latter.
+Then wrap it however your harness prefers — a dedicated agent restricted to the
+MCP tool, a reusable agent skill, or project instructions telling the main agent
+to use it before focused reads. The
+[Claude Code wrapper](../install-claude-readsubagent.sh) and
+[GitHub Copilot CLI wrapper](../install-copilot-readsubagent.sh) now install all
+three entry points using each harness's native syntax.

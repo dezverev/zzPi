@@ -9,6 +9,46 @@ export interface ParsedImplementationPieceReport {
   readonly status: ImplementationPieceStatus;
 }
 
+export type ImplementationPieceReportParseFailureKind = "format" | "semantic";
+
+export type ImplementationPieceReportParseFailureCode =
+  | "empty-report"
+  | "status-heading-missing"
+  | "status-heading-duplicate"
+  | "status-not-first"
+  | "status-heading-format"
+  | "status-value-invalid"
+  | "status-extra-content"
+  | "confidence-heading-missing"
+  | "confidence-heading-duplicate"
+  | "confidence-not-after-status"
+  | "confidence-heading-format"
+  | "confidence-value-format"
+  | "confidence-extra-content"
+  | "completed-below-threshold"
+  | "completed-has-low-confidence-sections"
+  | "low-confidence-reason-missing"
+  | "low-confidence-reason-duplicate"
+  | "low-confidence-reason-heading-format"
+  | "low-confidence-reason-empty"
+  | "low-confidence-reason-not-substantive"
+  | "clarifications-missing"
+  | "clarifications-duplicate"
+  | "clarifications-heading-format"
+  | "clarifications-empty"
+  | "clarifications-not-actionable";
+
+export interface ImplementationPieceReportParseFailure {
+  readonly code: ImplementationPieceReportParseFailureCode;
+  readonly kind: ImplementationPieceReportParseFailureKind;
+  readonly message: string;
+  readonly ok: false;
+}
+
+export type ImplementationPieceReportParseResult =
+  | { readonly ok: true; readonly report: ParsedImplementationPieceReport }
+  | ImplementationPieceReportParseFailure;
+
 export interface ImplementationConfidenceCheckpoint {
   readonly phase: string;
   readonly score: number;
@@ -69,53 +109,99 @@ function isReservedHeading(line: string, headingName: string): boolean {
   return normalizeLevelTwoHeading(line) === headingName.toLowerCase();
 }
 
-export function parseImplementationPieceStatus(markdown: string): ImplementationPieceStatus | undefined {
-  const lines = markdown.replaceAll("\r\n", "\n").split("\n");
-  if (lines.filter((line) => isReservedHeading(line, "Status")).length !== 1) return undefined;
-  if (lines[0]?.trim() !== "## Status") return undefined;
-  const status = lines[1]?.trim();
-  if (status !== "completed" && status !== "needs-decomposition" && status !== "blocked") {
-    return undefined;
-  }
-  let nextContent = 2;
-  while (nextContent < lines.length && !lines[nextContent]?.trim()) nextContent += 1;
-  const nextLine = lines[nextContent]?.trim() ?? "";
-  if (nextContent < lines.length && !nextLine.startsWith("## ")) return undefined;
-  return status;
+function parseFailure(
+  kind: ImplementationPieceReportParseFailureKind,
+  code: ImplementationPieceReportParseFailureCode,
+  message: string,
+): ImplementationPieceReportParseFailure {
+  return { code, kind, message, ok: false };
 }
 
-export function parseImplementationPieceConfidence(markdown: string): number | undefined {
-  if (!parseImplementationPieceStatus(markdown)) return undefined;
-  const lines = markdown.replaceAll("\r\n", "\n").split("\n");
-  if (lines.filter((line) => isReservedHeading(line, "Confidence")).length !== 1) return undefined;
-  let confidenceHeading = 2;
-  while (confidenceHeading < lines.length && !lines[confidenceHeading]?.trim()) confidenceHeading += 1;
-  if (lines[confidenceHeading]?.trim() !== "## Confidence") return undefined;
+function reportLines(markdown: string): string[] {
+  return markdown.replaceAll("\r\n", "\n").split("\n");
+}
 
+function headingIndices(lines: readonly string[], headingName: string): number[] {
+  const indices: number[] = [];
+  for (let index = 0; index < lines.length; index += 1) {
+    if (isReservedHeading(lines[index] ?? "", headingName)) indices.push(index);
+  }
+  return indices;
+}
+
+interface ParsedStatusStage {
+  readonly lines: readonly string[];
+  readonly status: ImplementationPieceStatus;
+}
+
+interface ParsedConfidenceStage extends ParsedStatusStage {
+  readonly confidence: number;
+}
+
+type StageResult<T> = { readonly ok: true; readonly value: T } | ImplementationPieceReportParseFailure;
+
+function parseStatusStage(markdown: string): StageResult<ParsedStatusStage> {
+  const lines = reportLines(markdown);
+  const indices = headingIndices(lines, "Status");
+  if (indices.length === 0) {
+    return parseFailure("format", "status-heading-missing", "Report must contain exactly one `## Status` heading.");
+  }
+  if (indices.length > 1) {
+    return parseFailure("format", "status-heading-duplicate", "Report contains more than one Status heading.");
+  }
+  const statusHeading = indices[0]!;
+  if (statusHeading !== 0) {
+    return parseFailure("format", "status-not-first", "`## Status` must be the first line of the report.");
+  }
+  if (lines[statusHeading]?.trim() !== "## Status") {
+    return parseFailure("format", "status-heading-format", "Status heading must be exactly `## Status`.");
+  }
+  const status = lines[statusHeading + 1]?.trim();
+  if (status !== "completed" && status !== "needs-decomposition" && status !== "blocked") {
+    return parseFailure(
+      "format",
+      "status-value-invalid",
+      "Status must be exactly `completed`, `needs-decomposition`, or `blocked` on the next line.",
+    );
+  }
+  let nextContent = statusHeading + 2;
+  while (nextContent < lines.length && !lines[nextContent]?.trim()) nextContent += 1;
+  if (nextContent < lines.length && normalizeLevelTwoHeading(lines[nextContent] ?? "") === undefined) {
+    return parseFailure("format", "status-extra-content", "Status value must be followed by a level-two section heading.");
+  }
+  return { ok: true, value: { lines, status } };
+}
+
+function parseConfidenceStage(markdown: string): StageResult<ParsedConfidenceStage> {
+  const statusResult = parseStatusStage(markdown);
+  if (!statusResult.ok) return statusResult;
+  const { lines, status } = statusResult.value;
+  const indices = headingIndices(lines, "Confidence");
+  if (indices.length === 0) {
+    return parseFailure("format", "confidence-heading-missing", "Report must contain exactly one `## Confidence` heading.");
+  }
+  if (indices.length > 1) {
+    return parseFailure("format", "confidence-heading-duplicate", "Report contains more than one Confidence heading.");
+  }
+  let expectedHeading = 2;
+  while (expectedHeading < lines.length && !lines[expectedHeading]?.trim()) expectedHeading += 1;
+  const confidenceHeading = indices[0]!;
+  if (confidenceHeading !== expectedHeading) {
+    return parseFailure("format", "confidence-not-after-status", "`## Confidence` must immediately follow the Status block.");
+  }
+  if (lines[confidenceHeading]?.trim() !== "## Confidence") {
+    return parseFailure("format", "confidence-heading-format", "Confidence heading must be exactly `## Confidence`.");
+  }
   const match = /^(0|[1-9]\d?|100)%$/.exec(lines[confidenceHeading + 1]?.trim() ?? "");
-  if (!match) return undefined;
+  if (!match) {
+    return parseFailure("format", "confidence-value-format", "Confidence must be one integer percentage from `0%` through `100%`.");
+  }
   let nextContent = confidenceHeading + 2;
   while (nextContent < lines.length && !lines[nextContent]?.trim()) nextContent += 1;
-  const nextLine = lines[nextContent]?.trim() ?? "";
-  if (nextContent < lines.length && !nextLine.startsWith("## ")) return undefined;
-  return Number(match[1]);
-}
-
-function parseRequiredReportSection(markdown: string, heading: string): string | undefined {
-  const lines = markdown.replaceAll("\r\n", "\n").split("\n");
-  const matchingHeadings: number[] = [];
-  const headingName = heading.replace(/^##[ \t]+/, "");
-  for (let index = 0; index < lines.length; index += 1) {
-    if (isReservedHeading(lines[index] ?? "", headingName)) matchingHeadings.push(index);
+  if (nextContent < lines.length && normalizeLevelTwoHeading(lines[nextContent] ?? "") === undefined) {
+    return parseFailure("format", "confidence-extra-content", "Confidence value must be followed by a level-two section heading.");
   }
-  if (matchingHeadings.length !== 1) return undefined;
-  if (lines[matchingHeadings[0]!]?.trim() !== heading) return undefined;
-
-  const bodyStart = matchingHeadings[0]! + 1;
-  let bodyEnd = bodyStart;
-  while (bodyEnd < lines.length && !lines[bodyEnd]?.trim().startsWith("## ")) bodyEnd += 1;
-  const body = lines.slice(bodyStart, bodyEnd).join("\n").trim();
-  return body || undefined;
+  return { ok: true, value: { confidence: Number(match[1]), lines, status } };
 }
 
 function isSubstantiveReportText(
@@ -138,30 +224,122 @@ function isSubstantiveReportText(
     || /\b(?:choose|clarify|confirm|decide|determine|provide|specify)\b/i.test(value);
 }
 
-export function parseImplementationPieceReport(markdown: string): ParsedImplementationPieceReport | undefined {
-  const status = parseImplementationPieceStatus(markdown);
-  const confidence = parseImplementationPieceConfidence(markdown);
-  if (!status || confidence === undefined) return undefined;
+function parseRequiredReportSection(options: {
+  readonly emptyCode: ImplementationPieceReportParseFailureCode;
+  readonly heading: string;
+  readonly headingFormatCode: ImplementationPieceReportParseFailureCode;
+  readonly lines: readonly string[];
+  readonly missingCode: ImplementationPieceReportParseFailureCode;
+  readonly duplicateCode: ImplementationPieceReportParseFailureCode;
+}): StageResult<string> {
+  const headingName = options.heading.replace(/^##[ \t]+/, "");
+  const indices = headingIndices(options.lines, headingName);
+  if (indices.length === 0) {
+    return parseFailure("semantic", options.missingCode, `Low-confidence report must include ${options.heading}.`);
+  }
+  if (indices.length > 1) {
+    return parseFailure("format", options.duplicateCode, `Report contains more than one ${options.heading} heading.`);
+  }
+  const headingIndex = indices[0]!;
+  if (options.lines[headingIndex]?.trim() !== options.heading) {
+    return parseFailure("format", options.headingFormatCode, `Heading must be exactly ${options.heading}.`);
+  }
+  const bodyStart = headingIndex + 1;
+  let bodyEnd = bodyStart;
+  while (bodyEnd < options.lines.length && normalizeLevelTwoHeading(options.lines[bodyEnd] ?? "") === undefined) bodyEnd += 1;
+  const body = options.lines.slice(bodyStart, bodyEnd).join("\n").trim();
+  if (!body) {
+    return parseFailure("semantic", options.emptyCode, `${options.heading} must contain substantive text.`);
+  }
+  return { ok: true, value: body };
+}
+
+export function parseImplementationPieceStatus(markdown: string): ImplementationPieceStatus | undefined {
+  const result = parseStatusStage(markdown);
+  return result.ok ? result.value.status : undefined;
+}
+
+export function parseImplementationPieceConfidence(markdown: string): number | undefined {
+  const result = parseConfidenceStage(markdown);
+  return result.ok ? result.value.confidence : undefined;
+}
+
+export function diagnoseImplementationPieceReport(markdown: string): ImplementationPieceReportParseResult {
+  if (!markdown.trim()) return parseFailure("format", "empty-report", "Implementation report is empty.");
+  const confidenceResult = parseConfidenceStage(markdown);
+  if (!confidenceResult.ok) return confidenceResult;
+  const { confidence, lines, status } = confidenceResult.value;
   if (confidence >= IMPLEMENTATION_CONFIDENCE_THRESHOLD) {
-    const lines = markdown.replaceAll("\r\n", "\n").split("\n");
     if (
       status === "completed"
       && lines.some((line) => (
         isReservedHeading(line, "Low-confidence reason")
         || isReservedHeading(line, "Clarifications needed")
       ))
-    ) return undefined;
-    return { confidence, status };
+    ) {
+      return parseFailure(
+        "semantic",
+        "completed-has-low-confidence-sections",
+        "A completed report at or above the confidence threshold must not include reserved low-confidence sections.",
+      );
+    }
+    return { ok: true, report: { confidence, status } };
   }
-  if (status === "completed") return undefined;
+  if (status === "completed") {
+    return parseFailure(
+      "semantic",
+      "completed-below-threshold",
+      `A completed report must have confidence of at least ${IMPLEMENTATION_CONFIDENCE_THRESHOLD}%.`,
+    );
+  }
 
-  const lowConfidenceReason = parseRequiredReportSection(markdown, "## Low-confidence reason");
-  const clarificationsNeeded = parseRequiredReportSection(markdown, "## Clarifications needed");
-  if (
-    !isSubstantiveReportText(lowConfidenceReason, "reason")
-    || !isSubstantiveReportText(clarificationsNeeded, "clarification")
-  ) return undefined;
-  return { clarificationsNeeded, confidence, lowConfidenceReason, status };
+  const reasonResult = parseRequiredReportSection({
+    duplicateCode: "low-confidence-reason-duplicate",
+    emptyCode: "low-confidence-reason-empty",
+    heading: "## Low-confidence reason",
+    headingFormatCode: "low-confidence-reason-heading-format",
+    lines,
+    missingCode: "low-confidence-reason-missing",
+  });
+  if (!reasonResult.ok) return reasonResult;
+  if (!isSubstantiveReportText(reasonResult.value, "reason")) {
+    return parseFailure(
+      "semantic",
+      "low-confidence-reason-not-substantive",
+      "Low-confidence reason must contain specific, substantive evidence rather than boilerplate.",
+    );
+  }
+
+  const clarificationResult = parseRequiredReportSection({
+    duplicateCode: "clarifications-duplicate",
+    emptyCode: "clarifications-empty",
+    heading: "## Clarifications needed",
+    headingFormatCode: "clarifications-heading-format",
+    lines,
+    missingCode: "clarifications-missing",
+  });
+  if (!clarificationResult.ok) return clarificationResult;
+  if (!isSubstantiveReportText(clarificationResult.value, "clarification")) {
+    return parseFailure(
+      "semantic",
+      "clarifications-not-actionable",
+      "Clarifications needed must ask a concrete question or request a specific parent decision.",
+    );
+  }
+  return {
+    ok: true,
+    report: {
+      clarificationsNeeded: clarificationResult.value,
+      confidence,
+      lowConfidenceReason: reasonResult.value,
+      status,
+    },
+  };
+}
+
+export function parseImplementationPieceReport(markdown: string): ParsedImplementationPieceReport | undefined {
+  const result = diagnoseImplementationPieceReport(markdown);
+  return result.ok ? result.report : undefined;
 }
 
 function isValidConfidenceCheckpointSequence(

@@ -12,7 +12,7 @@ The child invocation mirrors the Pi ``readsubagent`` extension
 runner (clients/zz-lib/extensions/zz-lib/child-pi-agent.ts):
 
     pi --mode json -p --no-session --model <selector> --thinking off \
-       --exclude-tools readsubagent,explorationsubagent \
+       --exclude-tools readsubagent \
        --tools read,grep,find,ls \
        --append-system-prompt "<system prompt>" "<delegated task>"
 
@@ -29,14 +29,19 @@ Everything non-protocol goes to stderr.
 from __future__ import annotations
 
 import json
+import math
 import os
+import re
 import subprocess
 import sys
 from typing import Any
 
 SERVER_NAME = "zz_readsubagent"
-SERVER_VERSION = "1.1.0"
-DEFAULT_PROTOCOL_VERSION = "2025-06-18"
+SERVER_VERSION = "1.2.1"
+DEFAULT_PROTOCOL_VERSION = "2025-11-25"
+SUPPORTED_PROTOCOL_VERSIONS = frozenset(
+    {DEFAULT_PROTOCOL_VERSION, "2025-06-18", "2025-03-26", "2024-11-05"}
+)
 
 # --- Defaults (overridable via environment) ---------------------------------
 
@@ -46,29 +51,89 @@ DEFAULT_THINKING = "off"
 DEFAULT_TOOLS = "read,grep,find,ls"
 DEFAULT_TIMEOUT_MS = 30 * 60 * 1000
 DEFAULT_REPORT_MAX_CHARS = 16_000
-EXCLUDED_CHILD_TOOLS = "readsubagent,explorationsubagent"
+EXCLUDED_CHILD_TOOLS = "readsubagent"
+PROHIBITED_REQUEST_MESSAGE = (
+    "readsubagent refused this explicit debugging or diagnostic-artifact request "
+    "before child launch. Inspect source and diagnostic evidence directly in the "
+    "parent, or use a debugger for root-cause diagnosis."
+)
+DIRECT_DEBUG_COMMAND_RE = re.compile(
+    r"\b(?:debug|diagnose|troubleshoot)\b(?!\s+(?:command|function|implementation|"
+    r"option|flag|configuration|config|mode|logging|logger)\b)",
+    re.IGNORECASE,
+)
+EXPLICIT_DEBUG_REQUEST_RE = re.compile(
+    r"\b(?:debug|diagnos(?:e|ing)|troubleshoot|investigat(?:e|ing)|analy[sz]e|"
+    r"examine|inspect|review|look\s+(?:into|over)|figure\s+out|fix|find|identify|"
+    r"help\s+me\s+(?:find|understand)|tell\s+me|what\s+caused|"
+    r"what\s+went\s+wrong|why)\b.{0,120}\b(?:bug|fail(?:s|ed|ing|ure)?|"
+    r"error|regression|flaky[-\s]+test|incident|crash(?:es|ed|ing)?|timeouts?|"
+    r"timed\s+out|logs?|stack\s+traces?|failure\s+output|"
+    r"unexpected[-\s]+runtime(?:\s+behavior)?)\b",
+    re.IGNORECASE | re.DOTALL | re.MULTILINE,
+)
+STRONG_DEBUG_REQUEST_RE = re.compile(
+    r"\b(?:debug|diagnos(?:e|ing)|troubleshoot|investigat(?:e|ing)|look\s+(?:into|over)|"
+    r"figure\s+out|fix|find|identify|what\s+caused|what\s+went\s+wrong|why)\b"
+    r".{0,120}\b(?:bug|fail(?:s|ed|ing)?|error|crash(?:es|ed|ing)?|timeouts?|"
+    r"timed\s+out|root[-\s]+cause)\b",
+    re.IGNORECASE | re.DOTALL | re.MULTILINE,
+)
+DIAGNOSTIC_ARTIFACT_RE = re.compile(
+    r"\b(?:logs|log\s+(?:file|output|excerpt|entries)|stack\s+traces?|"
+    r"crash\s+reports?|core\s+dumps?|test\s+failure\s+output|failure\s+output|"
+    r"execution\s+traces?|profiler\s+output|runtime\s+captures?|"
+    r"diagnostic\s+screenshots?)\b|\b\S+\.log\b",
+    re.IGNORECASE,
+)
+CONCRETE_DIAGNOSTIC_EVIDENCE_RE = re.compile(
+    r"(?:^|[\s\"'(])(?:[A-Za-z]:\\)?(?:[\w.-]+[\\/])*[\w-][\w.-]*\.log(?:$|[\s\"')])|"
+    r"\b(?:this|these|attached)\s+(?:logs?|stack\s+traces?|failure\s+output|"
+    r"crash\s+reports?)\b|\b(?:logs?|log\s+output|stack\s+traces?|"
+    r"failure\s+output)\s+from\s+(?:runtime|production|staging|the\s+server|"
+    r"the\s+request|the\s+test\s+run)\b",
+    re.IGNORECASE | re.DOTALL | re.MULTILINE,
+)
+ORDINARY_TOOLING_TOPIC_RE = re.compile(
+    r"(?:\b(?:stack\s+traces?|logs?|log\s+output|failures?)|\.log\s+files?)\s+"
+    r"(?:parser|parsing|format(?:ter|ting)?|configuration|config|option|schema|"
+    r"extension(?:\s+handling)?|implementation|handler|handling|type|class|"
+    r"module)\b|\b(?:parses?|handles?|formats?|configures?|implements?)\s+"
+    r"(?:stack\s+traces?|logs?|log\s+output|\.log\s+files?|failures?)\b",
+    re.IGNORECASE,
+)
+DIAGNOSTIC_INSPECTION_RE = re.compile(
+    r"\b(?:debug|diagnos(?:e|ing)|troubleshoot|investigat(?:e|ing)|inspect|"
+    r"examine|analy[sz]e|summari[sz]e|review|read|explain|interpret|extract|"
+    r"check|scan|parse|look\s+at|tell\s+me|what\s+(?:does|is|happened)|why)\b",
+    re.IGNORECASE,
+)
 
 # Ported verbatim from DEFAULT_READSUBAGENT_CONFIG.systemPrompt in
 # clients/pi-plugs/extensions/readsubagent.ts so the child behaves identically.
 DEFAULT_SYSTEM_PROMPT = (
-    "You are a read-only file-inspection subagent spawned by Pi. The parent "
-    "delegates to you instead of reading files directly when it needs factual "
-    "answers, summaries, extracted snippets, symbol locations, docs/config "
-    "details, or line ranges without raw contents in the parent context. Use "
-    "tools as needed to inspect only the requested repo-relative paths and "
-    "nearby supporting files. Do not edit or write files. Do not create "
-    "implementation plans, solution proposals, edit strategies, code-review "
-    "judgments, bug findings, correctness assessments, control-flow/type-safety "
-    "analysis, or accept/reject recommendations. Your job is factual "
-    "inspection, evidence, descriptive API/flow maps, and line-range pointers "
-    "only. If the parent asks for hard logic, review, or whether code is "
-    "correct/acceptable, state that this is outside readsubagent scope and "
-    "return only the factual evidence/locations that would support a separate "
-    "review. Start with the answer, then cite evidence with repo-relative paths "
-    "and line numbers when possible. Prefer summaries and exact line ranges the "
-    "parent can read later; include concrete snippets only when necessary and "
-    "keep them short. Never dump whole files or raw tool output; if the question "
-    "is too broad, propose a narrower factual follow-up."
+    "You are a read-only, non-debug codebase scout and read-planning subagent. "
+    "Evaluate task context first. Refuse every request involving debugging, "
+    "failure diagnosis, regression or flaky-test investigation, incident "
+    "response, or unexpected-runtime investigation. Never inspect or analyze "
+    "logs, stack traces, crash reports, core dumps, test failure output, traces, "
+    "profiler output, runtime captures, diagnostic screenshots, or similar "
+    "diagnostic artifacts. Direct the parent to inspect source, config, "
+    "documentation, and diagnostic evidence directly or use a debugger; do not "
+    "provide partial diagnostic analysis, scout the debug path, suggest "
+    "diagnostic evidence, or gather root-cause evidence. Outside debugging, "
+    "inspect only requested repo-relative paths and nearby supporting files. "
+    "Prefer a short subsystem map, candidate files, search/symbol/line anchors, "
+    "the smallest focused read list, avoid-for-now areas, and explicit "
+    "uncertainty. Focused factual answers about ordinary code, config, "
+    "documentation, and how-to material remain supported. Do not edit or write "
+    "files. Do not create implementation plans, solution proposals, edit "
+    "strategies, code-review judgments, bug findings, correctness assessments, "
+    "control-flow/type-safety analysis, design advice, or accept/reject "
+    "recommendations. Start with the answer or read plan, then cite "
+    "repo-relative paths and line numbers. Keep snippets short, never dump whole "
+    "files or raw tool output, and ask for a narrower non-debug question when "
+    "the request is too broad."
 )
 
 
@@ -196,24 +261,30 @@ def build_child_prompt(task: str) -> str:
         [
             "You are running as the child process for the parent readsubagent "
             "tool.",
-            "Your job is to answer a targeted factual file-inspection question "
-            "without sending full file contents back to the parent context.",
-            "Use read/search tools as needed to deliver the best factual "
-            "report. Do not modify files. Treat target paths, symbols, search "
-            "terms, and line ranges as the intended scope.",
+            "First evaluate task context. You are only a non-debug codebase "
+            "scout/read planner and focused factual file-inspection agent.",
+            "Refuse debugging, failure diagnosis, regression or flaky-test "
+            "investigation, incident response, and unexpected-runtime "
+            "investigation. Never inspect logs, stack traces, crash reports, "
+            "core dumps, test failure output, traces, profiler output, runtime "
+            "captures, diagnostic screenshots, or similar artifacts. Tell the "
+            "parent to inspect them directly or use a debugger, and do not "
+            "provide partial diagnostic analysis.",
+            "For allowed non-debug work, use read/search tools without modifying "
+            "files. Treat target paths, symbols, search terms, and line ranges "
+            "as scope. Prefer a short subsystem map, focused read list, anchors, "
+            "avoid-for-now areas, and uncertainty; focused factual answers about "
+            "ordinary code, config, and documentation remain supported.",
             "Use grep or focused reads so you can cite repo-relative paths and "
-            "line numbers. Avoid broad repo-wide searches unless the question "
-            "has no target path and no search terms.",
-            "Return the smallest useful report: direct answer first, citations "
-            "second, and exact short snippets only where useful. Do not create "
-            "implementation plans, solution proposals, edit strategies, "
-            "code-review judgments, bug findings, correctness assessments, "
-            "control-flow/type-safety analysis, or accept/reject "
-            "recommendations; provide factual repo evidence and line ranges "
-            "only. If asked for hard logic or review, say that is outside "
-            "readsubagent scope and provide only factual evidence/locations. If "
-            "you cannot answer precisely from the supplied scope, state the "
-            "narrow factual follow-up needed.",
+            "line numbers. Avoid broad repo-wide searches unless needed to "
+            "produce a bounded read plan.",
+            "Return the smallest useful report. Do not create implementation "
+            "plans, solution proposals, edit strategies, code-review judgments, "
+            "bug findings, correctness assessments, control-flow/type-safety "
+            "analysis, design advice, or accept/reject recommendations. If the "
+            "request crosses the boundary, refuse it rather than returning "
+            "partial evidence. If an allowed question is underspecified, state "
+            "the narrow non-debug follow-up needed.",
             f"Delegated file-inspection task:\n{task}",
         ]
     )
@@ -222,13 +293,13 @@ def build_child_prompt(task: str) -> str:
 def truncate_text(text: str, max_chars: int) -> str:
     if len(text) <= max_chars:
         return text
-    omitted = len(text) - max_chars
-    head_chars = max(1, int(max_chars * 0.65))
-    tail_chars = max(1, max_chars - head_chars - 120)
-    return (
-        f"{text[:head_chars]}\n\n[… {omitted} characters omitted …]\n\n"
-        f"{text[-tail_chars:]}"
-    )
+    marker = f"[… {len(text) - max_chars} characters omitted …]"
+    if max_chars <= len(marker) + 2:
+        return text[:max_chars]
+    available = max_chars - len(marker) - 2
+    head_chars = max(1, int(available * 0.65))
+    tail_chars = max(0, available - head_chars)
+    return f"{text[:head_chars]}\n{marker}\n{text[-tail_chars:] if tail_chars else ''}"
 
 
 # --- Running the headless pi child ------------------------------------------
@@ -301,7 +372,10 @@ def run_pi_child(cfg: dict[str, Any], task: str, cwd: str) -> dict[str, Any]:
             "exit_code": 127,
         }
     except subprocess.TimeoutExpired as exc:
-        partial = exc.stdout if isinstance(exc.stdout, str) else ""
+        if isinstance(exc.stdout, bytes):
+            partial = exc.stdout.decode("utf-8", "replace")
+        else:
+            partial = exc.stdout if isinstance(exc.stdout, str) else ""
         parsed = parse_pi_events(partial)
         report = parsed["output"] or (
             f"readsubagent timed out after {cfg['timeout_ms']}ms with no output. "
@@ -321,6 +395,8 @@ def run_pi_child(cfg: dict[str, Any], task: str, cwd: str) -> dict[str, Any]:
     output = parsed["output"] or parsed["error_message"] or stderr_text or "(no output)"
     completed = (
         proc.returncode == 0
+        and parsed["turns"] > 0
+        and bool(parsed["output"])
         and parsed["stop_reason"] != "error"
         and parsed["error_message"] is None
     )
@@ -394,6 +470,30 @@ def summarize_tool_calls(tool_calls: dict[str, int]) -> str:
     return ", ".join(f"{name} ×{count}" for name, count in tool_calls.items())
 
 
+def is_prohibited_readsubagent_request(arguments: dict[str, Any]) -> bool:
+    parts: list[str] = []
+    for name in ("question", "path", "paths", "symbols", "searchTerms", "lineRanges", "output"):
+        value = arguments.get(name)
+        if isinstance(value, str):
+            parts.append(value)
+        elif isinstance(value, list):
+            parts.extend(item for item in value if isinstance(item, str))
+    text = "\n".join(parts)
+    if DIRECT_DEBUG_COMMAND_RE.search(text):
+        return True
+    if CONCRETE_DIAGNOSTIC_EVIDENCE_RE.search(text):
+        return True
+    if EXPLICIT_DEBUG_REQUEST_RE.search(text):
+        if ORDINARY_TOOLING_TOPIC_RE.search(text) and not STRONG_DEBUG_REQUEST_RE.search(text):
+            return False
+        return True
+    if not (
+        DIAGNOSTIC_ARTIFACT_RE.search(text) and DIAGNOSTIC_INSPECTION_RE.search(text)
+    ):
+        return False
+    return not bool(ORDINARY_TOOLING_TOPIC_RE.search(text))
+
+
 def run_readsubagent(arguments: dict[str, Any]) -> dict[str, Any]:
     cfg = config()
     question = arguments.get("question")
@@ -410,24 +510,48 @@ def run_readsubagent(arguments: dict[str, Any]) -> dict[str, Any]:
     if isinstance(requested_max, (int, float)) and requested_max >= 1:
         report_max = min(report_max, int(requested_max))
 
+    if is_prohibited_readsubagent_request(arguments):
+        return {
+            "content": [
+                {"type": "text", "text": truncate_text(PROHIBITED_REQUEST_MESSAGE, report_max)}
+            ],
+            "isError": True,
+        }
+
     paths = normalize_path_list(arguments.get("path"), arguments.get("paths"))
     symbols = normalize_string_list(arguments.get("symbols"))
     search_terms = normalize_string_list(arguments.get("searchTerms"))
     line_ranges = normalize_string_list(arguments.get("lineRanges"))
     output = arguments.get("output") if isinstance(arguments.get("output"), str) else None
 
-    cwd = arguments.get("cwd")
-    if not isinstance(cwd, str) or not cwd.strip():
+    requested_cwd = arguments.get("cwd")
+    if isinstance(requested_cwd, str) and requested_cwd.strip():
+        cwd = requested_cwd
+        if not os.path.isdir(cwd):
+            return {
+                "content": [
+                    {
+                        "type": "text",
+                        "text": truncate_text(
+                            "invalid 'cwd': readsubagent expected an existing "
+                            f"directory, got {cwd!r}.",
+                            report_max,
+                        ),
+                    }
+                ],
+                "isError": True,
+            }
+    else:
         cwd = cfg["default_cwd"]
-    if not os.path.isdir(cwd):
-        cwd = os.getcwd()
+        if not os.path.isdir(cwd):
+            cwd = os.getcwd()
 
     task = format_delegated_task(
         question.strip(), paths, symbols, search_terms, line_ranges, output, report_max
     )
     result = run_pi_child(cfg, task, cwd)
 
-    report = truncate_text(result["output"].strip() or "(no output)", report_max)
+    report = result["output"].strip() or "(no output)"
     footer = "\n".join(
         [
             "",
@@ -436,9 +560,10 @@ def run_readsubagent(arguments: dict[str, Any]) -> dict[str, Any]:
             f"{result['turns']} turn(s) · tools: {summarize_tool_calls(result['tool_calls'])}_",
         ]
     )
+    response_text = truncate_text(report + "\n" + footer, report_max)
     return {
-        "content": [{"type": "text", "text": report + "\n" + footer}],
-        "isError": result["status"] not in ("completed",),
+        "content": [{"type": "text", "text": response_text}],
+        "isError": result["status"] != "completed",
     }
 
 
@@ -447,25 +572,36 @@ def run_readsubagent(arguments: dict[str, Any]) -> dict[str, Any]:
 TOOL_DESCRIPTOR = {
     "name": "readsubagent",
     "description": (
-        "Read-only codebase scout running on a LOCAL model (Qwen via LM Studio, "
-        "through a headless pi child). Ask it targeted factual questions about "
-        "files when you need an answer, summary, symbol location, descriptive "
-        "API/flow map, or exact line ranges rather than raw file contents in "
-        "your context. It inspects files read-only and returns a concise, cited "
-        "report. Do NOT use it for code review, bug finding, correctness/"
-        "type-safety judgments, edit strategies, or implementation planning. "
-        "The local model can be slow — allow a long timeout and wait."
+        "Read-only, non-debug codebase scout and read planner running on a LOCAL "
+        "model (Qwen via LM Studio, through a headless pi child). Use it first "
+        "for a bounded subsystem map, candidate files, anchors, focused read "
+        "list, avoid-for-now areas, and uncertainty, or for focused factual "
+        "answers about ordinary code, config, and documentation. Never use it "
+        "for debugging, failure diagnosis, incidents, regressions, flaky tests, "
+        "unexpected runtime behavior, logs, stack traces, crash reports, core "
+        "dumps, test failure output, traces, profiler output, runtime captures, "
+        "diagnostic screenshots, or similar artifacts. Inspect those directly "
+        "or use a debugger. Do NOT use it for review, bug finding, correctness/"
+        "type-safety judgments, design, edit strategies, or implementation "
+        "planning. The local model can be slow — allow a long timeout and wait."
     ),
+    "annotations": {
+        "title": "Read Subagent",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": False,
+    },
     "inputSchema": {
         "type": "object",
         "properties": {
             "question": {
                 "type": "string",
                 "description": (
-                    "Targeted factual question for the child file-inspection "
-                    "agent: what to find, summarize, compare, extract, or "
-                    "explain from file contents. Do not ask it to judge "
-                    "correctness or review code."
+                    "Non-debug scouting/read-planning or focused factual "
+                    "question about ordinary code, config, or documentation. "
+                    "Never include debugging work or diagnostic artifacts; do "
+                    "not ask for judgment, diagnosis, or review."
                 ),
             },
             "path": {
@@ -501,8 +637,9 @@ TOOL_DESCRIPTOR = {
             "output": {
                 "type": "string",
                 "description": (
-                    "Desired report shape and level of detail, e.g. concise "
-                    "answer, exact oldText block, or API summary."
+                    "Desired report shape, preferably a subsystem map, focused "
+                    "read list, anchors, avoid-for-now areas, and uncertainty, "
+                    "or a concise non-debug factual answer."
                 ),
             },
             "maxReportChars": {
@@ -528,7 +665,7 @@ TOOL_DESCRIPTOR = {
 # --- JSON-RPC / MCP transport ----------------------------------------------
 
 
-def send_message(message: dict[str, Any], framed: bool = False) -> None:
+def send_message(message: Any, framed: bool = False) -> None:
     payload = json.dumps(message).encode("utf-8")
     if framed:
         sys.stdout.buffer.write(f"Content-Length: {len(payload)}\r\n\r\n".encode("ascii"))
@@ -547,17 +684,49 @@ def make_error(request_id: Any, code: int, message: str) -> dict[str, Any]:
     return {"jsonrpc": "2.0", "id": request_id, "error": {"code": code, "message": message}}
 
 
+def invalid_params(request_id: Any, message: str = "params must be an object") -> dict[str, Any]:
+    return make_error(request_id, -32602, message)
+
+
 def handle_request(request: dict[str, Any]) -> dict[str, Any] | None:
-    method = request.get("method")
     request_id = request.get("id")
     is_notification = "id" not in request
+    valid_id = (
+        request_id is None
+        or isinstance(request_id, str)
+        or (
+            isinstance(request_id, (int, float))
+            and not isinstance(request_id, bool)
+            and (not isinstance(request_id, float) or math.isfinite(request_id))
+        )
+    )
+    if (
+        request.get("jsonrpc") != "2.0"
+        or not isinstance(request.get("method"), str)
+        or (not is_notification and not valid_id)
+    ):
+        return make_error(request_id if valid_id else None, -32600, "Invalid Request")
+
+    method = request["method"]
+    params = request.get("params", {})
+    if params is None:
+        params = {}
+    if not isinstance(params, dict):
+        return None if is_notification else invalid_params(request_id)
+
+    # JSON-RPC notifications never receive responses. MCP currently defines no
+    # notification here that requires server-side state beyond initialization.
+    if is_notification:
+        return None
 
     if method == "initialize":
-        params = request.get("params") or {}
         client_version = params.get("protocolVersion")
+        if not isinstance(client_version, str) or not client_version:
+            return invalid_params(request_id, "initialize protocolVersion must be a non-empty string")
         protocol_version = (
             client_version
-            if isinstance(client_version, str) and client_version.strip()
+            if isinstance(client_version, str)
+            and client_version in SUPPORTED_PROTOCOL_VERSIONS
             else DEFAULT_PROTOCOL_VERSION
         )
         return make_result(
@@ -569,9 +738,6 @@ def handle_request(request: dict[str, Any]) -> dict[str, Any] | None:
             },
         )
 
-    if method in ("notifications/initialized", "initialized"):
-        return None
-
     if method == "ping":
         return make_result(request_id, {})
 
@@ -579,11 +745,12 @@ def handle_request(request: dict[str, Any]) -> dict[str, Any] | None:
         return make_result(request_id, {"tools": [TOOL_DESCRIPTOR]})
 
     if method == "tools/call":
-        params = request.get("params") or {}
         name = params.get("name")
-        arguments = params.get("arguments") or {}
+        arguments = params.get("arguments", {})
         if name != "readsubagent":
-            return make_error(request_id, -32602, f"Unknown tool: {name}")
+            return invalid_params(request_id, f"Unknown tool: {name}")
+        if not isinstance(arguments, dict):
+            return invalid_params(request_id, "tools/call arguments must be an object")
         try:
             result = run_readsubagent(arguments)
         except Exception as exc:  # noqa: BLE001 - surface any failure as a tool error
@@ -594,9 +761,24 @@ def handle_request(request: dict[str, Any]) -> dict[str, Any] | None:
             }
         return make_result(request_id, result)
 
-    if is_notification:
-        return None
     return make_error(request_id, -32601, f"Method not found: {method}")
+
+
+def process_message(message: Any) -> Any | None:
+    if isinstance(message, list):
+        if not message:
+            return make_error(None, -32600, "Invalid Request")
+        responses = [
+            make_error(None, -32600, "Invalid Request")
+            if not isinstance(item, dict)
+            else handle_request(item)
+            for item in message
+        ]
+        filtered = [response for response in responses if response is not None]
+        return filtered or None
+    if not isinstance(message, dict):
+        return make_error(None, -32600, "Invalid Request")
+    return handle_request(message)
 
 
 def read_framed_body(first_header_line: bytes) -> bytes | None:
@@ -648,13 +830,9 @@ def main() -> int:
             send_message(make_error(None, -32700, "Parse error"), framed=framed)
             continue
 
-        messages = message if isinstance(message, list) else [message]
-        for item in messages:
-            if not isinstance(item, dict):
-                continue
-            response = handle_request(item)
-            if response is not None:
-                send_message(response, framed=framed)
+        response = process_message(message)
+        if response is not None:
+            send_message(response, framed=framed)
     return 0
 
 

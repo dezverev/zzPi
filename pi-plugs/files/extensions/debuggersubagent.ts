@@ -24,10 +24,15 @@ import {
 } from "./lib/standalone-agent-common.ts";
 
 const CONFIG_FILE_PATH = ".pi/extensions/debuggersubagent.config.jsonc";
+const MODEL_OPTIONS_CONFIG_FILE_PATH = ".pi/extensions/zz-agent-models.config.jsonc";
 const DEBUGGERSUBAGENT_MESSAGE_TYPE = "debuggersubagent-report";
 const DEBUGGERSUBAGENT_STATE_ENTRY_TYPE = "debuggersubagent-state";
-const DEFAULT_TOOLS = ["read", "bash", "grep", "find", "ls", "readsubagent"] as const;
-const NESTED_DEBUGGER_TOOLS = ["read", "readsubagent"] as const;
+const DEFAULT_TOOLS = ["read", "bash", "grep", "find", "ls"] as const;
+const NESTED_DEBUGGER_TOOLS = ["read", "bash", "grep", "find", "ls"] as const;
+const DEBUGGER_EXCLUDED_TOOLS = [
+  ...STANDALONE_AGENT_EXCLUDED_TOOLS,
+  "readsubagent", "edit", "write", "implementationsubagent",
+] as const;
 
 const DEFAULT_DEBUGGERSUBAGENT_CONFIG: ChildPiAgentConfig = {
   contextWindow: 272_000,
@@ -39,8 +44,8 @@ const DEFAULT_DEBUGGERSUBAGENT_CONFIG: ChildPiAgentConfig = {
   reportMaxChars: 32_000,
   requestTimeoutMs: 30 * 60 * 1_000,
   systemPrompt:
-    "You are debuggersubagent, a standalone root-cause debugging specialist for Pi. Diagnose bugs, failures, regressions, flaky tests, and suspicious behavior before implementation begins. Gather repository evidence, identify the most likely root cause, recommend a focused fix, and return only the requested JSON. Do not edit files; the parent agent decides whether and how to apply fixes.",
-  thinking: "xhigh",
+    "You are debuggersubagent, a standalone diagnosis-only root-cause debugging specialist for Pi. Diagnose bugs, failures, regressions, flaky tests, and suspicious behavior before implementation begins. Inspect evidence directly, identify the most likely root cause, recommend a focused fix, and return only the requested JSON. You may run reproductions, tests, builds, linters, profilers, trace capture, and purpose-built ad hoc diagnostic scripts. Those commands may create ordinary generated diagnostic artifacts such as temporary files, caches, build/test output, coverage, traces, and screenshots; incidental diagnostic writes are expected. Do not intentionally edit existing repository source, tests, configuration, documentation, scripts, manifests, or lockfiles; apply the fix; mutate git history, index, or branches; install or remove packages; create virtualenvs or toolchains; switch versions via a version manager; change persistent project, application, or runtime state such as databases, services, containers, or durable fixtures; change persistent machine or user configuration; publish or change remote state; or perform destructive or irreversible operations. Read-only remote diagnostics are allowed. Isolate scratch artifacts where practical, identify material artifacts left behind in the report, and clean up only debugger-created disposable artifacts when safe; never delete user or project data. The parent agent decides whether and how to apply fixes.",
+  thinking: "medium",
   tools: DEFAULT_TOOLS,
 };
 
@@ -72,7 +77,9 @@ export type DebuggerSubagentRunResult = StandaloneAgentRunResult<DebuggerSubagen
 function buildDebuggerSubagentPrompt(task: string): string {
   return [
     "You are running as debuggersubagent, a standalone root-cause debugging specialist for Pi.",
-    "Inspect the repository and the supplied failure/problem using only the available read/search tools for evidence. Do not edit or write files. Do not call workflow or debuggersubagent tools.",
+    "Inspect repository and runtime evidence directly with the available read, search, and shell tools. Do not call readsubagent, workflow, debuggersubagent, or implementation tools.",
+    "You may run reproductions, tests, builds, linters, profilers, trace capture, and purpose-built ad hoc diagnostic scripts. These commands may create ordinary generated diagnostic artifacts such as temporary files, caches, build/test output, coverage, traces, and screenshots; incidental diagnostic writes are expected. Isolate scratch artifacts where practical and identify material artifacts left behind in the report. Cleanup is allowed only for debugger-created disposable artifacts when safe; never delete user or project data.",
+    "Remain diagnosis-only: do not intentionally edit existing repository source, tests, configuration, documentation, scripts, manifests, or lockfiles; apply the fix; mutate git history, index, or branches; install or remove packages (pip, npm, uv, cargo, apt, brew, or any other package manager); create virtualenvs or toolchains; switch versions via a version manager; change persistent project, application, or runtime state such as databases, services, containers, or durable fixtures; change persistent machine or user configuration; publish or change remote state; or perform destructive or irreversible operations. Read-only remote diagnostics are allowed. If a repro requires one of those actions, report the requirement and the exact command you would have run instead of running it.",
     "Return JSON only. Do not wrap it in markdown. Use one of these shapes:",
     `{"kind":"debug_analysis","rootCause":"most likely root cause","evidence":["file/path:line or command output"],"pattern":"bug pattern or failure mode","hypotheses":["alternative considered"],"recommendedFix":"focused implementation instruction","verificationCommands":["command to verify"],"architectureConcern":"optional broader concern"}`,
     `{"kind":"questions","summary":"why diagnosis needs user input","questions":["question 1"]}`,
@@ -168,9 +175,11 @@ const debuggerSubagent = createStandaloneChildAgent<DebuggerSubagentDecision>({
   commandDescription: "Run the standalone root-cause debugging specialist, inspect its config, or select its model",
   commandUsage: "/debuggersubagent model [model|default] | config | ask <problem>; or /debuggersubagent <problem>",
   configFilePath: CONFIG_FILE_PATH,
+  defaultModelOptionId: "gpt-5.6-sol-medium",
+  modelOptionsConfigFilePath: MODEL_OPTIONS_CONFIG_FILE_PATH,
   defaultConfig: DEFAULT_DEBUGGERSUBAGENT_CONFIG,
   displayName: "Debugger subagent",
-  excludeTools: STANDALONE_AGENT_EXCLUDED_TOOLS,
+  excludeTools: DEBUGGER_EXCLUDED_TOOLS,
   formatReport: formatDebuggerSubagentReport,
   messageType: DEBUGGERSUBAGENT_MESSAGE_TYPE,
   modelDisplaySuffix: " (debuggersubagent)",
@@ -235,14 +244,14 @@ export default function debuggerSubagentExtension(pi: ExtensionAPI): void {
     name: "debuggersubagent",
     label: "Debugger Subagent",
     description:
-      "Delegate root-cause diagnosis of bugs, failures, regressions, flaky tests, and suspicious behavior to a read-only child Pi agent. It gathers repository evidence and returns a structured diagnosis, focused fix recommendation, and verification commands.",
+      "Delegate root-cause diagnosis of bugs, failures, regressions, flaky tests, and suspicious behavior to a diagnosis-only child Pi agent. It gathers repository evidence and returns a structured diagnosis, focused fix recommendation, and verification commands without implementing the fix.",
     promptSnippet:
-      "Delegate evidence-based root-cause debugging to a read-only child Pi agent before implementing a fix",
+      "Delegate evidence-based root-cause debugging to a non-implementing child Pi agent before implementing a fix",
     promptGuidelines: [
       "Use debuggersubagent when a bug, regression, failing test, flaky behavior, or unexpected runtime result needs evidence-based root-cause analysis.",
       "Delegate before editing when the cause is uncertain; include symptoms, expected versus actual behavior, reproduction details, errors, and relevant paths when available.",
       "Treat the result as diagnostic evidence: inspect its root cause, alternatives, recommended fix, and verification commands before deciding what to change.",
-      "The debugger is read-only. Keep implementation, code-review judgment, git operations, and final verification in the parent workflow.",
+      "The debugger is diagnosis-only and may create incidental diagnostic artifacts. Keep implementation, code-review judgment, git operations, and final verification in the parent workflow.",
       "Do not use debuggersubagent for ordinary feature planning, factual file summarization, broad repo discovery, or bugs whose root cause is already established.",
     ],
     parameters: Type.Object({

@@ -54,5 +54,5 @@ if (-not $file) { exit 0 }
 if ($file -notmatch '\.(rs|ts|tsx|js|mjs|cjs|py)$') { exit 0 }
 
 New-Item -ItemType File -Force -Path $sentinel | Out-Null
-Write-Output '{"hookSpecificOutput":{"hookEventName":"PreToolUse","additionalContext":"Read-planning reminder: before focused reads of unfamiliar implementation files, scout the area FIRST with readsubagent — use the readsubagent skill/subagent, or call mcp__zz_readsubagent__readsubagent directly when you already know the targets — for a subsystem map and the smallest focused read list, then read against those anchors. Ignore this if you''ve already scouted here or are re-reading a known file."}}'
+Write-Output '{"hookSpecificOutput":{"hookEventName":"PreToolUse","additionalContext":"Read-planning reminder: outside debugging, before focused reads of unfamiliar implementation files, scout the area FIRST with readsubagent — use the readsubagent skill, which calls mcp__zz_readsubagent__readsubagent directly — for a subsystem map and the smallest focused read list, then read against those anchors. Ignore this scouting nudge during debugging or failure investigation; inspect logs, traces, failure output, and other diagnostic or root-cause evidence directly in the main agent or use the debugger. Otherwise, ignore this if you have already scouted here or are re-reading a known file."}}'
 exit 0

@@ -30,6 +30,14 @@ The middle layer should be thinner:
 
 This is not an argument that one framework is universally bad. It is a claim about fit: as harnesses and models become more capable, the useful workflow layer should get smaller, more conditional, and more explicit about what each token buys.
 
+## Why design is not a standalone loop
+
+Modern models are already capable of exploring options, asking clarifying questions, and drafting a plan in the main conversation. Encoding those native capabilities again as permanent `brainstormer`, `designplanner`, and `design-loop` agents added orchestration and context without creating a distinct control boundary. The standalone Pi products and their native Codex, Copilot, and retained Claude-reference counterparts were therefore retired.
+
+Direction now stays direct: bring your own requirements and decisions, or ask the parent model to brainstorm or design when the task actually needs it. The user and parent can compare alternatives in ordinary conversation and record only consequential decisions. There is no mandatory design ceremony and no standalone design agent that silently turns a recommendation into product direction.
+
+Structure becomes valuable at the implementation boundary. Before `implementationsubagent` runs, the parent writes the approved direction into the implementation-agent handoff contract: a Markdown document covering context, invariants, touchpoints, stages, acceptance criteria, risks, and focused validation, paired with the tool's bounded-task schema. These sections are workflow policy rather than a parsed document format. The durable contract gives the implementation child what it needs while leaving design itself flexible, manual, and native to the model and harness.
+
 ## The three context failures
 
 ### 1. Stale context and documentation rot
@@ -59,16 +67,16 @@ That makes model choice an operation-level decision:
 
 The objective is not "always use the cheapest model." It is **minimum viable model per operation**: the least expensive route that meets the quality bar for that role.
 
-## The minimum set of roles
+## The minimum set of roles and artifacts
 
-Each role exists because it closes a different failure loop.
+Each role or durable artifact exists because it closes a different failure loop.
 
-| Role | Tool | Failure it prevents |
+| Role or artifact | Tool or medium | Failure it prevents |
 |---|---|---|
 | Live grounding | `readsubagent` | Broad main-thread exploration, stale repository maps, and raw-file context pollution |
 | Root-cause diagnosis | `debuggersubagent` | Editing symptoms before establishing evidence for the cause |
-| Solution exploration | `brainstormer` | Locking onto the first plausible approach without material alternatives |
-| Selected design | `designplanner` / `design-loop` | Treating a recommendation as user approval or implementing an ungrounded plan |
+| Solution exploration and selection | Parent/user discussion recorded in a manual Markdown handoff or design document | Locking onto the first plausible approach or mistaking a recommendation for user approval |
+| Implementation contract | A context-rich Markdown implementation document under `docs/artifacts/implementationdocs` | Implementing an ungrounded direction or losing approved invariants, stages, and acceptance criteria |
 | Bounded execution | `implementationsubagent` | Feature-sized delegation, silent uncertainty, and an autonomous child owning integration |
 | Independent challenge | `vettingagents` | Letting one context both make and certify a high-value claim without separate challenge |
 | Economic routing | Per-agent model controls | Paying the strongest-model rate for every operation or forcing one local model onto every role |
@@ -83,8 +91,8 @@ The system has a direction without forcing every task through every stage:
 
 1. **Ground only where needed.** Ask for a factual read plan, then read the smallest exact slices required for judgment or editing.
 2. **Diagnose unexpected behavior before fixing it.** A debugger operating under a non-mutation contract gathers evidence and recommends focused verification.
-3. **Explore real design choices when the solution is not already selected.** Brainstorm materially distinct options; the parent protocol requires the user to select one before detailed design.
-4. **Write the implementation contract.** Put context, invariants, stages, risks, acceptance criteria, and validation in a durable Markdown brief.
+3. **Explore and record real design choices when the solution is not already selected.** Discuss materially distinct options in the parent thread, require the user to select one, and capture consequential design decisions in a manual Markdown handoff or design document.
+4. **Write the implementation contract.** Put context, invariants, stages, risks, acceptance criteria, and validation in a durable Markdown implementation document under `docs/artifacts/implementationdocs`.
 5. **Delegate one independently vettable piece.** Never hand an implementation child an entire feature or a vague "finish the rest" assignment.
 6. **Stop on uncertainty.** The child protocol requires confidence checkpoints and an early handoff when self-reported confidence falls below the threshold.
 7. **Review in the parent.** Inspect the report, ledger, diff, and focused tests before assigning another piece.
@@ -110,6 +118,7 @@ Remove one boundary and the corresponding shortcut reappears:
 - no live read agent: the main model spends context on discovery or trusts stale summaries;
 - no diagnostic role: implementation starts before root cause is established;
 - no explicit solution selection: the tool silently chooses product direction;
+- no structured implementation handoff: approved direction is lost between conversation and execution;
 - no bounded implementation contract: scope expands and review arrives too late;
 - no confidence stop: ambiguity is buried under plausible code;
 - no independent vetting: the same assumptions create and approve the artifact;
@@ -141,8 +150,8 @@ The system stays small because roles do not blur. These are workflow contracts: 
 
 - readers do not perform code review;
 - debuggers do not edit;
-- brainstormers do not turn recommendations into decisions;
-- designers do not implement;
+- option exploration does not turn recommendations into decisions;
+- manual design remains separate from implementation;
 - implementation children do not own decomposition, vetting, integration, or Git;
 - vetters do not mutate the artifact they judge;
 - the parent does not outsource final responsibility.

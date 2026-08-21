@@ -1,0 +1,12 @@
+{
+  // Registers the hardened Codex subscription proxy in Pi's normal /model picker.
+  // Set ZZ_CODEX_PROXY_KEY in the environment before starting Pi.
+  "enabled": true,
+  "provider": "zz-codex-proxy",
+  "name": "OpenAI Codex via zz proxy",
+  "baseUrl": "http://127.0.0.1/codex/pi/v1",
+  "apiKey": "$ZZ_CODEX_PROXY_KEY",
+  "model": "gpt-5.6-sol",
+  "contextWindow": 272000,
+  "maxTokens": 128000
+}

@@ -2,7 +2,9 @@
 // Paths are relative to this .pi directory.
 {
   "schemaVersion": 1,
-  "commonFiles": [],
+  "commonFiles": [
+    "docs/zzpi-customization.md"
+  ],
   "plugins": [
     {
       "id": "zz-plug-manager",
@@ -12,10 +14,16 @@
       "internal": true,
       "pluginDeps": [
         "right-overlay-tiler",
-        "zz-subagent-runtime"
+        "zz-subagent-runtime",
+        "zz-codex-proxy"
       ],
       "fileDeps": [
-        "extensions/zz-plug-manager.config.jsonc"
+        "extensions/zz-plug-manager.config.jsonc",
+        "extensions/lib/custom-plug-loader.ts",
+        "extensions/lib/custom-plug-activation.ts",
+        "extensions/lib/custom-plug-adapter.ts",
+        "extensions/lib/custom-plug-module-loader.ts",
+        "extensions/lib/custom-plug-types.ts"
       ],
       "configFiles": [
         "extensions/zz-plug-manager.config.jsonc"
@@ -47,7 +55,7 @@
       "sharedDeps": [
         {
           "id": "zz-lib",
-          "minVersion": "1.0.0"
+          "minVersion": "1.1.0"
         }
       ]
     },
@@ -57,14 +65,15 @@
       "description": "Internal shared child-Pi subagent helper library, endpoint config, and /zz-model-setup command for custom and bundled subagent extensions.",
       "entry": "extensions/00-zz-subagent-runtime.ts",
       "internal": true,
-      "pluginDeps": [],
+      "pluginDeps": [
+        "zz-local-models"
+      ],
       "fileDeps": [
         "extensions/local-model-endpoints.config.jsonc",
+        "extensions/zz-agent-models.config.jsonc",
         "extensions/lib/child-agent-model-options.ts"
       ],
-      "configFiles": [
-        "extensions/local-model-endpoints.config.jsonc"
-      ],
+      "configFiles": [],
       "tags": [
         "agent",
         "runtime",
@@ -73,7 +82,7 @@
       "sharedDeps": [
         {
           "id": "zz-lib",
-          "minVersion": "1.0.0"
+          "minVersion": "1.1.0"
         }
       ]
     },
@@ -86,9 +95,7 @@
       "fileDeps": [
         "extensions/zzLocalModels.config.jsonc"
       ],
-      "configFiles": [
-        "extensions/zzLocalModels.config.jsonc"
-      ],
+      "configFiles": [],
       "tags": [
         "model",
         "local-model",
@@ -97,7 +104,31 @@
       "sharedDeps": [
         {
           "id": "zz-lib",
-          "minVersion": "1.0.0"
+          "minVersion": "1.1.0"
+        }
+      ]
+    },
+    {
+      "id": "zz-codex-proxy",
+      "title": "zz Codex proxy provider",
+      "description": "Registers gpt-5.6-sol through the hardened Codex proxy in Pi's normal /model picker.",
+      "entry": "extensions/zzCodexProxy.ts",
+      "pluginDeps": [],
+      "fileDeps": [
+        "extensions/zzCodexProxy.config.jsonc"
+      ],
+      "configFiles": [
+        "extensions/zzCodexProxy.config.jsonc"
+      ],
+      "tags": [
+        "model",
+        "openai-codex",
+        "telemetry"
+      ],
+      "sharedDeps": [
+        {
+          "id": "zz-lib",
+          "minVersion": "1.1.0"
         }
       ]
     },
@@ -124,7 +155,7 @@
       "sharedDeps": [
         {
           "id": "zz-lib",
-          "minVersion": "1.0.0"
+          "minVersion": "1.1.0"
         }
       ]
     },
@@ -151,7 +182,7 @@
       "sharedDeps": [
         {
           "id": "zz-lib",
-          "minVersion": "1.0.0"
+          "minVersion": "1.1.0"
         }
       ]
     },
@@ -173,28 +204,26 @@
       "sharedDeps": [
         {
           "id": "zz-lib",
-          "minVersion": "1.0.0"
+          "minVersion": "1.1.0"
         }
       ]
     },
     {
       "id": "debuggersubagent",
       "title": "Debugger subagent",
-      "description": "Provides standalone read-only root-cause diagnosis for bugs, failures, regressions, flaky behavior, and suspicious runtime results.",
+      "description": "Provides standalone diagnosis-only root-cause analysis for bugs, failures, regressions, flaky behavior, and suspicious runtime results without implementing fixes.",
       "entry": "extensions/debuggersubagent.ts",
       "pluginDeps": [
-        "zz-subagent-runtime",
-        "readsubagent"
+        "zz-subagent-runtime"
       ],
       "fileDeps": [
         "extensions/debuggersubagent.config.jsonc",
         "extensions/lib/child-agent-model-options.ts",
         "extensions/lib/standalone-agent-common.ts",
+        "extensions/lib/standalone-parse-error.ts",
         "extensions/lib/subagent-model-preferences.ts"
       ],
-      "configFiles": [
-        "extensions/debuggersubagent.config.jsonc"
-      ],
+      "configFiles": [],
       "tags": [
         "agent",
         "debugging",
@@ -203,19 +232,18 @@
       "sharedDeps": [
         {
           "id": "zz-lib",
-          "minVersion": "1.0.0"
+          "minVersion": "1.1.0"
         }
       ]
     },
     {
       "id": "implementationsubagent",
       "title": "Implementation subagent",
-      "description": "Provides a main-agent-controlled implementation worker for one medium-to-small independently vettable piece from a Markdown implementation document, with a persistent progress ledger and nested read/debug tools.",
+      "description": "Provides a main-agent-controlled implementation worker for one medium-to-small independently vettable piece, with a persistent ledger and a non-debug readsubagent scout/read planner; debugging is handed back to the main agent.",
       "entry": "extensions/implementationsubagent.ts",
       "pluginDeps": [
         "zz-subagent-runtime",
-        "readsubagent",
-        "debuggersubagent"
+        "readsubagent"
       ],
       "fileDeps": [
         "extensions/implementationsubagent.config.jsonc",
@@ -225,11 +253,10 @@
         "extensions/lib/implementation-piece.ts",
         "extensions/lib/planning-artifact-paths.ts",
         "extensions/lib/standalone-agent-common.ts",
+        "extensions/lib/standalone-parse-error.ts",
         "extensions/lib/subagent-model-preferences.ts"
       ],
-      "configFiles": [
-        "extensions/implementationsubagent.config.jsonc"
-      ],
+      "configFiles": [],
       "tags": [
         "agent",
         "implementation",
@@ -238,59 +265,14 @@
       "sharedDeps": [
         {
           "id": "zz-lib",
-          "minVersion": "1.0.0"
+          "minVersion": "1.1.0"
         }
       ]
     },
     {
-      "id": "brainstormer",
-      "title": "Solution brainstormer",
-      "description": "Standalone read-only agent that researches and suggests structured solution options and tradeoffs.",
-      "entry": "extensions/brainstormer.ts",
-      "pluginDeps": ["zz-subagent-runtime", "readsubagent"],
-      "fileDeps": [
-        "extensions/brainstormer.config.jsonc",
-        "extensions/lib/child-agent-model-options.ts",
-        "extensions/lib/design-loop-types.ts",
-        "extensions/lib/standalone-agent-common.ts",
-        "extensions/lib/subagent-model-preferences.ts"
-      ],
-      "configFiles": ["extensions/brainstormer.config.jsonc"],
-      "tags": ["agent", "design", "standalone"],
-      "sharedDeps": [{"id": "zz-lib", "minVersion": "1.0.0"}]
-    },
-    {
-      "id": "designplanner",
-      "title": "Design planner",
-      "description": "Standalone read-only agent that turns one selected brainstorm solution into a staged technical design.",
-      "entry": "extensions/designplanner.ts",
-      "pluginDeps": ["zz-subagent-runtime", "readsubagent"],
-      "fileDeps": [
-        "extensions/designplanner.config.jsonc",
-        "extensions/lib/child-agent-model-options.ts",
-        "extensions/lib/design-loop-types.ts",
-        "extensions/lib/standalone-agent-common.ts",
-        "extensions/lib/subagent-model-preferences.ts"
-      ],
-      "configFiles": ["extensions/designplanner.config.jsonc"],
-      "tags": ["agent", "design", "standalone"],
-      "sharedDeps": [{"id": "zz-lib", "minVersion": "1.0.0"}]
-    },
-    {
-      "id": "design-loop",
-      "title": "Design loop",
-      "description": "Composes solution brainstorming and explicit single-solution selection into a staged technical design workflow.",
-      "entry": "extensions/design-loop.ts",
-      "pluginDeps": ["brainstormer", "designplanner"],
-      "fileDeps": ["extensions/lib/agent-mode.ts", "extensions/lib/design-artifacts.ts", "extensions/lib/planning-artifact-paths.ts"],
-      "configFiles": [],
-      "tags": ["workflow", "brainstorming", "design"],
-      "sharedDeps": [{"id": "zz-lib", "minVersion": "1.0.0"}]
-    },
-    {
       "id": "readsubagent",
       "title": "Read subagent",
-      "description": "Adds /readsubagent and a readsubagent tool for targeted file-inspection questions through a child Pi process.",
+      "description": "Adds /readsubagent and a readsubagent tool as a non-debug codebase scout/read planner for ordinary code, config, and documentation through a child Pi process.",
       "entry": "extensions/readsubagent.ts",
       "pluginDeps": [
         "zz-subagent-runtime",
@@ -302,10 +284,7 @@
         "extensions/lib/agent-mode.ts",
         "extensions/lib/subagent-model-preferences.ts"
       ],
-      "configFiles": [
-        "extensions/readsubagent.config.jsonc",
-        "extensions/local-model-endpoints.config.jsonc"
-      ],
+      "configFiles": [],
       "tags": [
         "agent",
         "read-only"
@@ -313,7 +292,7 @@
       "sharedDeps": [
         {
           "id": "zz-lib",
-          "minVersion": "1.0.0"
+          "minVersion": "1.1.0"
         }
       ]
     },
@@ -330,12 +309,10 @@
         "extensions/local-model-endpoints.config.jsonc",
         "extensions/lib/child-agent-model-options.ts",
         "extensions/lib/agent-mode.ts",
-        "extensions/lib/subagent-model-preferences.ts"
+        "extensions/lib/subagent-model-preferences.ts",
+        "extensions/lib/vetting-report-format.ts"
       ],
-      "configFiles": [
-        "extensions/vettingagents.config.jsonc",
-        "extensions/local-model-endpoints.config.jsonc"
-      ],
+      "configFiles": [],
       "tags": [
         "agent",
         "vetting",
@@ -344,14 +321,14 @@
       "sharedDeps": [
         {
           "id": "zz-lib",
-          "minVersion": "1.0.0"
+          "minVersion": "1.1.0"
         }
       ]
     },
     {
       "id": "promptenrichsubagent",
       "title": "Prompt enrich subagent",
-      "description": "Standalone, manually-triggered prompt-enrichment agent. /pe <prompt> runs a clarification/enrichment pass (using readsubagent for repo context) and returns enriched prompt options or clarifying questions.",
+      "description": "Standalone prompt-enrichment agent. /pe uses readsubagent only as a non-debug scout/read planner for repo context; debugging and failures stay with direct inspection/debuggersubagent.",
       "entry": "extensions/promptenrichsubagent.ts",
       "pluginDeps": [
         "zz-subagent-runtime",
@@ -363,10 +340,7 @@
         "extensions/local-model-endpoints.config.jsonc",
         "extensions/lib/subagent-model-preferences.ts"
       ],
-      "configFiles": [
-        "extensions/promptenrichsubagent.config.jsonc",
-        "extensions/local-model-endpoints.config.jsonc"
-      ],
+      "configFiles": [],
       "tags": [
         "agent",
         "enrichment"
@@ -374,7 +348,7 @@
       "sharedDeps": [
         {
           "id": "zz-lib",
-          "minVersion": "1.0.0"
+          "minVersion": "1.1.0"
         }
       ]
     },
@@ -397,7 +371,7 @@
       "sharedDeps": [
         {
           "id": "zz-lib",
-          "minVersion": "1.0.0"
+          "minVersion": "1.1.0"
         }
       ]
     }

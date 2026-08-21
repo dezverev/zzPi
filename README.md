@@ -2,8 +2,8 @@
 
 `zzPi` is a minimum-complete agentic coding system built on [Pi](https://pi.dev).
 It keeps the main model's context focused on decisions and edits while bounded
-child agents handle repository grounding, diagnosis, design, implementation,
-and independent challenge.
+child agents handle repository grounding, diagnosis, implementation, and
+independent challenge.
 
 **Start with the manifesto:**
 [The Minimum Complete Agentic Coding System](docs/minimum-complete-agentic-system.md).
@@ -31,23 +31,34 @@ checkpoints self-reported confidence; and returns early under the protocol when
 confidence falls below 80%. The parent retains decomposition, sequencing,
 review, validation, integration, and Git.
 
-## The callable system
+Modern models can already brainstorm, clarify, and design in the main
+conversation when asked. The former `brainstormer`, `designplanner`, and
+`design-loop` Pi plugs and their native planning-agent counterparts duplicated
+those capabilities with extra orchestration, so they were retired. Bring your
+own direction when you have it; otherwise ask the parent to explore options or
+produce a design manually. Before delegated implementation, the parent records
+the selected direction in a Markdown implementation contract—context,
+invariants, touchpoints, stages, acceptance criteria, risks, and focused
+validation—and supplies the bounded task fields required by the tool schema.
+That is the structured handoff the implementation agent needs; design itself
+stays flexible and native to the model and harness.
 
-The parent composes only the roles a task needs:
+## The composable system
 
-| Role | Agent | Purpose |
+The parent composes only the roles and artifacts a task needs:
+
+| Role | Agent or medium | Purpose |
 |---|---|---|
 | Grounding | `readsubagent` | Factual repository inspection and focused read planning |
 | Diagnosis | `debuggersubagent` | Evidence-based root-cause analysis before editing |
-| Options | `brainstormer` | Materially different solutions and tradeoffs |
-| Design | `designplanner` / `design-loop` | A staged design for one explicitly selected solution |
+| Direction | Parent/user discussion + Markdown implementation document | Manual options/design when needed, followed by a structured implementation handoff |
 | Execution | `implementationsubagent` | One bounded implementation piece with ledger and confidence evidence |
 | Challenge | `vettingagents` | Three separate adversarial review lenses |
 | Clarification | `promptenrichsubagent` | Optional, user-triggered prompt enrichment |
 
 This is not a fixed pipeline. A small documentation edit may need only focused
 reading and validation. A regression may add diagnosis. A cross-cutting feature
-may use the full design, bounded implementation, and vetting loop.
+may add manual design, bounded implementation, and vetting.
 
 The roles are workflow contracts, not an operating-system sandbox. Some
 boundaries are enforced by schemas and handoff validation; others are enforced
@@ -87,7 +98,7 @@ Useful installer forms:
 ```bash
 ./install.sh --list
 ./install.sh --all
-./install.sh --plugins git-status,readsubagent,design-loop
+./install.sh --plugins git-status,readsubagent,implementationsubagent
 ./install.sh --dry-run --select
 ```
 
@@ -128,7 +139,6 @@ return to its configured default.
 - `/zz-model-setup setup` — configure the shared local-model endpoint.
 - `/readsubagent ask ...` — request a cited factual repository map or answer.
 - `/debuggersubagent ask ...` — request read-only-by-contract diagnosis.
-- `/design-loop on|off|toggle|status` — control the callable brainstorm/design tools; the parent invokes them when needed.
 - `/implementation-mode toggle` — toggle parent-directed bounded implementation.
 
 ## Standalone harness integrations

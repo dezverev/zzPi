@@ -2,6 +2,7 @@
   "archive": "pi-plugs.tar.gz",
   "commonFiles": [
     "extensions/zz-lib/child-pi-agent.ts",
+    "extensions/zz-lib/child-provider-bootstrap.ts",
     "extensions/zz-lib/child-run-semaphore.ts",
     "extensions/zz-lib/jsonc-config.ts",
     "extensions/zz-lib/version.ts"
@@ -14,14 +15,19 @@
       "sha256": "4d6cc25c57eb0a488ec7db2970f3723b423942e3e52e60e41117fdc964eeb3ec"
     },
     {
-      "bytes": 364,
+      "bytes": 417,
       "path": "zz-lib.catalog.jsonc",
-      "sha256": "050f0e7dce864d779d429a1b694b39059c090296fdcc3833186b9284a6f357ef"
+      "sha256": "d99ae4f5ff8cde13c93a29e0d9f90eaefcdfe04c6745fe080461eaccc051262a"
     },
     {
-      "bytes": 47038,
+      "bytes": 48082,
       "path": "extensions/zz-lib/child-pi-agent.ts",
-      "sha256": "7ef8784ea2d32bbe5ac48c2775ade09f7c8a50098f0ef9c3d54555818ee3524e"
+      "sha256": "b7e7bc4a0722bb1aa141eccecf154794f2522ea485caedb5b4134bc476d38de3"
+    },
+    {
+      "bytes": 1958,
+      "path": "extensions/zz-lib/child-provider-bootstrap.ts",
+      "sha256": "34f2f0c65717cbc2bf6e31feca7f684ec35d53743da810fff10f3b3b2b0a2f8f"
     },
     {
       "bytes": 1982,
@@ -36,7 +42,7 @@
     {
       "bytes": 74,
       "path": "extensions/zz-lib/version.ts",
-      "sha256": "bb42b356ccbd93b48ab860903bbc9301de8a392f0c81e083c5ded85357842804"
+      "sha256": "300295a4d9ef0ad58ccde2aaa3189ffe4149fa2ad63681e344792be1747b731e"
     }
   ],
   "install_target": "./.pi",
@@ -47,10 +53,10 @@
   "schemaVersion": 2,
   "sharedLib": {
     "id": "zz-lib",
-    "version": "1.0.0"
+    "version": "1.1.0"
   },
   "source": "zzPi git export",
-  "updated_at": "2026-07-17T22:33:18.775379+00:00",
+  "updated_at": "2026-08-21T07:54:07.248517+00:00",
   "visiblePlugins": [],
-  "zzLibVersion": "1.0.0"
+  "zzLibVersion": "1.1.0"
 }

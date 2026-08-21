@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "hooks": {
+    "subagentStart": [
+      {
+        "type": "command",
+        "bash": "python3 .github/hooks/scripts/verify-implementer.py subagentStart",
+        "powershell": "python .github/hooks/scripts/verify-implementer.py subagentStart",
+        "cwd": ".",
+        "timeoutSec": 10
+      }
+    ],
+    "preToolUse": [
+      {
+        "type": "command",
+        "bash": "python3 .github/hooks/scripts/verify-implementer.py preToolUse",
+        "powershell": "python .github/hooks/scripts/verify-implementer.py preToolUse",
+        "cwd": ".",
+        "timeoutSec": 10
+      }
+    ],
+    "subagentStop": [
+      {
+        "type": "command",
+        "bash": "python3 .github/hooks/scripts/verify-implementer.py subagentStop",
+        "powershell": "python .github/hooks/scripts/verify-implementer.py subagentStop",
+        "cwd": ".",
+        "timeoutSec": 10
+      }
+    ]
+  }
+}
