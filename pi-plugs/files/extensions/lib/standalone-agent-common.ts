@@ -29,6 +29,10 @@ import {
   readChildAgentModelOptions,
 } from "./child-agent-model-options.ts";
 import {
+  type StandaloneParseErrorMessage,
+  resolveStandaloneParseErrorMessage,
+} from "./standalone-parse-error.ts";
+import {
   CONFIG_DEFAULT_MODEL_CHOICE,
   isSubagentModelPreferenceReset,
   readSubagentModelPreference,
@@ -55,6 +59,8 @@ interface StandaloneAgentDefinition<Decision> {
   readonly commandDescription: string;
   readonly commandUsage: string;
   readonly configFilePath: string;
+  readonly defaultModelOptionId: string;
+  readonly modelOptionsConfigFilePath: string;
   readonly defaultConfig: ChildPiAgentConfig;
   readonly displayName: string;
   readonly excludeTools: readonly string[];
@@ -68,7 +74,8 @@ interface StandaloneAgentDefinition<Decision> {
   readonly messageType: string;
   readonly modelDisplaySuffix: string;
   readonly parseDecision: (text: string) => Decision | undefined;
-  readonly parseErrorMessage: string;
+  readonly parseErrorFallbackMessage?: string | undefined;
+  readonly parseErrorMessage: StandaloneParseErrorMessage;
   readonly providerDisplayName: string;
   readonly stateEntryType: string;
 }
@@ -98,8 +105,6 @@ export interface StandaloneChildAgent<Decision> {
 }
 
 export const STANDALONE_AGENT_EXCLUDED_TOOLS = [
-  "design-loop",
-  "brainstormer", "designplanner",
   "vettingagents", "debuggersubagent", "promptenrichsubagent",
 ] as const;
 
@@ -219,7 +224,7 @@ export function createStandaloneChildAgent<Decision>(definition: StandaloneAgent
     const result = readChildAgentModelOptions({
       agentName: definition.agentName,
       baseConfig,
-      configFilePath: definition.configFilePath,
+      modelOptionsConfigFilePath: definition.modelOptionsConfigFilePath,
       cwd,
     });
     if (result.error) lastConfigError = lastConfigError ? `${lastConfigError}\n${result.error}` : result.error;
@@ -239,7 +244,10 @@ export function createStandaloneChildAgent<Decision>(definition: StandaloneAgent
 
   const applyModelSelection = (config: ChildPiAgentConfig): ChildPiAgentConfig =>
     appendMandatorySystemPrompt(
-      applyChildAgentModelSelection(config, getModelOption(selectedModelId)),
+      applyChildAgentModelSelection(
+      config,
+      getModelOption(selectedModelId ?? definition.defaultModelOptionId),
+    ),
     );
 
   const readConfig = (cwd: string): ChildPiAgentConfig => {
@@ -447,7 +455,13 @@ export function createStandaloneChildAgent<Decision>(definition: StandaloneAgent
       task: options.task,
     });
     const decision = definition.parseDecision(result.output);
-    const parseError = decision ? undefined : definition.parseErrorMessage;
+    const parseError = decision === undefined
+      ? resolveStandaloneParseErrorMessage(
+          definition.parseErrorMessage,
+          result.output,
+          definition.parseErrorFallbackMessage ?? `${definition.agentName} output could not be parsed`,
+        )
+      : undefined;
     const report = definition.formatReport({ config, decision, parseError, result });
 
     return { config, decision, ...(parseError ? { parseError } : {}), report, result };

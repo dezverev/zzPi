@@ -3,6 +3,8 @@
   "EXPORT_SOURCE.txt",
   "claude-readsubagent",
   "codex-readsubagent",
+  "copilot-readsubagent",
+  "copilot-native-agents",
   "docs",
   "install-claude-readsubagent.ps1",
   "install-claude-readsubagent.sh",

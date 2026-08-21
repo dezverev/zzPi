@@ -1,0 +1,7 @@
+{
+  "apiVersion": 1,
+  "id": "zz-plugs-verifier",
+  "entry": "index.ts",
+  "title": "zz-plugs verifier",
+  "description": "Read-only verification agent for the zz-plugs tree"
+}

@@ -1,12 +1,7 @@
 #!/usr/bin/env bash
-# zz Codex readsubagent — repo-local installer for Linux / macOS / Git Bash.
+# zz Codex readsubagent — repo-local skill + MCP installer.
 #   cd /path/to/repo
 #   curl -fsSL https://raw.githubusercontent.com/dezverev/zzPi/main/install-codex-readsubagent.sh | bash
-#
-# Installs the project-local Codex readsubagent under ./.codex/agents/,
-# installs the shared zz-readsubagent MCP server under ./.zz-mcp/, registers it
-# in ./.codex/config.toml, adds repo AGENTS.md read-planning guidance, and
-# ensures the user-level LM Studio provider required by the custom agent.
 set -euo pipefail
 
 usage() {
@@ -15,35 +10,30 @@ install-codex-readsubagent.sh [options]
 
 Options:
   --project-dir DIR       Target repo/project dir (default: current directory).
-  --provider-url URL      LM Studio OpenAI-compatible base URL for ~/.codex/config.toml.
-  --skip-provider         Do not add/update the user-level model provider.
+  --model SELECTOR        pi model selector (default: lm-studio/qwen/qwen3.6-35b-a3b).
+  --pi-bin NAME           pi executable name/path for the MCP server (default: pi).
   --skip-mcp              Do not install/register the repo-local MCP server.
   --skip-agents-md        Do not add/update the repo AGENTS.md guidance block.
-  --force                 Claim/overwrite existing unowned readsubagent files.
+  --skip-skill            Do not install/update .codex/skills/readsubagent/SKILL.md.
+  --force                 Claim/overwrite existing unowned or modified managed files.
   --dry-run               Show the install plan without writing files.
   -h, --help              Show this help.
 
 Environment:
   ZZ_DASH_URL                         Website host (default: https://raw.githubusercontent.com/dezverev/zzPi/main)
-  ZZ_CODEX_READSUBAGENT_URL           Exact source URL (default: $ZZ_DASH_URL/codex-readsubagent)
+  ZZ_CODEX_READSUBAGENT_URL           Skill source URL (default: $ZZ_DASH_URL/codex-readsubagent)
   ZZ_READSUBAGENT_MCP_URL             MCP server source URL (default: $ZZ_DASH_URL/zz-readsubagent-mcp)
   ZZ_CODEX_READSUBAGENT_PROJECT_DIR   Target repo/project dir
-  ZZ_CODEX_READSUBAGENT_PROVIDER_URL  Provider base URL (default: http://127.0.0.1:1234/v1)
-  ZZ_CODEX_READSUBAGENT_SKIP_PROVIDER=1
+  ZZ_CODEX_READSUBAGENT_MODEL         pi model selector
+  ZZ_CODEX_READSUBAGENT_PI_BIN        pi executable name/path
   ZZ_CODEX_READSUBAGENT_SKIP_MCP=1
   ZZ_CODEX_READSUBAGENT_SKIP_AGENTS_MD=1
+  ZZ_CODEX_READSUBAGENT_SKIP_SKILL=1
   ZZ_CODEX_READSUBAGENT_FORCE=1
   ZZ_CODEX_READSUBAGENT_DRY_RUN=1
   ZZ_CODEX_READSUBAGENT_ALLOW_SUBDIR=1
-  CODEX_HOME                          User Codex config dir (default: ~/.codex)
+  CODEX_HOME                          User Codex config dir (default: ~/.codex; used only to retire the old provider block)
 EOF
-}
-
-truthy() {
-  case "${1:-}" in
-    1|true|TRUE|yes|YES|on|ON) return 0 ;;
-    *) return 1 ;;
-  esac
 }
 
 DEFAULT_HOST="https://raw.githubusercontent.com/dezverev/zzPi/main"
@@ -54,10 +44,11 @@ MCP_SOURCE_BASE="${ZZ_READSUBAGENT_MCP_URL:-${HOST_BASE%/}/zz-readsubagent-mcp}"
 MCP_SOURCE_BASE="${MCP_SOURCE_BASE%/}"
 PROJECT_DIR="${ZZ_CODEX_READSUBAGENT_PROJECT_DIR:-$PWD}"
 CODEX_DIR="${CODEX_HOME:-$HOME/.codex}"
-PROVIDER_URL="${ZZ_CODEX_READSUBAGENT_PROVIDER_URL:-http://127.0.0.1:1234/v1}"
-SKIP_PROVIDER="${ZZ_CODEX_READSUBAGENT_SKIP_PROVIDER:-0}"
+MODEL="${ZZ_CODEX_READSUBAGENT_MODEL:-lm-studio/qwen/qwen3.6-35b-a3b}"
+PI_BIN="${ZZ_CODEX_READSUBAGENT_PI_BIN:-pi}"
 SKIP_MCP="${ZZ_CODEX_READSUBAGENT_SKIP_MCP:-0}"
 SKIP_AGENTS_MD="${ZZ_CODEX_READSUBAGENT_SKIP_AGENTS_MD:-0}"
+SKIP_SKILL="${ZZ_CODEX_READSUBAGENT_SKIP_SKILL:-0}"
 FORCE="${ZZ_CODEX_READSUBAGENT_FORCE:-0}"
 DRY_RUN="${ZZ_CODEX_READSUBAGENT_DRY_RUN:-0}"
 
@@ -65,11 +56,13 @@ while [ "$#" -gt 0 ]; do
   case "$1" in
     --project-dir) [ "$#" -ge 2 ] || { echo "--project-dir needs a value" >&2; exit 2; }; PROJECT_DIR="$2"; shift 2 ;;
     --project-dir=*) PROJECT_DIR="${1#*=}"; shift ;;
-    --provider-url) [ "$#" -ge 2 ] || { echo "--provider-url needs a value" >&2; exit 2; }; PROVIDER_URL="$2"; shift 2 ;;
-    --provider-url=*) PROVIDER_URL="${1#*=}"; shift ;;
-    --skip-provider) SKIP_PROVIDER=1; shift ;;
+    --model) [ "$#" -ge 2 ] || { echo "--model needs a value" >&2; exit 2; }; MODEL="$2"; shift 2 ;;
+    --model=*) MODEL="${1#*=}"; shift ;;
+    --pi-bin) [ "$#" -ge 2 ] || { echo "--pi-bin needs a value" >&2; exit 2; }; PI_BIN="$2"; shift 2 ;;
+    --pi-bin=*) PI_BIN="${1#*=}"; shift ;;
     --skip-mcp) SKIP_MCP=1; shift ;;
     --skip-agents-md) SKIP_AGENTS_MD=1; shift ;;
+    --skip-skill) SKIP_SKILL=1; shift ;;
     --force) FORCE=1; shift ;;
     --dry-run) DRY_RUN=1; shift ;;
     -h|--help) usage; exit 0 ;;
@@ -79,7 +72,6 @@ done
 
 command -v curl >/dev/null 2>&1 || { echo "install-codex-readsubagent.sh needs curl" >&2; exit 1; }
 command -v python3 >/dev/null 2>&1 || { echo "install-codex-readsubagent.sh needs python3" >&2; exit 1; }
-
 PROJECT_DIR="$(cd "$PROJECT_DIR" && pwd -P)"
 CODEX_DIR="$(mkdir -p "$CODEX_DIR" && cd "$CODEX_DIR" && pwd -P)"
 
@@ -87,112 +79,79 @@ if [ -z "${ZZ_CODEX_READSUBAGENT_ALLOW_SUBDIR:-}" ] && command -v git >/dev/null
   if git -C "$PROJECT_DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     GIT_ROOT="$(git -C "$PROJECT_DIR" rev-parse --show-toplevel)"
     GIT_ROOT="$(cd "$GIT_ROOT" && pwd -P)"
-    if [ "$PROJECT_DIR" != "$GIT_ROOT" ]; then
-      echo "Refusing to install into a git subdirectory:" >&2
-      echo "  current: $PROJECT_DIR" >&2
-      echo "  repo root: $GIT_ROOT" >&2
-      echo "Run this from the repo root, or set ZZ_CODEX_READSUBAGENT_PROJECT_DIR=$GIT_ROOT." >&2
+    [ "$PROJECT_DIR" = "$GIT_ROOT" ] || {
+      echo "Refusing to install into a git subdirectory: current=$PROJECT_DIR repo root=$GIT_ROOT" >&2
       exit 1
-    fi
+    }
   fi
 fi
 
 TMP_DIR="$(mktemp -d)"
 cleanup() { rm -rf "$TMP_DIR"; }
 trap cleanup EXIT
-
-AGENT_TMP="$TMP_DIR/readsubagent.toml"
+SKILL_TMP="$TMP_DIR/SKILL.md"
 SERVER_TMP="$TMP_DIR/zz-readsubagent-mcp.py"
-curl -fsSL "$SOURCE_BASE/readsubagent.toml" -o "$AGENT_TMP"
-case "$(printf '%s' "$SKIP_MCP" | tr '[:upper:]' '[:lower:]')" in
-  1|true|yes|on) ;;
-  *) curl -fsSL "$MCP_SOURCE_BASE/zz-readsubagent-mcp.py" -o "$SERVER_TMP" ;;
-esac
+case "$(printf '%s' "$SKIP_SKILL" | tr '[:upper:]' '[:lower:]')" in 1|true|yes|on) ;; *) curl -fsSL "$SOURCE_BASE/skills/readsubagent/SKILL.md" -o "$SKILL_TMP" ;; esac
+case "$(printf '%s' "$SKIP_MCP" | tr '[:upper:]' '[:lower:]')" in 1|true|yes|on) ;; *) curl -fsSL "$MCP_SOURCE_BASE/zz-readsubagent-mcp.py" -o "$SERVER_TMP" ;; esac
 
-python3 - "$PROJECT_DIR" "$CODEX_DIR" "$AGENT_TMP" "$SERVER_TMP" "$SOURCE_BASE" "$MCP_SOURCE_BASE" "$PROVIDER_URL" "$SKIP_PROVIDER" "$SKIP_MCP" "$SKIP_AGENTS_MD" "$FORCE" "$DRY_RUN" <<'PY'
+python3 - "$PROJECT_DIR" "$CODEX_DIR" "$SKILL_TMP" "$SERVER_TMP" "$SOURCE_BASE" "$MCP_SOURCE_BASE" "$MODEL" "$PI_BIN" "$SKIP_MCP" "$SKIP_AGENTS_MD" "$SKIP_SKILL" "$FORCE" "$DRY_RUN" <<'PY'
 from __future__ import annotations
 
 import hashlib
 import json
-import os
 import re
 import sys
 from pathlib import Path
 
 project_dir = Path(sys.argv[1]).resolve()
 codex_dir = Path(sys.argv[2]).resolve()
-agent_tmp = Path(sys.argv[3]).resolve()
+skill_tmp = Path(sys.argv[3]).resolve()
 server_tmp = Path(sys.argv[4]).resolve()
 source_base = sys.argv[5].rstrip("/")
 mcp_source_base = sys.argv[6].rstrip("/")
-provider_url = sys.argv[7]
-skip_provider = sys.argv[8].strip().lower() in {"1", "true", "yes", "on"}
+model = sys.argv[7]
+pi_bin = sys.argv[8]
 skip_mcp = sys.argv[9].strip().lower() in {"1", "true", "yes", "on"}
 skip_agents_md = sys.argv[10].strip().lower() in {"1", "true", "yes", "on"}
-force = sys.argv[11].strip().lower() in {"1", "true", "yes", "on"}
-dry_run = sys.argv[12].strip().lower() in {"1", "true", "yes", "on"}
+skip_skill = sys.argv[11].strip().lower() in {"1", "true", "yes", "on"}
+force = sys.argv[12].strip().lower() in {"1", "true", "yes", "on"}
+dry_run = sys.argv[13].strip().lower() in {"1", "true", "yes", "on"}
 
-rel_agent = ".codex/agents/readsubagent.toml"
-rel_codex_config = ".codex/config.toml"
+rel_skill = ".codex/skills/readsubagent/SKILL.md"
 rel_server = ".zz-mcp/zz-readsubagent-mcp.py"
-agent_target = project_dir / rel_agent
-codex_config = project_dir / rel_codex_config
+obsolete_agent = ".codex/agents/readsubagent.toml"
+skill_target = project_dir / rel_skill
 server_target = project_dir / rel_server
+obsolete_agent_target = project_dir / obsolete_agent
+codex_config = project_dir / ".codex/config.toml"
 agents_md = project_dir / "AGENTS.md"
-manifest_path = project_dir / ".codex" / "zz-codex-readsubagent-manifest.json"
+manifest_path = project_dir / ".codex/zz-codex-readsubagent-manifest.json"
 user_config = codex_dir / "config.toml"
 
-MARKER_START = "<!-- zz-codex-readsubagent:start -->"
-MARKER_END = "<!-- zz-codex-readsubagent:end -->"
-AGENTS_BLOCK = f"""{MARKER_START}
+GUIDANCE_START = "<!-- zz-codex-readsubagent:start -->"
+GUIDANCE_END = "<!-- zz-codex-readsubagent:end -->"
+GUIDANCE_BLOCK = f"""{GUIDANCE_START}
 ## Read Planning
 
-Before doing focused reads of specific implementation files, start with a
-read-planning pass through `readsubagent`.
+Before focused reads of unfamiliar implementation files, use the repo-local
+`readsubagent` skill. The skill calls the direct MCP tool registered in
+`.codex/config.toml`; do not launch another Codex subagent.
 
-Prefer the Codex MCP tool provided by `.zz-mcp/zz-readsubagent-mcp.py`. This
-repo registers it in `.codex/config.toml`, so trusted Codex sessions should see
-a `readsubagent` tool that behaves similarly to `.pi/extensions/readsubagent.ts`.
-If that MCP tool is not exposed in the current session, fall back to the
-`readsubagent` custom agent.
+Ask a targeted factual `question` and include repo-relative `path`/`paths`,
+`symbols`, `searchTerms`, `lineRanges`, `output`, and `maxReportChars` where
+useful. Use it for subsystem maps, focused read lists, definitions, factual
+summaries, and line anchors—not implementation planning, edit strategy, bug
+finding, code review, or correctness judgments. The local model can be slow;
+wait rather than retrying merely because it is taking time.
+{GUIDANCE_END}"""
 
-Use `readsubagent` to get:
-
-- A short map of the relevant subsystem.
-- Candidate files and directories, with reasons.
-- The smallest focused read list for the main agent.
-- Search terms, symbols, or line anchors that should guide the focused reads.
-- Files or areas that look related but should be avoided for now.
-- Uncertainty or follow-up questions that could change the read plan.
-
-When using the MCP tool, ask a targeted factual `question` and include
-repo-relative `path`/`paths`, `symbols`, `searchTerms`, `lineRanges`, `output`,
-and `maxReportChars` where useful. Keep reports small and ask narrower
-follow-ups before falling back to broad direct reads.
-
-Use at least a ten-minute wait for `readsubagent` when the tool supports an
-explicit timeout, because the local model may be slower than hosted models.
-Prefer a longer wait over assuming the subagent stalled.
-
-Use `readsubagent` only for factual read planning and file inspection. Do not
-ask it to create implementation plans, solution proposals, edit strategies,
-code-review judgments, bug findings, correctness assessments, or accept/reject
-recommendations.
-{MARKER_END}
-"""
-
-PROVIDER_START = "# zz-codex-readsubagent:start"
-PROVIDER_END = "# zz-codex-readsubagent:end"
-PROVIDER_BLOCK = f"""{PROVIDER_START}
-[model_providers.zz_lmstudio_read]
-name = "LM Studio readsubagent"
-base_url = "{provider_url}"
-{PROVIDER_END}
-"""
-
-CODEX_MCP_START = "# zz-codex-readsubagent-mcp:start"
-CODEX_MCP_END = "# zz-codex-readsubagent-mcp:end"
-CODEX_MCP_BLOCK = f"""{CODEX_MCP_START}
+MCP_START = "# zz-codex-readsubagent-mcp:start"
+MCP_END = "# zz-codex-readsubagent-mcp:end"
+env = {"ZZ_READSUBAGENT_MODEL": model}
+if pi_bin != "pi":
+    env["ZZ_READSUBAGENT_PI_BIN"] = pi_bin
+env_toml = ", ".join(f"{key} = {json.dumps(value)}" for key, value in env.items())
+MCP_BLOCK = f"""{MCP_START}
 [mcp_servers.readsubagent]
 command = "python3"
 args = ["{rel_server}"]
@@ -202,8 +161,11 @@ required = false
 startup_timeout_sec = 10
 tool_timeout_sec = 1800
 enabled_tools = ["readsubagent"]
-{CODEX_MCP_END}
-"""
+env = {{ {env_toml} }}
+{MCP_END}"""
+
+PROVIDER_START = "# zz-codex-readsubagent:start"
+PROVIDER_END = "# zz-codex-readsubagent:end"
 
 
 def sha256(path: Path) -> str:
@@ -214,143 +176,168 @@ def load_manifest() -> dict:
     if not manifest_path.is_file():
         return {}
     try:
-        data = json.loads(manifest_path.read_text(encoding="utf-8"))
-        return data if isinstance(data, dict) else {}
+        value = json.loads(manifest_path.read_text(encoding="utf-8"))
+        return value if isinstance(value, dict) else {}
     except Exception:
         return {}
 
 
-def manifest_owns(rel: str) -> bool:
-    owned = load_manifest().get("owned_files")
-    return isinstance(owned, list) and rel in owned
+prior = load_manifest()
+prior_owned = set(prior.get("owned_files") if isinstance(prior.get("owned_files"), list) else [])
+prior_hashes = prior.get("file_hashes") if isinstance(prior.get("file_hashes"), dict) else {}
 
 
-def replace_marked_block(text: str, start: str, end: str, block: str) -> tuple[str, bool]:
+def replace_block(text: str, start: str, end: str, block: str) -> tuple[str, bool]:
     pattern = re.compile(rf"{re.escape(start)}.*?{re.escape(end)}", re.S)
     if pattern.search(text):
         return pattern.sub(block.rstrip(), text), True
     return text.rstrip() + ("\n\n" if text.strip() else "") + block.rstrip(), False
 
 
-def ensure_owned_file(rel: str, target: Path, tmp: Path) -> str:
-    if target.exists() and not manifest_owns(rel) and not force:
-        if target.read_bytes() != tmp.read_bytes():
-            raise SystemExit(
-                f"Refusing to overwrite existing unowned {rel}. Use --force if you want this installer to claim it."
-            )
-        return f"unchanged existing matching {rel}"
+def remove_block(text: str, start: str, end: str) -> str:
+    pattern = re.compile(rf"(?:^|\n){re.escape(start)}.*?{re.escape(end)}(?:\n|$)", re.S)
+    return pattern.sub("\n", text).strip() + ("\n" if text.strip() else "")
+
+
+def validate_markers(path: Path, start: str, end: str) -> None:
+    if not path.exists():
+        return
+    text = path.read_text(encoding="utf-8")
+    if text.count(start) != text.count(end) or text.count(start) > 1:
+        raise SystemExit(f"Refusing to edit {path}: managed markers are malformed or duplicated")
+
+
+def preflight_file(rel: str, target: Path, payload: Path) -> None:
+    if not target.exists():
+        return
+    if rel in prior_owned:
+        expected = prior_hashes.get(rel)
+        if not expected and not force:
+            raise SystemExit(f"Cannot verify ownership baseline for {rel}. Use --force to replace it.")
+        if expected and sha256(target) != expected and not force:
+            raise SystemExit(f"Refusing to overwrite locally modified managed {rel}. Use --force to replace it.")
+    elif target.read_bytes() != payload.read_bytes() and not force:
+        raise SystemExit(f"Refusing to overwrite existing unowned {rel}. Use --force to claim it.")
+
+
+if not skip_skill:
+    preflight_file(rel_skill, skill_target, skill_tmp)
+if not skip_mcp:
+    preflight_file(rel_server, server_target, server_tmp)
+validate_markers(codex_config, MCP_START, MCP_END)
+validate_markers(agents_md, GUIDANCE_START, GUIDANCE_END)
+validate_markers(user_config, PROVIDER_START, PROVIDER_END)
+
+
+def install_file(rel: str, target: Path, payload: Path) -> str:
     if dry_run:
-        action = "update" if target.exists() else "create"
-        return f"would {action} {rel}"
+        return f"would {'update' if target.exists() else 'create'} {rel}"
     target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_bytes(tmp.read_bytes())
+    target.write_bytes(payload.read_bytes())
     return f"installed {rel}"
 
 
-def ensure_agent() -> str:
-    return ensure_owned_file(rel_agent, agent_target, agent_tmp)
-
-
-def ensure_server() -> str:
-    if skip_mcp:
-        return "skipped repo-local Codex MCP server"
-    return ensure_owned_file(rel_server, server_target, server_tmp)
-
-
-def ensure_agents_md() -> str:
-    if skip_agents_md:
-        return "skipped AGENTS.md guidance"
+def retire_agent() -> str | None:
+    if obsolete_agent not in prior_owned or not obsolete_agent_target.is_file():
+        return None
+    expected = prior_hashes.get(obsolete_agent)
+    if expected and sha256(obsolete_agent_target) != expected:
+        return f"preserved locally modified obsolete {obsolete_agent}"
     if dry_run:
-        return "would add/update AGENTS.md read-planning block"
-    existing = agents_md.read_text(encoding="utf-8") if agents_md.exists() else "# Codex Guidance\n"
-    next_text, replaced = replace_marked_block(existing, MARKER_START, MARKER_END, AGENTS_BLOCK)
-    agents_md.write_text(next_text.rstrip() + "\n", encoding="utf-8")
-    return "updated AGENTS.md read-planning block" if replaced else "added AGENTS.md read-planning block"
+        return f"would remove obsolete {obsolete_agent}"
+    obsolete_agent_target.unlink()
+    return f"removed obsolete {obsolete_agent}"
 
 
-def ensure_codex_config() -> str:
+def retire_provider() -> str | None:
+    if not user_config.is_file():
+        return None
+    text = user_config.read_text(encoding="utf-8")
+    if PROVIDER_START not in text:
+        return None
+    if dry_run:
+        return f"would remove obsolete zz_lmstudio_read provider from {user_config}"
+    user_config.write_text(remove_block(text, PROVIDER_START, PROVIDER_END), encoding="utf-8")
+    return f"removed obsolete zz_lmstudio_read provider from {user_config}"
+
+
+def ensure_config() -> str:
     if skip_mcp:
         return "skipped .codex/config.toml MCP registration"
     existing = codex_config.read_text(encoding="utf-8") if codex_config.exists() else ""
-    if CODEX_MCP_START in existing and CODEX_MCP_END in existing:
-        next_text, _ = replace_marked_block(existing, CODEX_MCP_START, CODEX_MCP_END, CODEX_MCP_BLOCK)
-        if dry_run:
-            return "would update .codex/config.toml MCP registration"
-        codex_config.parent.mkdir(parents=True, exist_ok=True)
-        codex_config.write_text(next_text.rstrip() + "\n", encoding="utf-8")
-        return "updated .codex/config.toml MCP registration"
-    if re.search(r"(?m)^\[mcp_servers\.readsubagent\]\s*$", existing):
+    if MCP_START not in existing and re.search(r"(?m)^\[mcp_servers\.readsubagent\]\s*$", existing):
         return "preserved existing unmanaged readsubagent MCP server in .codex/config.toml"
+    next_text, replaced = replace_block(existing, MCP_START, MCP_END, MCP_BLOCK)
     if dry_run:
-        return "would add readsubagent MCP server to .codex/config.toml"
+        return f"would {'update' if replaced else 'add'} .codex/config.toml MCP registration"
     codex_config.parent.mkdir(parents=True, exist_ok=True)
-    next_text = existing.rstrip() + ("\n\n" if existing.strip() else "") + CODEX_MCP_BLOCK.rstrip() + "\n"
-    codex_config.write_text(next_text, encoding="utf-8")
-    return "added readsubagent MCP server to .codex/config.toml"
+    codex_config.write_text(next_text.rstrip() + "\n", encoding="utf-8")
+    return f"{'updated' if replaced else 'added'} .codex/config.toml MCP registration"
 
 
-def ensure_provider() -> str:
-    if skip_provider:
-        return "skipped user-level provider"
-    existing = user_config.read_text(encoding="utf-8") if user_config.exists() else ""
-    if PROVIDER_START in existing and PROVIDER_END in existing:
-        next_text, _ = replace_marked_block(existing, PROVIDER_START, PROVIDER_END, PROVIDER_BLOCK)
-        if dry_run:
-            return f"would update {user_config}"
-        user_config.parent.mkdir(parents=True, exist_ok=True)
-        user_config.write_text(next_text.rstrip() + "\n", encoding="utf-8")
-        return f"updated {user_config}"
-    if re.search(r"(?m)^\[model_providers\.zz_lmstudio_read\]\s*$", existing):
-        return f"preserved existing unmanaged zz_lmstudio_read provider in {user_config}"
+def ensure_guidance() -> str:
+    if skip_agents_md:
+        return "skipped AGENTS.md guidance"
+    existing = agents_md.read_text(encoding="utf-8") if agents_md.exists() else "# Codex Guidance\n"
+    next_text, replaced = replace_block(existing, GUIDANCE_START, GUIDANCE_END, GUIDANCE_BLOCK)
     if dry_run:
-        return f"would add zz_lmstudio_read provider to {user_config}"
-    user_config.parent.mkdir(parents=True, exist_ok=True)
-    next_text = existing.rstrip() + ("\n\n" if existing.strip() else "") + PROVIDER_BLOCK.rstrip() + "\n"
-    user_config.write_text(next_text, encoding="utf-8")
-    return f"added zz_lmstudio_read provider to {user_config}"
+        return f"would {'update' if replaced else 'add'} AGENTS.md read-planning block"
+    agents_md.write_text(next_text.rstrip() + "\n", encoding="utf-8")
+    return f"{'updated' if replaced else 'added'} AGENTS.md read-planning block"
 
 
-try:
-    import tomllib  # type: ignore[import-not-found]
-except ModuleNotFoundError:
-    toml_status = "skipped TOML parse check: python tomllib is unavailable"
+actions: list[str] = []
+retired = retire_agent()
+if retired:
+    actions.append(retired)
+provider_retired = retire_provider()
+if provider_retired:
+    actions.append(provider_retired)
+if skip_skill:
+    actions.append("skipped Codex readsubagent skill")
 else:
-    with agent_tmp.open("rb") as fh:
-        tomllib.load(fh)
-    toml_status = "validated readsubagent.toml"
-
-actions = [toml_status, ensure_agent(), ensure_server(), ensure_codex_config(), ensure_agents_md(), ensure_provider()]
+    actions.append(install_file(rel_skill, skill_target, skill_tmp))
+if skip_mcp:
+    actions.append("skipped repo-local Codex MCP server")
+else:
+    actions.append(install_file(rel_server, server_target, server_tmp))
+actions.extend([ensure_config(), ensure_guidance()])
 
 if not dry_run:
-    owned_files = [rel_agent]
+    owned = set(prior_owned)
+    owned.discard(obsolete_agent)
+    if not skip_skill:
+        owned.add(rel_skill)
     if not skip_mcp:
-        owned_files.extend([rel_codex_config, rel_server])
+        owned.add(rel_server)
+    owned = {rel for rel in owned if (project_dir / rel).is_file() and rel not in {".codex/config.toml"}}
+    refreshed = ({rel_skill} if not skip_skill else set()) | ({rel_server} if not skip_mcp else set())
+    hashes = {}
+    for rel in sorted(owned):
+        hashes[rel] = sha256(project_dir / rel) if rel in refreshed or rel not in prior_hashes else prior_hashes[rel]
+    prior_blocks = set(prior.get("managed_blocks") if isinstance(prior.get("managed_blocks"), list) else [])
+    prior_blocks.discard("~/.codex/config.toml:zz-codex-readsubagent")
+    if not skip_agents_md:
+        prior_blocks.add("AGENTS.md:zz-codex-readsubagent")
+    if not skip_mcp:
+        prior_blocks.add(".codex/config.toml:zz-codex-readsubagent-mcp")
     state = {
         "installer": "zz-codex-readsubagent",
-        "schemaVersion": 1,
+        "schemaVersion": 2,
         "source_url": source_base,
         "mcp_source_url": mcp_source_base,
-        "owned_files": owned_files,
-        "managed_blocks": [
-            "AGENTS.md:zz-codex-readsubagent" if not skip_agents_md else "",
-            ".codex/config.toml:zz-codex-readsubagent-mcp" if not skip_mcp else "",
-            "~/.codex/config.toml:zz-codex-readsubagent" if not skip_provider else "",
-        ],
-        "file_hashes": {rel: sha256(project_dir / rel) for rel in owned_files},
+        "owned_files": sorted(owned),
+        "managed_blocks": sorted(prior_blocks),
+        "file_hashes": hashes,
         "mcp_server": {
             "name": "readsubagent",
             "config_path": str(codex_config),
             "server_path": rel_server,
-            "managed": not skip_mcp,
-        },
-        "provider": {
-            "name": "zz_lmstudio_read",
-            "base_url": provider_url,
-            "config_path": str(user_config),
-            "managed": not skip_provider,
+            "model": model,
+            "pi_bin": pi_bin,
+            "managed": ".codex/config.toml:zz-codex-readsubagent-mcp" in prior_blocks,
         },
     }
-    state["managed_blocks"] = [item for item in state["managed_blocks"] if item]
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
     manifest_path.write_text(json.dumps(state, indent=2) + "\n", encoding="utf-8")
 
@@ -358,9 +345,8 @@ print("")
 print("  zz Codex readsubagent install plan" if dry_run else "  zz Codex readsubagent installed")
 for action in actions:
     print(f"  -> {action}")
+print(f"  -> model: {model}")
 print(f"  -> target repo: {project_dir}")
-print(f"  -> source: {source_base}")
-print(f"  -> mcp source: {mcp_source_base}")
 if not dry_run:
-    print("  -> restart Codex from this repo so it discovers .codex/agents/readsubagent.toml and .codex/config.toml")
+    print("  -> restart Codex from this repo so it discovers .codex/skills/readsubagent/SKILL.md and .codex/config.toml")
 PY

@@ -54,6 +54,8 @@ import {
 } from "./zz-lib/jsonc-config.ts";
 
 const CONFIG_FILE_PATH = ".pi/extensions/readsubagent.config.jsonc";
+const DEFAULT_MODEL_OPTION_ID = "qwen-35b-a3b";
+const MODEL_OPTIONS_CONFIG_FILE_PATH = ".pi/extensions/zz-agent-models.config.jsonc";
 const READSUBAGENT_MESSAGE_TYPE = "readsubagent-report";
 const READSUBAGENT_STATE_ENTRY_TYPE = "readsubagent-state";
 const STATUS_KEY = "readsubagent";
@@ -70,6 +72,14 @@ const READSUBAGENT_EVENT_ERROR = "readsubagent:error";
 const READSUBAGENT_EVENT_PROGRESS = "readsubagent:progress";
 const READSUBAGENT_EVENT_START = "readsubagent:start";
 const DIRECT_READ_POLICIES = ["allow", "guard-large", "guard-large-any", "block"] as const;
+const DIRECT_DEBUG_COMMAND_PATTERN = /\b(?:debug|diagnose|troubleshoot)\b(?!\s+(?:command|function|implementation|option|flag|configuration|config|mode|logging|logger)\b)/iu;
+const EXPLICIT_DEBUG_REQUEST_PATTERN = /\b(?:debug|diagnos(?:e|ing)|troubleshoot|investigat(?:e|ing)|analy[sz]e|examine|inspect|review|look\s+(?:into|over)|figure\s+out|fix|find|identify|help\s+me\s+(?:find|understand)|tell\s+me|what\s+caused|what\s+went\s+wrong|why)\b.{0,120}\b(?:bug|fail(?:s|ed|ing|ure)?|error|regression|flaky[-\s]+test|incident|crash(?:es|ed|ing)?|timeouts?|timed\s+out|logs?|stack\s+traces?|failure\s+output|unexpected[-\s]+runtime(?:\s+behavior)?)\b/imu;
+const STRONG_DEBUG_REQUEST_PATTERN = /\b(?:debug|diagnos(?:e|ing)|troubleshoot|investigat(?:e|ing)|look\s+(?:into|over)|figure\s+out|fix|find|identify|what\s+caused|what\s+went\s+wrong|why)\b.{0,120}\b(?:bug|fail(?:s|ed|ing)?|error|crash(?:es|ed|ing)?|timeouts?|timed\s+out|root[-\s]+cause)\b/imu;
+const DIAGNOSTIC_ARTIFACT_PATTERN = /\b(?:logs|log\s+(?:file|output|excerpt|entries)|stack\s+traces?|crash\s+reports?|core\s+dumps?|test\s+failure\s+output|failure\s+output|execution\s+traces?|profiler\s+output|runtime\s+captures?|diagnostic\s+screenshots?)\b|\b\S+\.log\b/iu;
+const CONCRETE_DIAGNOSTIC_EVIDENCE_PATTERN = /(?:^|[\s"'(])(?:[A-Za-z]:\\)?(?:[\w.-]+[\\/])*[\w-][\w.-]*\.log(?:$|[\s"')])|\b(?:this|these|attached)\s+(?:logs?|stack\s+traces?|failure\s+output|crash\s+reports?)\b|\b(?:logs?|log\s+output|stack\s+traces?|failure\s+output)\s+from\s+(?:runtime|production|staging|the\s+server|the\s+request|the\s+test\s+run)\b/imu;
+const ORDINARY_TOOLING_TOPIC_PATTERN = /(?:\b(?:stack\s+traces?|logs?|log\s+output|failures?)|\.log\s+files?)\s+(?:parser|parsing|format(?:ter|ting)?|configuration|config|option|schema|extension(?:\s+handling)?|implementation|handler|handling|type|class|module)\b|\b(?:parses?|handles?|formats?|configures?|implements?)\s+(?:stack\s+traces?|logs?|log\s+output|\.log\s+files?|failures?)\b/iu;
+const DIAGNOSTIC_INSPECTION_PATTERN = /\b(?:debug|diagnos(?:e|ing)|troubleshoot|investigat(?:e|ing)|inspect|examine|analy[sz]e|summari[sz]e|review|read|explain|interpret|extract|check|scan|parse|look\s+at|tell\s+me|what\s+(?:does|is|happened)|why)\b/iu;
+const PROHIBITED_REQUEST_MESSAGE = "readsubagent refused this explicit debugging or diagnostic-artifact request before child launch. Inspect source and diagnostic evidence directly in the parent, or use debuggersubagent for root-cause diagnosis.";
 
 type DirectReadPolicy = (typeof DIRECT_READ_POLICIES)[number];
 
@@ -93,31 +103,24 @@ interface ReadSubagentMainConfig {
 const DEFAULT_READSUBAGENT_MAIN_CONFIG: ReadSubagentMainConfig = {
   directReadMaxChars: 12_000,
   directReadMaxLines: 300,
-  directReadPolicy: "guard-large-any",
+  directReadPolicy: "allow",
   enabledByDefault: true,
 };
 
 const MAIN_READSUBAGENT_PROMPT = [
   "<readsubagent_mode>",
-  "Readsubagent mode is ON. Treat readsubagent as the default for factual file-content retrieval, summarization, symbol lookup, and line-range discovery when exact raw text is not needed in the parent context.",
-  "Mandatory boundary: readsubagent is not a reasoning, review, or implementation-analysis agent. Do not use it to judge correctness, identify bugs, validate control flow/type safety, decide whether code is acceptable, or choose an edit strategy.",
-  "Mandatory decision rule before any direct read: if the goal is to retrieve/summarize contents, inspect docs/config/logs, find definitions, get descriptive API/flow maps, or learn a file's factual structure, use readsubagent first.",
-  "Direct read is only for last-mile exact text: user-visible quotes, exact snippets or oldText for edits, precise small line ranges already identified, image reads, or final verification after an edit.",
-  "Do not direct-read documentation or large source files in chunks to learn them. If a file is large or you would need multiple read calls, ask readsubagent for the answer and exact line ranges, then read only the smallest necessary ranges.",
-  "If the large-read guard compacts a read, stop and delegate the question to readsubagent. Do not work around the guard with offset/limit chunking unless you already know the exact range needed for an edit, quote, or verification.",
-  "Use readsubagent for documentation/config/how-to questions when you need the answer rather than exact text; do not run rg/read in the parent just to answer a usage question.",
-  "When working in a known file but you first need to understand its structure, factual flow, or relevant symbols, ask readsubagent for a concise descriptive map and exact line ranges before direct-reading large sections.",
-  "Before copying a pattern from another known file or large implementation, ask readsubagent for relevant symbols, descriptive flow, and exact line ranges; then direct-read only those small ranges needed for edits.",
-  "Avoid direct-reading large source files just to learn what behavior exists; delegate that summarization to readsubagent unless exact file text is immediately required.",
-  "If you would read a file mainly to retrieve facts, summarize/explain/compare documented behavior, inspect docs/config/logs, or find where something is defined, ask readsubagent that factual question instead.",
-  "If the task asks for issues, bugs, correctness, regressions, type safety, control-flow problems, maintainability judgment, or whether code is acceptable, do not use readsubagent; use direct reads plus validation instead.",
-  "Use main-context grep/find/ls only for one-shot low-output discovery with a clear next action, such as rg -l or a single tight rg -n; if the search would branch, require multiple commands, or produce broad output, ask readsubagent for a bounded factual read-planning pass before running broader parent commands.",
-  "For exploratory repo archaeology, ask readsubagent for a scoped factual map with candidate paths, search anchors, and the smallest next read list instead of streaming broad raw discovery into the parent context.",
-  "For code/implementation review, use direct parent analysis instead of readsubagent so review judgment stays in the main session.",
+  "Readsubagent mode is ON. Evaluate task context before file type or factuality: never use readsubagent for debugging, failure diagnosis, regression or flaky-test investigation, incident response, or unexpected-runtime investigation.",
+  "During those workflows, the main agent or debuggersubagent must inspect source, config, documentation, and all diagnostic evidence directly. Readsubagent must not scout the debug path, suggest diagnostic evidence, summarize it, or gather root-cause evidence.",
+  "Never send readsubagent logs, stack traces, crash reports, core dumps, test failure output, traces, profiler output, runtime captures, diagnostic screenshots, or similar artifacts. Directly inspect them in the parent or use debuggersubagent.",
+  "Outside debugging, use readsubagent primarily as a read-only codebase scout and read planner for unfamiliar repository areas. Ask for a short subsystem map, candidate files, search/symbol/line anchors, the smallest focused read list, avoid-for-now areas, and explicit uncertainty.",
+  "Focused non-debug factual answers about ordinary code, config, documentation, and how-to material remain supported when the parent needs an answer rather than raw text.",
+  "Mandatory boundary: readsubagent is not a reasoning, review, design, or implementation-analysis agent. Do not use it to judge correctness, identify bugs, validate control flow/type safety, decide whether code is acceptable, or choose an edit strategy.",
+  "Direct read remains appropriate for debugging; user-visible quotes; exact snippets or oldText for edits; precise small line ranges already identified; image inspection; final verification; and parent-side correctness analysis.",
+  "Outside debugging, do not direct-read documentation or large source files in chunks merely to learn them. Ask readsubagent for a bounded map and exact line ranges, then read only the smallest necessary ranges.",
+  "If the large-read guard compacts a non-debug read, stop and delegate a scoped scout/read-planning question. Do not work around the guard with offset/limit chunking unless you already know the exact range needed for an edit, quote, or verification.",
+  "Use main-context grep/find/ls for one-shot low-output discovery with a clear next action. If non-debug discovery would branch or produce broad output, ask readsubagent for a bounded factual read plan before broader parent discovery.",
+  "Ask narrow questions with repo-relative paths, symbols, line ranges, search terms, desired output shape, and a maxReportChars budget. If an answer is vague, ask a narrower non-debug follow-up.",
   "For git operations that mutate repo or remote state, handle them in the parent session rather than readsubagent.",
-  "Ask narrow readsubagent questions and include repo-relative paths, symbols, line ranges, search terms, desired output shape, and a maxReportChars budget when possible.",
-  "Prefer small readsubagent reports: ask for the direct answer, citations, and only the minimal snippets needed for the next action.",
-  "If the readsubagent answer is too vague, incomplete, or lacks needed details, ask readsubagent a narrower follow-up question before using broad direct reads.",
   "</readsubagent_mode>",
 ].join("\n");
 
@@ -126,12 +129,12 @@ const DEFAULT_READSUBAGENT_CONFIG: ChildPiAgentConfig = {
   endpoint: "http://127.0.0.1:1234",
   maxOutputTokens: 32_768,
   model: "qwen/qwen3.6-35b-a3b",
-  provider: "lm-studio",
-  providerRegistration: "none",
+  provider: "zz-agent-local",
+  providerRegistration: "openai-compatible",
   reportMaxChars: 16_000,
   requestTimeoutMs: 30 * 60 * 1_000,
   systemPrompt:
-    "You are a read-only file-inspection subagent spawned by Pi. The parent delegates to you instead of reading files directly when it needs factual answers, summaries, extracted snippets, symbol locations, docs/config details, or line ranges without raw contents in the parent context. Use tools as needed to inspect only the requested repo-relative paths and nearby supporting files. Do not edit or write files. Do not create implementation plans, solution proposals, edit strategies, code-review judgments, bug findings, correctness assessments, control-flow/type-safety analysis, or accept/reject recommendations. Your job is factual inspection, evidence, descriptive API/flow maps, and line-range pointers only. If the parent asks for hard logic, review, or whether code is correct/acceptable, state that this is outside readsubagent scope and return only the factual evidence/locations that would support a separate review. Start with the answer, then cite evidence with repo-relative paths and line numbers when possible. Prefer summaries and exact line ranges the parent can read later; include concrete snippets only when necessary and keep them short. Never dump whole files or raw tool output; if the question is too broad, propose a narrower factual follow-up.",
+    "You are a read-only, non-debug codebase scout and read-planning subagent spawned by Pi. Evaluate task context first. Refuse every request involving debugging, failure diagnosis, regression or flaky-test investigation, incident response, or unexpected-runtime investigation. Never inspect or analyze logs, stack traces, crash reports, core dumps, test failure output, traces, profiler output, runtime captures, diagnostic screenshots, or similar diagnostic artifacts. Direct the parent to inspect source, config, documentation, and diagnostic evidence directly or use debuggersubagent; do not provide partial diagnostic analysis, scout the debug path, suggest diagnostic evidence, or gather root-cause evidence. Outside debugging, inspect only requested repo-relative paths and nearby supporting files. Prefer a short subsystem map, candidate files, search/symbol/line anchors, the smallest focused read list, avoid-for-now areas, and explicit uncertainty. Focused factual answers about ordinary code, config, documentation, and how-to material remain supported. Do not edit or write files. Do not create implementation plans, solution proposals, edit strategies, code-review judgments, bug findings, correctness assessments, control-flow/type-safety analysis, design advice, or accept/reject recommendations. Start with the answer or read plan, then cite repo-relative paths and line numbers. Keep snippets short, never dump whole files or raw tool output, and ask for a narrower non-debug question when the request is too broad.",
   thinking: "off",
   tools: DEFAULT_TOOLS,
 };
@@ -159,7 +162,7 @@ function readReadSubagentModelOptions(
   const result = readChildAgentModelOptions({
     agentName: "readsubagent",
     baseConfig,
-    configFilePath: CONFIG_FILE_PATH,
+    modelOptionsConfigFilePath: MODEL_OPTIONS_CONFIG_FILE_PATH,
     cwd,
   });
   if (result.error) {
@@ -199,7 +202,7 @@ function formatReadSubagentModelSelection(config: ChildPiAgentConfig): string {
 function applyReadSubagentModelSelection(config: ChildPiAgentConfig): ChildPiAgentConfig {
   return applyChildAgentModelSelection(
     config,
-    getReadSubagentModelOption(selectedReadSubagentModelId),
+    getReadSubagentModelOption(selectedReadSubagentModelId ?? DEFAULT_MODEL_OPTION_ID),
   );
 }
 
@@ -270,11 +273,11 @@ function formatDirectReadPolicy(config: ReadSubagentMainConfig): string {
     case "allow":
       return "allow (direct read works normally)";
     case "guard-large":
-      return `guard-large (compact oversized reads without offset/limit; caps ${config.directReadMaxChars} chars or ${config.directReadMaxLines} lines)`;
+      return `guard-large (optional non-debug context guard; direct debugging reads remain direct and must not be redirected to readsubagent; caps ${config.directReadMaxChars} chars or ${config.directReadMaxLines} lines)`;
     case "guard-large-any":
-      return `guard-large-any (compact any oversized read; caps ${config.directReadMaxChars} chars or ${config.directReadMaxLines} lines)`;
+      return `guard-large-any (optional non-debug context guard; direct debugging reads remain direct and must not be redirected to readsubagent; caps ${config.directReadMaxChars} chars or ${config.directReadMaxLines} lines)`;
     case "block":
-      return "block (strict mode; direct read calls are blocked)";
+      return "block (strict optional policy; debugging reads must still remain direct and must not be redirected to readsubagent, so disable this policy during debugging)";
   }
 }
 
@@ -536,13 +539,30 @@ function formatDelegatedTask(
   ].join("\n");
 }
 
+export function isProhibitedReadSubagentRequest(parts: readonly unknown[]): boolean {
+  const text = parts
+    .flatMap((part) => Array.isArray(part) ? part : [part])
+    .filter((part): part is string => typeof part === "string")
+    .join("\n");
+
+  if (DIRECT_DEBUG_COMMAND_PATTERN.test(text)) return true;
+  if (CONCRETE_DIAGNOSTIC_EVIDENCE_PATTERN.test(text)) return true;
+  if (EXPLICIT_DEBUG_REQUEST_PATTERN.test(text)) {
+    if (ORDINARY_TOOLING_TOPIC_PATTERN.test(text) && !STRONG_DEBUG_REQUEST_PATTERN.test(text)) return false;
+    return true;
+  }
+  if (!DIAGNOSTIC_ARTIFACT_PATTERN.test(text) || !DIAGNOSTIC_INSPECTION_PATTERN.test(text)) return false;
+  return !ORDINARY_TOOLING_TOPIC_PATTERN.test(text);
+}
+
 function buildReadSubagentPrompt(task: string): string {
   return [
     "You are running as the child process for the parent Pi readsubagent tool.",
-    "Your job is to answer a targeted factual file-inspection question without sending full file contents back to the parent context.",
-    "Use read/search tools as needed to deliver the best factual report. Do not modify files. Treat target paths, symbols, search terms, and line ranges as the intended scope.",
-    "Use grep or focused reads so you can cite repo-relative paths and line numbers. Avoid broad repo-wide searches unless the question has no target path and no search terms.",
-    "Return the smallest useful report: direct answer first, citations second, and exact short snippets only where useful. Do not create implementation plans, solution proposals, edit strategies, code-review judgments, bug findings, correctness assessments, control-flow/type-safety analysis, or accept/reject recommendations; provide factual repo evidence and line ranges only. If asked for hard logic or review, say that is outside readsubagent scope and provide only factual evidence/locations. If you cannot answer precisely from the supplied scope, state the narrow factual follow-up needed.",
+    "First evaluate task context. You are only a non-debug codebase scout/read planner and focused factual file-inspection agent.",
+    "Refuse debugging, failure diagnosis, regression or flaky-test investigation, incident response, and unexpected-runtime investigation. Never inspect logs, stack traces, crash reports, core dumps, test failure output, traces, profiler output, runtime captures, diagnostic screenshots, or similar artifacts. Tell the parent to inspect them directly or use debuggersubagent, and do not provide partial diagnostic analysis.",
+    "For allowed non-debug work, use read/search tools without modifying files. Treat target paths, symbols, search terms, and line ranges as scope. Prefer a short subsystem map, focused read list, anchors, avoid-for-now areas, and uncertainty; focused factual answers about ordinary code, config, and documentation remain supported.",
+    "Use grep or focused reads so you can cite repo-relative paths and line numbers. Avoid broad repo-wide searches unless needed to produce a bounded read plan.",
+    "Return the smallest useful report. Do not create implementation plans, solution proposals, edit strategies, code-review judgments, bug findings, correctness assessments, control-flow/type-safety analysis, design advice, or accept/reject recommendations. If the request crosses the boundary, refuse it rather than returning partial evidence. If an allowed question is underspecified, state the narrow non-debug follow-up needed.",
     `Delegated file-inspection task:\n${task}`,
   ].join("\n\n");
 }
@@ -573,7 +593,7 @@ function formatStatus(): string {
     `enabled by default: ${currentMainConfig.enabledByDefault ? "on" : "off"}`,
     formatReadSubagentModelSelection(currentConfig),
     `direct read policy: ${formatDirectReadPolicy(currentMainConfig)}`,
-    "When on, the main agent is instructed to use readsubagent for answers from files when raw contents are not needed, while keeping direct read available for exact contents, ranges, and verification unless the policy is block. A saved /readsubagent on/off state overrides enabledByDefault for that session branch.",
+    "When on, the main agent may use readsubagent only for non-debug scouting/read planning or focused ordinary facts. Debugging source and diagnostic evidence remain direct parent/debugger reads and must never be redirected to readsubagent, including when an optional guard policy is configured. A saved /readsubagent on/off state overrides enabledByDefault for that session branch.",
     "Commands: /readsubagent on | off | toggle | status | model [model|default] | ask <question>. The model subcommand sets a workspace-persistent model/endpoint override; `model default` (or `model reset`) clears it.",
   ].join("\n");
 }
@@ -602,8 +622,9 @@ function formatGuardedReadNotice(options: {
     `Omitted result size: ${options.charCount.toLocaleString("en-US")} characters across ${options.lineCount.toLocaleString("en-US")} lines.`,
     `Guard threshold: ${options.policy.directReadMaxChars.toLocaleString("en-US")} characters or ${options.policy.directReadMaxLines.toLocaleString("en-US")} lines (${options.policy.directReadPolicy}).`,
     "",
-    "Next step options:",
-    `- If the read was for understanding, summarizing, docs/config/how-to, or finding where behavior lives, stop and use readsubagent with path=${JSON.stringify(options.path)}, that question, optional symbols/searchTerms/lineRanges, and a small maxReportChars budget.`,
+    "Debugging exception: if this is a debugging, failure-investigation, or diagnostic-evidence read, keep inspection direct in the parent or debugger. Do not redirect it to readsubagent; disable the optional guard or retry the required direct range.",
+    "Next step options for non-debug work only:",
+    `- If this non-debug read was for understanding, summarizing, docs/config/how-to, or finding where behavior lives, stop and use readsubagent with path=${JSON.stringify(options.path)}, that question, optional symbols/searchTerms/lineRanges, and a small maxReportChars budget.`,
     `- If exact direct contents are genuinely needed, retry read only for a small known range in ${options.path} needed for an edit, quote, or verification; do not chunk a large file or docs to learn it.`,
     "- If the target file or symbol is still unclear, ask readsubagent for a focused read-planning pass before any more direct reads.",
     "- If direct full reads are intentional, run /readsubagent off or set directReadPolicy to allow.",
@@ -652,6 +673,17 @@ async function runReadSubagentTask(options: {
   readonly signal?: AbortSignal | undefined;
   readonly symbols?: readonly string[] | undefined;
 }): Promise<ChildAgentRunResult> {
+  if (isProhibitedReadSubagentRequest([
+    options.question,
+    options.paths,
+    options.symbols,
+    options.searchTerms,
+    options.lineRanges,
+    options.output,
+  ])) {
+    throw new Error(PROHIBITED_REQUEST_MESSAGE);
+  }
+
   const searchTerms = normalizeStringList(options.searchTerms);
   const symbols = normalizeStringList(options.symbols);
   const lineRanges = normalizeStringList(options.lineRanges);
@@ -769,7 +801,7 @@ export default function readSubagentExtension(pi: ExtensionAPI) {
     return {
       block: true,
       reason:
-        "read blocked: readsubagent directReadPolicy is block. Use readsubagent with a targeted question, run /readsubagent off, or set directReadPolicy to allow/guard-large.",
+        "read blocked by the optional readsubagent directReadPolicy=block. Debugging reads must remain direct and must not be redirected to readsubagent; run /readsubagent off or set directReadPolicy to allow before debugging. For non-debug scouting only, use readsubagent or guard-large.",
     };
   });
 
@@ -941,29 +973,27 @@ export default function readSubagentExtension(pi: ExtensionAPI) {
     name: "readsubagent",
     label: "Read Subagent",
     description:
-      "Ask a local child Pi process a targeted question about files when the main context needs an answer rather than raw file contents. The child can inspect files read-only and returns a concise cited answer with concrete code examples or exact snippets when useful.",
+      "Ask a local child Pi process for a non-debug codebase scout/read plan or focused factual answer about ordinary code, config, or documentation. Never use it for debugging, failure diagnosis, incidents, regressions, flaky tests, unexpected runtime behavior, or diagnostic artifacts.",
     promptSnippet:
-      "Ask a local child Pi process targeted questions about files when raw contents are not needed",
+      "Scout unfamiliar repository areas and plan focused non-debug reads before loading raw contents",
     promptGuidelines: [
-      "Use readsubagent by default when file inspection is for factual content retrieval, summarization, or line-range discovery rather than exact text extraction.",
-      "Before any direct read, verify that raw text is needed for a quote, exact edit oldText, precise known range, image inspection, final verification, or parent-side correctness analysis; otherwise ask readsubagent.",
-      "If you were about to call read mainly to retrieve/summarize contents, explain documented behavior, compare file contents, inspect docs/config/logs, find definitions, or learn factual file structure, delegate that exact question to readsubagent with relevant paths, symbols, line ranges, and search terms.",
-      "Do not read large docs or source files in chunks to learn them; ask readsubagent for the answer and exact line ranges, then direct-read only the smallest necessary ranges.",
-      "If a direct read is compacted by the large-read guard, stop and use readsubagent unless you already know the exact small range needed for an edit, quote, or verification.",
-      "Use readsubagent for documentation/config/how-to questions when the parent needs the answer rather than exact text; do not run rg/read in the parent just to answer a usage question.",
-      "When working in a known file but you first need to understand its structure, descriptive flow, or relevant symbols, ask readsubagent for a concise factual map and exact line ranges before direct-reading large sections.",
-      "Before copying a pattern from another known file or large implementation, ask readsubagent for relevant symbols, descriptive flow, and exact line ranges; then direct-read only those small ranges needed for edits.",
-      "Give readsubagent repo-relative paths, symbols, line ranges, search terms, the exact question to answer, desired output shape, and maxReportChars when possible.",
-      "Use main-context grep/find/ls only for one-shot low-output discovery with a clear next action; if the search would branch, require multiple commands, or produce broad output, ask readsubagent for a bounded factual read-planning pass before broader parent discovery.",
-      "If readsubagent's answer is too vague or missing needed details, ask readsubagent a narrower follow-up question before falling back to direct reads.",
-      "For broad repo archaeology, keep the question scoped and ask readsubagent for a concise factual map, candidate paths, search anchors, and the smallest next read list rather than raw discovery output.",
-      "Do not use readsubagent for hard logic or code review; use direct reads plus validation when the goal is to inspect for issues, judge correctness, validate control flow/type safety, quality, maintainability, security, or regression risk.",
+      "Evaluate task context first: never use readsubagent while debugging, diagnosing failures, investigating regressions or flaky tests, handling incidents, or tracing unexpected runtime behavior.",
+      "Never delegate logs, stack traces, crash reports, core dumps, test failure output, traces, profiler output, runtime captures, diagnostic screenshots, or similar artifacts. Inspect them directly in the parent or use debuggersubagent.",
+      "During debugging, the parent or debuggersubagent must directly inspect source, config, documentation, and diagnostic evidence; readsubagent must not scout the debug path, suggest evidence, or return partial diagnostic analysis.",
+      "Outside debugging, use readsubagent primarily for bounded codebase scouting and read planning in unfamiliar repository areas.",
+      "Ask for a short subsystem map, candidate files, search/symbol/line anchors, the smallest focused read list, avoid-for-now areas, and explicit uncertainty.",
+      "Focused non-debug factual answers about ordinary code, config, and documentation, including how-to material, remain supported when raw text is not needed.",
+      "For allowed work, direct-read only when raw text is needed for a quote, exact edit oldText, precise known range, image inspection, final verification, or parent-side correctness analysis.",
+      "If a non-debug direct read is compacted by the large-read guard, stop and ask readsubagent for a bounded read plan unless you already know the exact small range needed.",
+      "Give readsubagent repo-relative paths, symbols, line ranges, search terms, the exact question, desired output shape, and maxReportChars when possible.",
+      "Use main-context grep/find/ls for one-shot low-output discovery with a clear next action; for broader non-debug discovery, ask readsubagent for a bounded map and smallest next read list.",
+      "Do not use readsubagent for hard logic, design, code review, bug finding, correctness, control-flow/type-safety, quality, maintainability, security, regression risk, or edit decisions.",
       "Do not use readsubagent for git operations that mutate repo or remote state; handle committing, pushing, PR creation/merge, branch cleanup, and main sync in the parent session.",
     ],
     parameters: Type.Object({
       question: Type.String({
         description:
-          "Targeted factual question for the child file-inspection agent. Include what to find, summarize, compare, extract, or explain from file contents; do not ask it to judge correctness or perform review.",
+          "Non-debug scouting/read-planning or focused factual question about ordinary code, config, or documentation. Never include debugging work or diagnostic artifacts; do not ask for judgment, diagnosis, or review.",
       }),
       path: Type.Optional(Type.String({ description: "Single repo-relative path to inspect" })),
       paths: Type.Optional(
@@ -990,7 +1020,7 @@ export default function readSubagentExtension(pi: ExtensionAPI) {
       output: Type.Optional(
         Type.String({
           description:
-            "Desired report shape and level of detail, e.g. concise answer, exact oldText block, or API summary",
+            "Desired report shape, preferably a subsystem map, focused read list, anchors, avoid-for-now areas, and uncertainty, or a concise non-debug factual answer",
         }),
       ),
       maxReportChars: Type.Optional(

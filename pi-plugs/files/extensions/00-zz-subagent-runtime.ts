@@ -12,6 +12,7 @@ import { isConfigObject, parseJsonc } from "./zz-lib/jsonc-config.ts";
  * Installing this plug places the pi-plugs model-option helper/config under:
  * - .pi/extensions/lib/child-agent-model-options.ts
  * - .pi/extensions/local-model-endpoints.config.jsonc
+ * - .pi/extensions/zz-agent-models.config.jsonc
  *
  * The shared child-Pi agent and JSONC helpers come from zz-lib under:
  * - .pi/extensions/zz-lib/child-pi-agent.ts
@@ -55,9 +56,17 @@ const DEFAULT_SETUP: LocalModelSetup = {
 
 const ZZ_LOCAL_MODELS_CONFIG = "zzLocalModels.config.jsonc";
 const LOCAL_MODEL_ENDPOINTS_CONFIG = "local-model-endpoints.config.jsonc";
-const CHILD_AGENT_CONFIGS = [
-  "readsubagent.config.jsonc",
-] as const;
+const ZZ_AGENT_MODELS_CONFIG = "zz-agent-models.config.jsonc";
+const LOCAL_MODEL_OPTION_ID = "qwen-35b-a3b";
+const CHILD_LOCAL_PROVIDER = "zz-agent-local";
+const RESERVED_PROVIDER_IDS = new Set([
+  CHILD_LOCAL_PROVIDER,
+  "anthropic",
+  "fireworks",
+  "google",
+  "openai",
+  "openai-codex",
+]);
 
 function extensionConfigPath(cwd: string, filename: string): string {
   return resolve(cwd, ".pi", "extensions", filename);
@@ -162,48 +171,53 @@ function localEndpointFromRecord(record: Record<string, unknown>): string | unde
 }
 
 async function readExistingSetup(cwd: string): Promise<LocalModelSetup> {
-  const setup: LocalModelSetup = { ...DEFAULT_SETUP };
+  let setup: LocalModelSetup = { ...DEFAULT_SETUP };
 
-  const zzLocalModels = await readConfigFile(extensionConfigPath(cwd, ZZ_LOCAL_MODELS_CONFIG));
-  if (zzLocalModels) {
-    const configuredModel = firstConfiguredModel(zzLocalModels);
-    return {
-      contextWindow: getNumberField(zzLocalModels, "contextWindow") ?? setup.contextWindow,
-      endpoint:
-        getStringField(zzLocalModels, "endpoint") ??
-        getStringField(zzLocalModels, "baseUrl") ??
-        getStringField(zzLocalModels, "url") ??
-        setup.endpoint,
-      maxOutputTokens: getNumberField(zzLocalModels, "maxTokens") ?? setup.maxOutputTokens,
-      modelId: configuredModel.id ?? setup.modelId,
-      modelName: configuredModel.name ?? configuredModel.id ?? setup.modelName,
-      provider: getStringField(zzLocalModels, "provider") ?? setup.provider,
-      providerName: getStringField(zzLocalModels, "name") ?? setup.providerName,
-      reasoning: getBooleanField(zzLocalModels, "reasoning") ?? setup.reasoning,
-    };
+  const centralCatalog = await readConfigFile(extensionConfigPath(cwd, ZZ_AGENT_MODELS_CONFIG));
+  const centralOptions = centralCatalog?.modelOptions;
+  if (isConfigObject(centralOptions)) {
+    const localOption = centralOptions[LOCAL_MODEL_OPTION_ID];
+    if (isConfigObject(localOption)) {
+      const contextWindow = getNumberField(localOption, "contextWindow");
+      const endpoint = getStringField(localOption, "endpoint");
+      const maxOutputTokens = getNumberField(localOption, "maxOutputTokens");
+      const modelId = getStringField(localOption, "model");
+      const thinking = getStringField(localOption, "thinking");
+      setup = {
+        ...setup,
+        ...(contextWindow !== undefined ? { contextWindow } : {}),
+        ...(endpoint ? { endpoint } : {}),
+        ...(maxOutputTokens !== undefined ? { maxOutputTokens } : {}),
+        ...(modelId ? { modelId, modelName: modelId } : {}),
+        ...(thinking ? { reasoning: thinking !== "off" } : {}),
+      };
+    }
   }
 
   const localEndpoints = await readConfigFile(extensionConfigPath(cwd, LOCAL_MODEL_ENDPOINTS_CONFIG));
   if (localEndpoints) {
     const endpoint = localEndpointFromRecord(localEndpoints);
-    return { ...setup, ...(endpoint ? { endpoint } : {}) };
+    if (endpoint) setup = { ...setup, endpoint };
   }
 
-  for (const filename of CHILD_AGENT_CONFIGS) {
-    const config = await readConfigFile(extensionConfigPath(cwd, filename));
-    if (!config) continue;
-    const endpoint = getStringField(config, "endpoint") ?? getStringField(config, "baseUrl") ?? getStringField(config, "url");
-    const modelId = getStringField(config, "model");
-    const provider = getStringField(config, "provider");
-    return {
-      ...setup,
-      ...(endpoint ? { endpoint } : {}),
-      ...(modelId ? { modelId, modelName: modelId } : {}),
-      ...(provider ? { provider } : {}),
-    };
-  }
+  const zzLocalModels = await readConfigFile(extensionConfigPath(cwd, ZZ_LOCAL_MODELS_CONFIG));
+  if (!zzLocalModels) return setup;
 
-  return setup;
+  const configuredModel = firstConfiguredModel(zzLocalModels);
+  return {
+    contextWindow: getNumberField(zzLocalModels, "contextWindow") ?? setup.contextWindow,
+    endpoint:
+      getStringField(zzLocalModels, "endpoint") ??
+      getStringField(zzLocalModels, "baseUrl") ??
+      getStringField(zzLocalModels, "url") ??
+      setup.endpoint,
+    maxOutputTokens: getNumberField(zzLocalModels, "maxTokens") ?? setup.maxOutputTokens,
+    modelId: configuredModel.id ?? setup.modelId,
+    modelName: configuredModel.name ?? configuredModel.id ?? setup.modelName,
+    provider: getStringField(zzLocalModels, "provider") ?? setup.provider,
+    providerName: getStringField(zzLocalModels, "name") ?? setup.providerName,
+    reasoning: getBooleanField(zzLocalModels, "reasoning") ?? setup.reasoning,
+  };
 }
 
 function mergeZzLocalModelsConfig(
@@ -258,112 +272,92 @@ function mergeLocalModelEndpointsConfig(
   return next;
 }
 
-function isLocalModelOption(option: Record<string, unknown>, setup: LocalModelSetup): boolean {
-  const provider = (getStringField(option, "provider") ?? "").trim().toLowerCase();
-  const label = (getStringField(option, "label") ?? "").toLowerCase();
-  const endpoint = getStringField(option, "endpoint") ?? getStringField(option, "baseUrl") ?? getStringField(option, "url");
-
-  if (provider === setup.provider.toLowerCase()) return true;
-  if (["lm-studio", "lmstudio", "local"].includes(provider)) return true;
-  if (provider && ["openai-codex", "anthropic", "google", "openai"].includes(provider)) return false;
-  return Boolean(endpoint) && label.includes("lm studio");
-}
-
-function updateLocalChildModelOption(option: Record<string, unknown>, setup: LocalModelSetup): void {
-  option.label = `${setup.modelName} @ ${endpointHostLabel(setup.endpoint)} (${setup.providerName})`;
-  option.provider = setup.provider;
-  option.providerRegistration = "openai-compatible";
-  option.endpoint = setup.endpoint;
-  option.model = setup.modelId;
-  option.contextWindow = getNumberField(option, "contextWindow") ?? setup.contextWindow;
-  option.maxOutputTokens = getNumberField(option, "maxOutputTokens") ?? setup.maxOutputTokens;
-  option.thinking = getStringField(option, "thinking") ?? (setup.reasoning ? "off" : "off");
-}
-
-function mergeChildAgentConfig(
-  existing: Record<string, unknown>,
-  setup: LocalModelSetup,
-): { changed: boolean; next: Record<string, unknown> } {
+function mergeCentralModelCatalog(existing: Record<string, unknown>, setup: LocalModelSetup): Record<string, unknown> {
   const next = cloneConfigObject(existing);
-  let changed = false;
-
-  const topLevelProvider = (getStringField(next, "provider") ?? "").trim().toLowerCase();
-  const topLevelEndpoint = getStringField(next, "endpoint") ?? getStringField(next, "baseUrl") ?? getStringField(next, "url");
-  if (topLevelProvider === setup.provider.toLowerCase() || topLevelProvider === "lm-studio" || topLevelProvider === "lmstudio") {
-    next.provider = setup.provider;
-    next.providerRegistration = "openai-compatible";
-    next.endpoint = setup.endpoint;
-    next.model = setup.modelId;
-    next.contextWindow = setup.contextWindow;
-    next.maxOutputTokens = setup.maxOutputTokens;
-    changed = true;
-  } else if (!topLevelProvider && topLevelEndpoint) {
-    next.provider = setup.provider;
-    next.providerRegistration = "openai-compatible";
-    next.endpoint = setup.endpoint;
-    next.model = setup.modelId;
-    changed = true;
-  }
-
   const modelOptions = next.modelOptions;
-  if (isConfigObject(modelOptions)) {
-    for (const option of Object.values(modelOptions)) {
-      if (!isConfigObject(option) || !isLocalModelOption(option, setup)) continue;
-      updateLocalChildModelOption(option, setup);
-      changed = true;
-    }
+  if (!isConfigObject(modelOptions)) {
+    throw new Error(`${ZZ_AGENT_MODELS_CONFIG} must define a modelOptions object`);
   }
 
-  return { changed, next };
+  const localOption = modelOptions[LOCAL_MODEL_OPTION_ID];
+  if (!isConfigObject(localOption)) {
+    throw new Error(`${ZZ_AGENT_MODELS_CONFIG} must define modelOptions.${LOCAL_MODEL_OPTION_ID}`);
+  }
+
+  localOption.label = `${setup.modelName} @ ${endpointHostLabel(setup.endpoint)} (${setup.providerName})`;
+  localOption.provider = CHILD_LOCAL_PROVIDER;
+  localOption.providerRegistration = "openai-compatible";
+  localOption.endpoint = setup.endpoint;
+  localOption.model = setup.modelId;
+  localOption.contextWindow = getNumberField(localOption, "contextWindow") ?? setup.contextWindow;
+  localOption.maxOutputTokens = getNumberField(localOption, "maxOutputTokens") ?? setup.maxOutputTokens;
+  localOption.thinking = getStringField(localOption, "thinking") ?? "off";
+  return next;
 }
 
 async function applyLocalModelSetup(cwd: string, setup: LocalModelSetup): Promise<SetupResult> {
   const filesUpdated: string[] = [];
   const warnings: string[] = [];
+  const normalizedProvider = setup.provider.trim().toLowerCase();
+  if (RESERVED_PROVIDER_IDS.has(normalizedProvider)) {
+    return {
+      filesUpdated,
+      warnings: [`provider id "${setup.provider}" is reserved; choose a distinct local provider id`],
+    };
+  }
 
+  const centralCatalogPath = extensionConfigPath(cwd, ZZ_AGENT_MODELS_CONFIG);
   const zzLocalModelsPath = extensionConfigPath(cwd, ZZ_LOCAL_MODELS_CONFIG);
-  const zzLocalModelsExtensionPath = resolve(cwd, ".pi", "extensions", "zzLocalModels.ts");
-  if (existsSync(zzLocalModelsPath) || existsSync(zzLocalModelsExtensionPath)) {
-    try {
-      const existing = await readConfigFile(zzLocalModelsPath);
-      await writeConfigFile(
-        zzLocalModelsPath,
-        mergeZzLocalModelsConfig(existing, setup),
-        "Written by /zz-model-setup for Pi's local model provider.",
-      );
-      filesUpdated.push(`.pi/extensions/${ZZ_LOCAL_MODELS_CONFIG}`);
-    } catch (error) {
-      warnings.push(`${ZZ_LOCAL_MODELS_CONFIG}: ${error instanceof Error ? error.message : String(error)}`);
-    }
-  } else {
-    warnings.push(`install the zz-local-models plug, then rerun /zz-model-setup to update ${ZZ_LOCAL_MODELS_CONFIG}`);
-  }
-
   const localEndpointsPath = extensionConfigPath(cwd, LOCAL_MODEL_ENDPOINTS_CONFIG);
+
+  let nextCentralCatalog: Record<string, unknown>;
+  let nextZzLocalModels: Record<string, unknown>;
+  let nextLocalEndpoints: Record<string, unknown>;
   try {
-    const existing = await readConfigFile(localEndpointsPath);
-    await writeConfigFile(
-      localEndpointsPath,
-      mergeLocalModelEndpointsConfig(existing, setup),
-      "Written by /zz-model-setup for shared child-agent local endpoints.",
-    );
-    filesUpdated.push(`.pi/extensions/${LOCAL_MODEL_ENDPOINTS_CONFIG}`);
+    const centralCatalog = await readConfigFile(centralCatalogPath);
+    if (!centralCatalog) throw new Error(`${ZZ_AGENT_MODELS_CONFIG} is missing`);
+    const zzLocalModels = await readConfigFile(zzLocalModelsPath);
+    if (!zzLocalModels) throw new Error(`${ZZ_LOCAL_MODELS_CONFIG} is missing`);
+    const localEndpoints = await readConfigFile(localEndpointsPath);
+    if (!localEndpoints) throw new Error(`${LOCAL_MODEL_ENDPOINTS_CONFIG} is missing`);
+    nextCentralCatalog = mergeCentralModelCatalog(centralCatalog, setup);
+    nextZzLocalModels = mergeZzLocalModelsConfig(zzLocalModels, setup);
+    nextLocalEndpoints = mergeLocalModelEndpointsConfig(localEndpoints, setup);
   } catch (error) {
-    warnings.push(`${LOCAL_MODEL_ENDPOINTS_CONFIG}: ${error instanceof Error ? error.message : String(error)}`);
+    return {
+      filesUpdated,
+      warnings: [`setup preflight failed: ${error instanceof Error ? error.message : String(error)}`],
+    };
   }
 
-  for (const filename of CHILD_AGENT_CONFIGS) {
-    const path = extensionConfigPath(cwd, filename);
-    if (!existsSync(path)) continue;
+  const writes = [
+    {
+      comment: "Written by /zz-model-setup for shared child-agent local model options.",
+      filename: ZZ_AGENT_MODELS_CONFIG,
+      path: centralCatalogPath,
+      value: nextCentralCatalog,
+    },
+    {
+      comment: "Written by /zz-model-setup for Pi's local model provider.",
+      filename: ZZ_LOCAL_MODELS_CONFIG,
+      path: zzLocalModelsPath,
+      value: nextZzLocalModels,
+    },
+    {
+      comment: "Written by /zz-model-setup for shared child-agent local endpoints.",
+      filename: LOCAL_MODEL_ENDPOINTS_CONFIG,
+      path: localEndpointsPath,
+      value: nextLocalEndpoints,
+    },
+  ] as const;
+
+  for (const write of writes) {
     try {
-      const existing = await readConfigFile(path);
-      if (!existing) continue;
-      const { changed, next } = mergeChildAgentConfig(existing, setup);
-      if (!changed) continue;
-      await writeConfigFile(path, next, "Updated by /zz-model-setup for local child-agent model options.");
-      filesUpdated.push(`.pi/extensions/${filename}`);
+      await writeConfigFile(write.path, write.value, write.comment);
+      filesUpdated.push(`.pi/extensions/${write.filename}`);
     } catch (error) {
-      warnings.push(`${filename}: ${error instanceof Error ? error.message : String(error)}`);
+      warnings.push(`${write.filename}: ${error instanceof Error ? error.message : String(error)}`);
+      break;
     }
   }
 
@@ -424,8 +418,8 @@ function setupFromSetArgs(args: readonly string[], defaults: LocalModelSetup): L
 
 async function showSetupStatus(ctx: ExtensionContext): Promise<void> {
   const defaults = await readExistingSetup(ctx.cwd);
-  const installedChildConfigs = CHILD_AGENT_CONFIGS.filter((filename) => existsSync(extensionConfigPath(ctx.cwd, filename)));
   const zzLocalModelsInstalled = existsSync(resolve(ctx.cwd, ".pi", "extensions", "zzLocalModels.ts"));
+  const centralCatalogInstalled = existsSync(extensionConfigPath(ctx.cwd, ZZ_AGENT_MODELS_CONFIG));
 
   ctx.ui.notify(
     [
@@ -435,7 +429,7 @@ async function showSetupStatus(ctx: ExtensionContext): Promise<void> {
       `  model: ${defaults.modelId}`,
       `  provider config: .pi/extensions/${ZZ_LOCAL_MODELS_CONFIG}${zzLocalModelsInstalled ? "" : " (install zz-local-models to expose it in /model)"}`,
       `  shared endpoint config: .pi/extensions/${LOCAL_MODEL_ENDPOINTS_CONFIG}`,
-      `  child-agent configs installed: ${installedChildConfigs.length ? installedChildConfigs.join(", ") : "none"}`,
+      `  child-agent fallback catalog: .pi/extensions/${ZZ_AGENT_MODELS_CONFIG}${centralCatalogInstalled ? "" : " (install zz-subagent-runtime to expose it)"}`,
       "Run /zz-model-setup setup to open the wizard, or /zz-model-setup set <endpoint> [model-id] [provider-id].",
     ].join("\n"),
     "info",
@@ -470,7 +464,7 @@ async function runSetupCommand(args: string, ctx: ExtensionContext): Promise<voi
         "  /zz-model-setup set <endpoint> [model-id] [provider-id]",
         "",
         "The wizard updates .pi/extensions/zzLocalModels.config.jsonc,",
-        ".pi/extensions/local-model-endpoints.config.jsonc, and any installed child-agent configs.",
+        ".pi/extensions/local-model-endpoints.config.jsonc, and .pi/extensions/zz-agent-models.config.jsonc.",
       ].join("\n"),
       "info",
     );

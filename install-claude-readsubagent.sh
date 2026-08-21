@@ -5,9 +5,8 @@
 #
 # Thin Claude Code wrapper around the harness-neutral zz-readsubagent-mcp server.
 # It installs the MCP server at ./.zz-mcp/zz-readsubagent-mcp.py, registers the
-# zz_readsubagent server in ./.mcp.json, writes the ./.claude/agents/readsubagent.md
-# subagent (restricted to that one MCP tool), installs the readsubagent skill and
-# hooks, merges ./.claude/settings.json hook entries, and adds repo CLAUDE.md guidance.
+# zz_readsubagent server in ./.mcp.json, installs the readsubagent skill and hooks,
+# merges ./.claude/settings.json hook entries, and adds repo CLAUDE.md guidance.
 # The MCP server spawns a headless `pi` child on a local Qwen model (via LM Studio).
 set -euo pipefail
 
@@ -29,7 +28,7 @@ Options:
 
 Environment:
   ZZ_DASH_URL                          Website host (default: https://raw.githubusercontent.com/dezverev/zzPi/main)
-  ZZ_CLAUDE_READSUBAGENT_URL           Subagent source URL (default: $ZZ_DASH_URL/claude-readsubagent)
+  ZZ_CLAUDE_READSUBAGENT_URL           Skill/hooks source URL (default: $ZZ_DASH_URL/claude-readsubagent)
   ZZ_READSUBAGENT_MCP_URL              MCP server source URL (default: $ZZ_DASH_URL/zz-readsubagent-mcp)
   ZZ_CLAUDE_READSUBAGENT_PROJECT_DIR   Target repo/project dir
   ZZ_CLAUDE_READSUBAGENT_MODEL         pi model selector
@@ -106,14 +105,12 @@ TMP_DIR="$(mktemp -d)"
 cleanup() { rm -rf "$TMP_DIR"; }
 trap cleanup EXIT
 
-AGENT_TMP="$TMP_DIR/readsubagent.md"
 SERVER_TMP="$TMP_DIR/zz-readsubagent-mcp.py"
 HOOK_NUDGE_TMP="$TMP_DIR/readsubagent-nudge.sh"
 HOOK_BLOCK_EXPLORE_TMP="$TMP_DIR/block-explore-subagent.sh"
 HOOK_NUDGE_PS1_TMP="$TMP_DIR/readsubagent-nudge.ps1"
 HOOK_BLOCK_EXPLORE_PS1_TMP="$TMP_DIR/block-explore-subagent.ps1"
 SKILL_TMP="$TMP_DIR/SKILL.md"
-curl -fsSL "$AGENT_SOURCE_BASE/readsubagent.md" -o "$AGENT_TMP"
 curl -fsSL "$MCP_SOURCE_BASE/zz-readsubagent-mcp.py" -o "$SERVER_TMP"
 case "$(printf '%s' "$SKIP_HOOKS" | tr '[:upper:]' '[:lower:]')" in
   1|true|yes|on) ;;
@@ -134,7 +131,7 @@ if ! command -v "$PI_BIN" >/dev/null 2>&1; then
   PI_WARNING="WARNING: '$PI_BIN' not found on PATH. The readsubagent MCP tool needs pi with the LM Studio (lm-studio) provider available."
 fi
 
-python3 - "$PROJECT_DIR" "$AGENT_TMP" "$SERVER_TMP" "$HOOK_NUDGE_TMP" "$HOOK_BLOCK_EXPLORE_TMP" "$HOOK_NUDGE_PS1_TMP" "$HOOK_BLOCK_EXPLORE_PS1_TMP" "$SKILL_TMP" "$AGENT_SOURCE_BASE" "$MCP_SOURCE_BASE" "$MODEL" "$PI_BIN" "$SKIP_MCP" "$SKIP_CLAUDE_MD" "$SKIP_HOOKS" "$SKIP_SKILL" "$FORCE" "$DRY_RUN" <<'PY'
+python3 - "$PROJECT_DIR" "$SERVER_TMP" "$HOOK_NUDGE_TMP" "$HOOK_BLOCK_EXPLORE_TMP" "$HOOK_NUDGE_PS1_TMP" "$HOOK_BLOCK_EXPLORE_PS1_TMP" "$SKILL_TMP" "$AGENT_SOURCE_BASE" "$MCP_SOURCE_BASE" "$MODEL" "$PI_BIN" "$SKIP_MCP" "$SKIP_CLAUDE_MD" "$SKIP_HOOKS" "$SKIP_SKILL" "$FORCE" "$DRY_RUN" <<'PY'
 from __future__ import annotations
 
 import hashlib
@@ -144,32 +141,31 @@ import sys
 from pathlib import Path
 
 project_dir = Path(sys.argv[1]).resolve()
-agent_tmp = Path(sys.argv[2]).resolve()
-server_tmp = Path(sys.argv[3]).resolve()
-hook_nudge_tmp = Path(sys.argv[4]).resolve()
-hook_block_explore_tmp = Path(sys.argv[5]).resolve()
-hook_nudge_ps1_tmp = Path(sys.argv[6]).resolve()
-hook_block_explore_ps1_tmp = Path(sys.argv[7]).resolve()
-skill_tmp = Path(sys.argv[8]).resolve()
-source_base = sys.argv[9].rstrip("/")
-mcp_source_base = sys.argv[10].rstrip("/")
-model = sys.argv[11]
-pi_bin = sys.argv[12]
-skip_mcp = sys.argv[13].strip().lower() in {"1", "true", "yes", "on"}
-skip_claude_md = sys.argv[14].strip().lower() in {"1", "true", "yes", "on"}
-skip_hooks = sys.argv[15].strip().lower() in {"1", "true", "yes", "on"}
-skip_skill = sys.argv[16].strip().lower() in {"1", "true", "yes", "on"}
-force = sys.argv[17].strip().lower() in {"1", "true", "yes", "on"}
-dry_run = sys.argv[18].strip().lower() in {"1", "true", "yes", "on"}
+server_tmp = Path(sys.argv[2]).resolve()
+hook_nudge_tmp = Path(sys.argv[3]).resolve()
+hook_block_explore_tmp = Path(sys.argv[4]).resolve()
+hook_nudge_ps1_tmp = Path(sys.argv[5]).resolve()
+hook_block_explore_ps1_tmp = Path(sys.argv[6]).resolve()
+skill_tmp = Path(sys.argv[7]).resolve()
+source_base = sys.argv[8].rstrip("/")
+mcp_source_base = sys.argv[9].rstrip("/")
+model = sys.argv[10]
+pi_bin = sys.argv[11]
+skip_mcp = sys.argv[12].strip().lower() in {"1", "true", "yes", "on"}
+skip_claude_md = sys.argv[13].strip().lower() in {"1", "true", "yes", "on"}
+skip_hooks = sys.argv[14].strip().lower() in {"1", "true", "yes", "on"}
+skip_skill = sys.argv[15].strip().lower() in {"1", "true", "yes", "on"}
+force = sys.argv[16].strip().lower() in {"1", "true", "yes", "on"}
+dry_run = sys.argv[17].strip().lower() in {"1", "true", "yes", "on"}
 
-rel_agent = ".claude/agents/readsubagent.md"
+obsolete_agent = ".claude/agents/readsubagent.md"
 rel_hook_nudge = ".claude/hooks/readsubagent-nudge.sh"
 rel_hook_block_explore = ".claude/hooks/block-explore-subagent.sh"
 rel_hook_nudge_ps1 = ".claude/hooks/readsubagent-nudge.ps1"
 rel_hook_block_explore_ps1 = ".claude/hooks/block-explore-subagent.ps1"
 rel_skill = ".claude/skills/readsubagent/SKILL.md"
 rel_server = ".zz-mcp/zz-readsubagent-mcp.py"
-agent_target = project_dir / rel_agent
+obsolete_agent_target = project_dir / obsolete_agent
 hook_nudge_target = project_dir / rel_hook_nudge
 hook_block_explore_target = project_dir / rel_hook_block_explore
 hook_nudge_ps1_target = project_dir / rel_hook_nudge_ps1
@@ -192,18 +188,12 @@ Before doing focused reads of specific implementation files, start with a
 read-planning pass through `readsubagent`, which delegates to a local model
 (Qwen via LM Studio, through a headless `pi` child).
 
-`readsubagent` is reachable three equivalent ways — use whichever fits:
+Use the **`readsubagent` skill**. The skill calls the direct MCP tool
+`mcp__zz_readsubagent__readsubagent`, served by
+`.zz-mcp/zz-readsubagent-mcp.py`; do not launch another Claude subagent.
 
-- the **`readsubagent` skill** (via the Skill tool),
-- the **`readsubagent` subagent** (`Agent(subagent_type=\"readsubagent\")`), and
-- the **direct MCP tool `mcp__zz_readsubagent__readsubagent`**, served by
-  `.zz-mcp/zz-readsubagent-mcp.py`.
-
-Prefer the **direct MCP tool** when you already know the targets: it is the
-lowest-overhead path and gives the most control. Pass `question` (required) plus
-any of `path`/`paths`, `symbols`, `searchTerms`, `lineRanges`, `output`, and
-`maxReportChars` to scope the inspection. Reach for the skill or subagent when
-you want the wrapped read-planning workflow instead.
+Pass `question` (required) plus any of `path`/`paths`, `symbols`, `searchTerms`,
+`lineRanges`, `output`, and `maxReportChars` to scope the inspection.
 
 Use `readsubagent` (any entry point) to get a short subsystem map, candidate
 files, the smallest focused read list, useful search terms/line anchors, areas
@@ -235,6 +225,12 @@ def manifest_owns(rel: str) -> bool:
     return isinstance(owned, list) and rel in owned
 
 
+def manifest_hash(rel: str) -> str | None:
+    hashes = load_manifest().get("file_hashes")
+    value = hashes.get(rel) if isinstance(hashes, dict) else None
+    return value if isinstance(value, str) else None
+
+
 def replace_marked_block(text: str, start: str, end: str, block: str) -> tuple[str, bool]:
     pattern = re.compile(rf"{re.escape(start)}.*?{re.escape(end)}", re.S)
     if pattern.search(text):
@@ -242,12 +238,24 @@ def replace_marked_block(text: str, start: str, end: str, block: str) -> tuple[s
     return text.rstrip() + ("\n\n" if text.strip() else "") + block.rstrip(), False
 
 
+def preflight_file(rel: str, target: Path, tmp: Path) -> bool:
+    if not target.exists() or force:
+        return False
+    matches_payload = target.read_bytes() == tmp.read_bytes()
+    if not manifest_owns(rel) and not matches_payload:
+        raise SystemExit(
+            f"Refusing to overwrite existing unowned {rel}. Use --force if you want this installer to claim it."
+        )
+    expected_hash = manifest_hash(rel)
+    if manifest_owns(rel) and expected_hash and sha256(target) != expected_hash and not matches_payload:
+        raise SystemExit(
+            f"Refusing to overwrite locally modified managed {rel}. Use --force to replace it."
+        )
+    return matches_payload
+
+
 def ensure_file(rel: str, target: Path, tmp: Path, *, executable: bool = False) -> str:
-    if target.exists() and not manifest_owns(rel) and not force:
-        if target.read_bytes() != tmp.read_bytes():
-            raise SystemExit(
-                f"Refusing to overwrite existing unowned {rel}. Use --force if you want this installer to claim it."
-            )
+    if preflight_file(rel, target, tmp):
         if executable and not dry_run:
             target.chmod(target.stat().st_mode | 0o755)
         return f"unchanged existing matching {rel}"
@@ -322,10 +330,10 @@ def ensure_settings_hooks() -> str:
     return "merged readsubagent hooks into .claude/settings.json" if changed else "readsubagent hooks already present in .claude/settings.json"
 
 
-def server_entry() -> dict:
-    env = {"ZZ_READSUBAGENT_MODEL": model}
-    if pi_bin != "pi":
-        env["ZZ_READSUBAGENT_PI_BIN"] = pi_bin
+def server_entry(entry_model: str = model, entry_pi_bin: str = pi_bin) -> dict:
+    env = {"ZZ_READSUBAGENT_MODEL": entry_model}
+    if entry_pi_bin != "pi":
+        env["ZZ_READSUBAGENT_PI_BIN"] = entry_pi_bin
     return {
         "type": "stdio",
         "command": "python3",
@@ -334,28 +342,55 @@ def server_entry() -> dict:
     }
 
 
+def assert_managed_mcp_entry_unchanged(servers: dict) -> None:
+    prior = load_manifest()
+    if SERVER_NAME not in (prior.get("managed_servers") or []) or force:
+        return
+    server_state = prior.get("server")
+    prior_model = server_state.get("model") if isinstance(server_state, dict) else None
+    prior_pi_bin = server_state.get("pi_bin", "pi") if isinstance(server_state, dict) else None
+    if not isinstance(prior_model, str) or not isinstance(prior_pi_bin, str):
+        raise SystemExit(
+            f"Cannot verify legacy ownership of {SERVER_NAME} in .mcp.json. Use --force to replace it."
+        )
+    if SERVER_NAME not in servers or servers[SERVER_NAME] != server_entry(prior_model, prior_pi_bin):
+        raise SystemExit(
+            f"Refusing to overwrite locally modified managed {SERVER_NAME} server in .mcp.json. "
+            "Use --force to replace it."
+        )
+
+
+mcp_managed_this_run = False
+
+
 def ensure_mcp() -> str:
+    global mcp_managed_this_run
     if skip_mcp:
         return "skipped .mcp.json registration"
     data: dict = {}
     if mcp_json.exists():
         try:
             loaded = json.loads(mcp_json.read_text(encoding="utf-8"))
-            if isinstance(loaded, dict):
-                data = loaded
+            if not isinstance(loaded, dict):
+                raise ValueError("root is not an object")
+            data = loaded
         except Exception as exc:
             raise SystemExit(f"Refusing to edit malformed .mcp.json: {exc}")
     servers = data.get("mcpServers")
-    if not isinstance(servers, dict):
+    if servers is None:
         servers = {}
-    existing = servers.get(SERVER_NAME)
+    elif not isinstance(servers, dict):
+        raise SystemExit("Refusing to edit .mcp.json because mcpServers is not an object")
+    assert_managed_mcp_entry_unchanged(servers)
+    existing_present = SERVER_NAME in servers
     managed = SERVER_NAME in (load_manifest().get("managed_servers") or [])
-    if isinstance(existing, dict) and not managed and not force:
+    if existing_present and not managed and not force:
         return f"preserved existing unmanaged {SERVER_NAME} server in .mcp.json"
     if dry_run:
-        verb = "update" if isinstance(existing, dict) else "add"
+        verb = "update" if existing_present else "add"
         return f"would {verb} {SERVER_NAME} server in .mcp.json"
     servers[SERVER_NAME] = server_entry()
+    mcp_managed_this_run = True
     data["mcpServers"] = servers
     mcp_json.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
     return f"registered {SERVER_NAME} server in .mcp.json"
@@ -372,10 +407,63 @@ def ensure_claude_md() -> str:
     return "updated CLAUDE.md read-planning block" if replaced else "added CLAUDE.md read-planning block"
 
 
-actions = [
-    ensure_file(rel_agent, agent_target, agent_tmp),
-    ensure_file(rel_server, server_target, server_tmp),
-]
+def preflight_configuration() -> None:
+    if not skip_hooks and settings_json.exists():
+        try:
+            settings = json.loads(settings_json.read_text(encoding="utf-8"))
+            if not isinstance(settings, dict):
+                raise ValueError("root is not an object")
+            ensure_hook_event(settings, "PreToolUse", hook_entry(HOOK_NUDGE_COMMAND, "Read"), HOOK_NUDGE_COMMAND)
+            ensure_hook_event(settings, "PreToolUse", hook_entry(HOOK_BLOCK_EXPLORE_COMMAND, "Agent|Task"), HOOK_BLOCK_EXPLORE_COMMAND)
+            ensure_hook_event(settings, "UserPromptSubmit", hook_entry(HOOK_RESET_COMMAND), HOOK_RESET_COMMAND)
+        except Exception as exc:
+            raise SystemExit(f"Refusing to edit malformed .claude/settings.json: {exc}")
+    if not skip_mcp and mcp_json.exists():
+        try:
+            mcp_data = json.loads(mcp_json.read_text(encoding="utf-8"))
+            if not isinstance(mcp_data, dict):
+                raise ValueError("root is not an object")
+            if mcp_data.get("mcpServers") is not None and not isinstance(mcp_data["mcpServers"], dict):
+                raise ValueError("mcpServers is not an object")
+            assert_managed_mcp_entry_unchanged(mcp_data.get("mcpServers") or {})
+        except Exception as exc:
+            raise SystemExit(f"Refusing to edit malformed .mcp.json: {exc}")
+
+
+files_to_install = [(rel_server, server_target, server_tmp)]
+if not skip_hooks:
+    files_to_install.extend([
+        (rel_hook_nudge, hook_nudge_target, hook_nudge_tmp),
+        (rel_hook_block_explore, hook_block_explore_target, hook_block_explore_tmp),
+        (rel_hook_nudge_ps1, hook_nudge_ps1_target, hook_nudge_ps1_tmp),
+        (rel_hook_block_explore_ps1, hook_block_explore_ps1_target, hook_block_explore_ps1_tmp),
+    ])
+if not skip_skill:
+    files_to_install.append((rel_skill, skill_target, skill_tmp))
+for preflight_rel, preflight_target, preflight_tmp in files_to_install:
+    preflight_file(preflight_rel, preflight_target, preflight_tmp)
+preflight_configuration()
+
+
+def retire_obsolete_agent() -> str | None:
+    prior = load_manifest()
+    owned = prior.get("owned_files")
+    if not isinstance(owned, list) or obsolete_agent not in owned or not obsolete_agent_target.is_file():
+        return None
+    prior_hashes = prior.get("file_hashes")
+    expected = prior_hashes.get(obsolete_agent) if isinstance(prior_hashes, dict) else None
+    if expected and sha256(obsolete_agent_target) != expected:
+        return f"preserved locally modified obsolete {obsolete_agent}"
+    if dry_run:
+        return f"would remove obsolete {obsolete_agent}"
+    obsolete_agent_target.unlink()
+    return f"removed obsolete {obsolete_agent}"
+
+
+actions = [ensure_file(rel_server, server_target, server_tmp)]
+retired = retire_obsolete_agent()
+if retired:
+    actions.append(retired)
 if skip_hooks:
     actions.append("skipped Claude readsubagent hook files")
 else:
@@ -396,30 +484,73 @@ actions.extend([
 ])
 
 if not dry_run:
-    owned_files = [rel_agent, rel_server]
+    prior_state = load_manifest()
+    prior_owned = prior_state.get("owned_files")
+    owned_files = set(prior_owned if isinstance(prior_owned, list) else [])
+    owned_files.discard(obsolete_agent)
+    owned_files.add(rel_server)
     if not skip_hooks:
-        owned_files.extend([rel_hook_nudge, rel_hook_block_explore, rel_hook_nudge_ps1, rel_hook_block_explore_ps1])
+        owned_files.update([rel_hook_nudge, rel_hook_block_explore, rel_hook_nudge_ps1, rel_hook_block_explore_ps1])
     if not skip_skill:
-        owned_files.append(rel_skill)
-    managed_blocks = ["CLAUDE.md:zz-claude-readsubagent" if not skip_claude_md else ""]
+        owned_files.add(rel_skill)
+    owned_files = sorted(rel for rel in owned_files if (project_dir / rel).is_file())
+
+    def merged_management(key: str, current: list[str], skipped: bool) -> list[str]:
+        previous = prior_state.get(key)
+        values = set(previous if skipped and isinstance(previous, list) else [])
+        values.update(current)
+        return sorted(values)
+
+    managed_blocks = merged_management(
+        "managed_blocks", [] if skip_claude_md else ["CLAUDE.md:zz-claude-readsubagent"], skip_claude_md
+    )
+    managed_settings = merged_management(
+        "managed_settings", [] if skip_hooks else [".claude/settings.json:readsubagent-hooks"], skip_hooks
+    )
+    managed_servers = merged_management(
+        "managed_servers", [SERVER_NAME] if mcp_managed_this_run else [], skip_mcp
+    )
+    server_model = model
+    server_pi_bin = pi_bin
+    server_config_path = str(mcp_json)
+    prior_server = prior_state.get("server")
+    if skip_mcp and isinstance(prior_server, dict):
+        if isinstance(prior_server.get("model"), str):
+            server_model = prior_server["model"]
+        if isinstance(prior_server.get("pi_bin"), str):
+            server_pi_bin = prior_server["pi_bin"]
+        if isinstance(prior_server.get("config_path"), str):
+            server_config_path = prior_server["config_path"]
     state = {
         "installer": "zz-claude-readsubagent",
         "schemaVersion": 1,
         "source_url": source_base,
         "mcp_source_url": mcp_source_base,
         "owned_files": owned_files,
-        "managed_blocks": [item for item in managed_blocks if item],
-        "managed_settings": [] if skip_hooks else [".claude/settings.json:readsubagent-hooks"],
-        "managed_servers": [] if skip_mcp else [SERVER_NAME],
-        "file_hashes": {rel: sha256(project_dir / rel) for rel in owned_files},
+        "managed_blocks": managed_blocks,
+        "managed_settings": managed_settings,
+        "managed_servers": managed_servers,
+        "file_hashes": {},
         "server": {
             "name": SERVER_NAME,
-            "model": model,
-            "pi_bin": pi_bin,
-            "config_path": str(mcp_json),
-            "managed": not skip_mcp,
+            "model": server_model,
+            "pi_bin": server_pi_bin,
+            "config_path": server_config_path,
+            "managed": SERVER_NAME in managed_servers,
         },
     }
+    prior_hashes = prior_state.get("file_hashes")
+    prior_hashes = prior_hashes if isinstance(prior_hashes, dict) else {}
+    refreshed_files = {rel_server}
+    if not skip_hooks:
+        refreshed_files.update([rel_hook_nudge, rel_hook_block_explore, rel_hook_nudge_ps1, rel_hook_block_explore_ps1])
+    if not skip_skill:
+        refreshed_files.add(rel_skill)
+    for rel in owned_files:
+        if rel in refreshed_files or rel not in prior_hashes:
+            state["file_hashes"][rel] = sha256(project_dir / rel)
+        else:
+            state["file_hashes"][rel] = prior_hashes[rel]
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
     manifest_path.write_text(json.dumps(state, indent=2) + "\n", encoding="utf-8")
 

@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "hooks": {
+    "preToolUse": [
+      {
+        "type": "command",
+        "matcher": "view",
+        "bash": "./.github/hooks/readsubagent-nudge.sh nudge",
+        "powershell": "./.github/hooks/readsubagent-nudge.ps1 nudge",
+        "cwd": ".",
+        "timeoutSec": 5
+      },
+      {
+        "type": "command",
+        "matcher": "task",
+        "bash": "./.github/hooks/block-explore-subagent.sh",
+        "powershell": "./.github/hooks/block-explore-subagent.ps1",
+        "cwd": ".",
+        "timeoutSec": 5
+      }
+    ],
+    "userPromptSubmitted": [
+      {
+        "type": "command",
+        "bash": "./.github/hooks/readsubagent-nudge.sh reset",
+        "powershell": "./.github/hooks/readsubagent-nudge.ps1 reset",
+        "cwd": ".",
+        "timeoutSec": 5
+      }
+    ]
+  }
+}

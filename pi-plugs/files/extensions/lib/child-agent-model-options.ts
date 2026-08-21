@@ -40,9 +40,20 @@ export interface ChildAgentModelOptionsResult {
 export interface ReadChildAgentModelOptionsParams {
   readonly agentName: string;
   readonly baseConfig: ChildPiAgentConfig;
-  readonly configFilePath: string;
+  readonly modelOptionsConfigFilePath: string;
   readonly cwd: string;
 }
+
+const PROJECT_MODEL_OPTIONS_CONFIG_FILE_PATH = ".zzpi/zz-agent-models.jsonc";
+const RESERVED_PROJECT_PROVIDER_IDS = new Set([
+  "anthropic",
+  "fireworks",
+  "google",
+  "openai",
+  "openai-codex",
+  "zz-agent-local",
+  "zz-codex-proxy",
+]);
 
 export function sanitizeModelOptionId(value: string): string {
   return value
@@ -103,7 +114,7 @@ function normalizeChildAgentProviderRegistration(
 function readChildAgentModelOption(
   idFromMap: string | undefined,
   record: ConfigObject,
-  params: Pick<ReadChildAgentModelOptionsParams, "agentName" | "baseConfig" | "configFilePath">,
+  params: Pick<ReadChildAgentModelOptionsParams, "agentName" | "baseConfig" | "modelOptionsConfigFilePath">,
 ): ChildAgentModelOption {
   const model = getStringField(record, "model")?.trim() || idFromMap?.trim();
   if (!model) throw new Error("modelOptions entries must define a non-empty model.");
@@ -131,8 +142,8 @@ function readChildAgentModelOption(
     ...(contextWindow ? { contextWindow } : {}),
     ...(endpoint
       ? {
-          endpoint: normalizeBaseUrl(endpoint, `${params.configFilePath} modelOptions.${id}.endpoint`),
-          endpointSource: `${params.configFilePath} modelOptions.${id}.endpoint`,
+          endpoint: normalizeBaseUrl(endpoint, `${params.modelOptionsConfigFilePath} modelOptions.${id}.endpoint`),
+          endpointSource: `${params.modelOptionsConfigFilePath} modelOptions.${id}.endpoint`,
         }
       : {}),
     id,
@@ -152,44 +163,116 @@ function readChildAgentModelOption(
   };
 }
 
+function validateProjectModelOptionRecord(idFromMap: string | undefined, record: ConfigObject): void {
+  const optionId = getStringField(record, "id")?.trim() || idFromMap?.trim() || "<unknown>";
+  for (const field of ["model", "provider", "providerRegistration", "thinking"] as const) {
+    if (!getStringField(record, field)?.trim()) {
+      throw new Error(`modelOptions.${optionId}.${field} must be a non-empty string in the project catalog.`);
+    }
+  }
+  for (const field of ["contextWindow", "maxOutputTokens"] as const) {
+    if (readOptionalPositiveInteger(record, field, optionId) === undefined) {
+      throw new Error(`modelOptions.${optionId}.${field} must be a positive integer in the project catalog.`);
+    }
+  }
+  const registration = normalizeChildAgentProviderRegistration(
+    getStringField(record, "providerRegistration")!,
+    optionId,
+  );
+  if (registration === "openai-compatible" && !getFirstStringField(record, ["endpoint", "baseUrl", "url"])) {
+    throw new Error(`modelOptions.${optionId}.endpoint is required for an openai-compatible project provider.`);
+  }
+}
+
+function readModelOptionsCatalog(
+  record: ConfigObject,
+  params: ReadChildAgentModelOptionsParams,
+  modelOptionsConfigFilePath: string,
+  projectCatalog = false,
+): ChildAgentModelOption[] {
+  if (record.version !== 1) {
+    throw new Error(`${modelOptionsConfigFilePath} has unsupported version ${String(record.version)}.`);
+  }
+  const rawOptions = record.modelOptions;
+  if (rawOptions === undefined) {
+    throw new Error(`${modelOptionsConfigFilePath} must define modelOptions.`);
+  }
+
+  const entries: Array<{ idFromMap?: string; record: ConfigObject }> = [];
+  if (Array.isArray(rawOptions)) {
+    rawOptions.forEach((item, index) => {
+      if (!isConfigObject(item)) throw new Error(`modelOptions[${index}] must be an object.`);
+      entries.push({ record: item });
+    });
+  } else if (isConfigObject(rawOptions)) {
+    for (const [idFromMap, item] of Object.entries(rawOptions)) {
+      if (!isConfigObject(item)) throw new Error(`modelOptions.${idFromMap} must be an object.`);
+      entries.push({ idFromMap, record: item });
+    }
+  } else {
+    throw new Error("modelOptions must be an object mapping ids to model configs or an array of model config objects.");
+  }
+
+  if (entries.length === 0) throw new Error("modelOptions must define at least one model.");
+
+  const seen = new Set<string>();
+  return entries.map(({ idFromMap, record: optionRecord }) => {
+    if (projectCatalog) validateProjectModelOptionRecord(idFromMap, optionRecord);
+    const option = readChildAgentModelOption(idFromMap, optionRecord, {
+      ...params,
+      modelOptionsConfigFilePath,
+    });
+    if (seen.has(option.id)) throw new Error(`modelOptions contains duplicate id "${option.id}".`);
+    seen.add(option.id);
+    return option;
+  });
+}
+
 export function readChildAgentModelOptions(
   params: ReadChildAgentModelOptionsParams,
 ): ChildAgentModelOptionsResult {
   const fallbackOptions = [createChildAgentModelOptionFromConfig(params.baseConfig)];
+  let packagedOptions: ChildAgentModelOption[];
 
   try {
-    const record = readJsoncConfig(params.configFilePath, params.cwd);
-    const rawOptions = record?.modelOptions;
-    if (rawOptions === undefined) return { options: fallbackOptions };
-
-    const entries: Array<{ idFromMap?: string; record: ConfigObject }> = [];
-    if (Array.isArray(rawOptions)) {
-      rawOptions.forEach((item, index) => {
-        if (!isConfigObject(item)) throw new Error(`modelOptions[${index}] must be an object.`);
-        entries.push({ record: item });
-      });
-    } else if (isConfigObject(rawOptions)) {
-      for (const [idFromMap, item] of Object.entries(rawOptions)) {
-        if (!isConfigObject(item)) throw new Error(`modelOptions.${idFromMap} must be an object.`);
-        entries.push({ idFromMap, record: item });
-      }
-    } else {
-      throw new Error("modelOptions must be an object mapping ids to model configs or an array of model config objects.");
-    }
-
-    if (entries.length === 0) throw new Error("modelOptions must define at least one model.");
-
-    const seen = new Set<string>();
-    return {
-      options: entries.map(({ idFromMap, record }) => {
-        const option = readChildAgentModelOption(idFromMap, record, params);
-        if (seen.has(option.id)) throw new Error(`modelOptions contains duplicate id "${option.id}".`);
-        seen.add(option.id);
-        return option;
-      }),
-    };
+    const record = readJsoncConfig(params.modelOptionsConfigFilePath, params.cwd);
+    if (!record) throw new Error(`${params.modelOptionsConfigFilePath} is missing.`);
+    packagedOptions = readModelOptionsCatalog(record, params, params.modelOptionsConfigFilePath);
   } catch (error) {
     return { error: getErrorMessage(error), options: fallbackOptions };
+  }
+
+  try {
+    const projectRecord = readJsoncConfig(PROJECT_MODEL_OPTIONS_CONFIG_FILE_PATH, params.cwd);
+    if (!projectRecord) return { options: packagedOptions };
+
+    const projectOptions = readModelOptionsCatalog(
+      projectRecord,
+      params,
+      PROJECT_MODEL_OPTIONS_CONFIG_FILE_PATH,
+      true,
+    );
+    const packagedIds = new Set(packagedOptions.map((option) => option.id));
+    const selfRegisteringProviders = new Set<string>();
+    for (const option of projectOptions) {
+      if (packagedIds.has(option.id)) {
+        throw new Error(`${PROJECT_MODEL_OPTIONS_CONFIG_FILE_PATH} model option id "${option.id}" collides with the packaged catalog.`);
+      }
+      if (option.providerRegistration === "openai-compatible") {
+        const normalizedProvider = option.provider.toLowerCase();
+        if (RESERVED_PROJECT_PROVIDER_IDS.has(normalizedProvider)) {
+          throw new Error(`${PROJECT_MODEL_OPTIONS_CONFIG_FILE_PATH} modelOptions.${option.id}.provider "${option.provider}" is reserved.`);
+        }
+        if (selfRegisteringProviders.has(normalizedProvider)) {
+          throw new Error(`${PROJECT_MODEL_OPTIONS_CONFIG_FILE_PATH} self-registering provider "${option.provider}" is used by more than one model option.`);
+        }
+        selfRegisteringProviders.add(normalizedProvider);
+      }
+    }
+
+    return { options: [...packagedOptions, ...projectOptions] };
+  } catch (error) {
+    return { error: getErrorMessage(error), options: packagedOptions };
   }
 }
 
@@ -302,8 +385,8 @@ export function applyChildAgentModelSelection(
   config: ChildPiAgentConfig,
   selectedOption: ChildAgentModelOption | undefined,
 ): ChildPiAgentConfig {
-  // Installed config files are intentionally preserved across plug updates. Migrate
-  // the former automatic default in memory while retaining explicit model choices.
+  // Preserve a usable operational fallback when the central catalog is unavailable.
+  // Retain the legacy GPT default normalization for old standalone config shapes.
   if (!selectedOption) return migrateLegacyGptDefault(config);
 
   const { modelSelector: _modelSelector, ...baseConfig } = config;
@@ -329,6 +412,7 @@ export function applyChildAgentModelSelection(
     ...(selectedOption.requestTimeoutMs ? { requestTimeoutMs: selectedOption.requestTimeoutMs } : {}),
     ...(selectedOption.systemPrompt !== undefined ? { systemPrompt: selectedOption.systemPrompt } : {}),
     ...(selectedOption.thinking ? { thinking: selectedOption.thinking } : {}),
-    ...(selectedOption.tools ? { tools: selectedOption.tools } : {}),
+    // Tools are agent operational policy, not model metadata. Keep the base
+    // allowlist so a central or project model option cannot erase capabilities.
   };
 }

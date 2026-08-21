@@ -1,7 +1,7 @@
 {
   // promptenrichsubagent is a standalone, manually-triggered prompt-enrichment
-  // agent. /pe <prompt> runs a clarification/enrichment pass (using the
-  // readsubagent for repo context) and returns
+  // agent. /pe <prompt> runs a clarification/enrichment pass (using direct
+  // read-only tools and readsubagent for repo context) and returns
   // enriched prompt options or clarifying questions into the main context.
 
   // Default remote Pi model for the enrichment pass.
@@ -17,120 +17,17 @@
   // Leave empty to use "<provider>/<model>" from the settings above.
   "modelSelector": "",
 
-  // Choices shown by /pe-model. Keep model/provider metadata here so adding
-  // or changing the enrichment model is a config-only change.
-  // The object key is the stable selection id persisted as a workspace override.
-  "modelOptions": {
-    "gpt-5.6-sol-xhigh": {
-      "label": "GPT-5.6 Sol xhigh (openai-codex)",
-      "provider": "openai-codex",
-      "providerRegistration": "none",
-      "model": "gpt-5.6-sol",
-      "contextWindow": 272000,
-      "maxOutputTokens": 128000,
-      "requestTimeoutMs": 1800000,
-      "reportMaxChars": 20000,
-      "thinking": "xhigh",
-      "tools": ["readsubagent"],
-    },
-    "gpt-5.6-sol-max": {
-      "label": "GPT-5.6 Sol max (openai-codex)",
-      "provider": "openai-codex",
-      "providerRegistration": "none",
-      "model": "gpt-5.6-sol",
-      "contextWindow": 272000,
-      "maxOutputTokens": 128000,
-      "requestTimeoutMs": 1800000,
-      "reportMaxChars": 20000,
-      "thinking": "max",
-      "tools": ["readsubagent"],
-    },
-    "gpt-5.6-sol-low": {
-      "label": "GPT-5.6 Sol low (openai-codex)",
-      "provider": "openai-codex",
-      "providerRegistration": "none",
-      "model": "gpt-5.6-sol",
-      "contextWindow": 272000,
-      "maxOutputTokens": 128000,
-      "requestTimeoutMs": 1800000,
-      "reportMaxChars": 20000,
-      "thinking": "low",
-      "tools": ["readsubagent"],
-    },
-    "gpt-5.6-sol-medium": {
-      "label": "GPT-5.6 Sol medium (openai-codex)",
-      "provider": "openai-codex",
-      "providerRegistration": "none",
-      "model": "gpt-5.6-sol",
-      "contextWindow": 272000,
-      "maxOutputTokens": 128000,
-      "requestTimeoutMs": 1800000,
-      "reportMaxChars": 20000,
-      "thinking": "medium",
-      "tools": ["readsubagent"],
-    },
-    "gpt-5.5-xhigh": {
-      "label": "GPT-5.5 xhigh (openai-codex)",
-      "provider": "openai-codex",
-      "providerRegistration": "none",
-      "model": "gpt-5.5",
-      "contextWindow": 400000,
-      "maxOutputTokens": 32768,
-      "requestTimeoutMs": 1800000,
-      "reportMaxChars": 20000,
-      "thinking": "xhigh",
-      "tools": ["readsubagent"],
-    },
-    "qwen-35b-a3b": {
-      "label": "Qwen 3.6 35B A3B via local OpenAI-compatible endpoint",
-      "provider": "lm-studio",
-      "providerRegistration": "none",
-      "endpoint": "http://127.0.0.1:1234",
-      "model": "qwen/qwen3.6-35b-a3b",
-      "contextWindow": 127000,
-      "maxOutputTokens": 32768,
-      "requestTimeoutMs": 1800000,
-      "reportMaxChars": 20000,
-      "thinking": "off",
-      "tools": ["readsubagent"],
-    },
-    "glm-5p2-xhigh": {
-      "label": "GLM 5.2 xhigh (fireworks)",
-      "provider": "fireworks",
-      "providerRegistration": "none",
-      "model": "accounts/fireworks/models/glm-5p2",
-      "contextWindow": 1048575,
-      "maxOutputTokens": 32768,
-      "requestTimeoutMs": 1800000,
-      "reportMaxChars": 20000,
-      "thinking": "xhigh",
-      "tools": ["readsubagent"],
-    },
-    "qwen3p7-plus": {
-      "label": "Qwen 3.7 Plus (fireworks)",
-      "provider": "fireworks",
-      "providerRegistration": "none",
-      "model": "accounts/fireworks/models/qwen3p7-plus",
-      "contextWindow": 262144,
-      "maxOutputTokens": 32768,
-      "requestTimeoutMs": 1800000,
-      "reportMaxChars": 20000,
-      "thinking": "high",
-      "tools": ["readsubagent"],
-    },
-  },
-
-  // promptenrichsubagent should use this subagent tool for repo context. That
-  // tool spawns its own child Pi process and uses its configured model from
-  // readsubagent.config.jsonc.
-  "tools": ["readsubagent"],
+  // Direct read-only tools support focused inspection. For non-debug asks only,
+  // readsubagent can scout broader repo context using its configured model.
+  // Debugging/failure evidence stays with direct inspection/debuggersubagent.
+  "tools": ["read", "grep", "find", "ls", "readsubagent"],
 
   "requestTimeoutMs": 1800000,
   "contextWindow": 272000,
   "maxOutputTokens": 128000,
   "reportMaxChars": 20000,
-  "thinking": "xhigh",
+  "thinking": "medium",
 
   // Extra instructions appended to the child Pi system prompt.
-  "systemPrompt": "You are promptenrichsubagent, a standalone prompt-enrichment subagent for Pi. Clarify and enrich a user's prompt before they act on it. Use the readsubagent tool only to gather relevant repo facts, evidence, relationships, constraints, and uncertainty. Do not ask it for implementation plans, solution proposals, recommendations, or edit strategies. The readsubagent tool uses its own configured model; do not try to replace it with raw inspection. Return only the requested JSON decision.",
+  "systemPrompt": "You are promptenrichsubagent, a standalone prompt-enrichment subagent for Pi. Clarify and enrich a user's prompt before they act on it. For non-debug asks only, use readsubagent to scout relevant repo facts, relationships, constraints, and uncertainty, then use read, grep, find, and ls for focused inspection when exact source context is needed. Never use readsubagent while debugging, investigating failures or regressions, or inspecting diagnostic artifacts; inspect source/config/docs and evidence directly, and direct uncertain root-cause diagnosis to debuggersubagent. Do not ask readsubagent for implementation plans, solution proposals, recommendations, or edit strategies. Never use shell commands or edit or write files. Return only the requested JSON decision.",
 }

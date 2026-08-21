@@ -3,7 +3,7 @@
 #
 # Reinforces the CLAUDE.md "Read Planning" workflow: before focused reads of
 # unfamiliar implementation files, scout the area through `readsubagent` first
-# (skill/subagent/direct MCP tool) to get a subsystem map + smallest focused
+# (skill calling the direct MCP tool) to get a subsystem map + smallest focused
 # read list, then read against anchors.
 #
 # Wired from .claude/settings.json two ways:
@@ -81,6 +81,6 @@ esac
 : > "$SENTINEL" 2>/dev/null || true
 
 cat <<'JSON'
-{"hookSpecificOutput":{"hookEventName":"PreToolUse","additionalContext":"Read-planning reminder: before focused reads of unfamiliar implementation files, scout the area FIRST with readsubagent — use the readsubagent skill/subagent, or call mcp__zz_readsubagent__readsubagent directly when you already know the targets — for a subsystem map and the smallest focused read list, then read against those anchors. Ignore this if you've already scouted here or are re-reading a known file."}}
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","additionalContext":"Read-planning reminder: outside debugging, before focused reads of unfamiliar implementation files, scout the area FIRST with readsubagent — use the readsubagent skill, which calls mcp__zz_readsubagent__readsubagent directly — for a subsystem map and the smallest focused read list, then read against those anchors. Ignore this scouting nudge during debugging or failure investigation; inspect logs, traces, failure output, and other diagnostic or root-cause evidence directly in the main agent or use the debugger. Otherwise, ignore this if you have already scouted here or are re-reading a known file."}}
 JSON
 exit 0

@@ -39,13 +39,18 @@ import {
 } from "./lib/subagent-model-preferences.ts";
 
 const CONFIG_FILE_PATH = ".pi/extensions/promptenrichsubagent.config.jsonc";
+const DEFAULT_MODEL_OPTION_ID = "gpt-5.6-sol-medium";
+const MODEL_OPTIONS_CONFIG_FILE_PATH = ".pi/extensions/zz-agent-models.config.jsonc";
 const PROMPTENRICH_MESSAGE_TYPE = "promptenrichsubagent-report";
 const PROMPTENRICH_STATE_ENTRY_TYPE = "promptenrichsubagent-state";
 const STATUS_KEY = "promptenrichsubagent";
-const DEFAULT_TOOLS = ["readsubagent"];
+const DEFAULT_TOOLS = ["read", "grep", "find", "ls", "readsubagent"] as const;
 const EXCLUDED_CHILD_TOOLS = [
   "promptenrichsubagent",
   "pe",
+  "bash",
+  "edit",
+  "write",
 ] as const;
 
 const DEFAULT_PROMPTENRICH_CONFIG: ChildPiAgentConfig = {
@@ -58,8 +63,8 @@ const DEFAULT_PROMPTENRICH_CONFIG: ChildPiAgentConfig = {
   reportMaxChars: 20_000,
   requestTimeoutMs: 30 * 60 * 1_000,
   systemPrompt:
-    "You are promptenrichsubagent, a standalone prompt-enrichment subagent for Pi. Clarify and enrich a user's prompt before they act on it. Use the readsubagent tool only to gather relevant repo facts, evidence, relationships, constraints, and uncertainty. Do not ask it for implementation plans, solution proposals, recommendations, or edit strategies. The readsubagent tool uses its own configured model; do not try to replace it with raw inspection. Return only the requested JSON decision.",
-  thinking: "xhigh",
+    "You are promptenrichsubagent, a standalone prompt-enrichment subagent for Pi. Clarify and enrich a user's prompt before they act on it. For non-debug asks only, use readsubagent to scout relevant repo facts, relationships, constraints, and uncertainty, then use read, grep, find, and ls for focused inspection when exact source context is needed. Never use readsubagent while debugging, investigating failures or regressions, or inspecting diagnostic artifacts; inspect source/config/docs and evidence directly, and direct uncertain root-cause diagnosis to debuggersubagent. Do not ask readsubagent for implementation plans, solution proposals, recommendations, or edit strategies. Never use shell commands or edit or write files. Return only the requested JSON decision.",
+  thinking: "medium",
   tools: DEFAULT_TOOLS,
 };
 
@@ -135,7 +140,7 @@ function readPromptEnrichModelOptions(
   const result = readChildAgentModelOptions({
     agentName: "promptenrichsubagent",
     baseConfig,
-    configFilePath: CONFIG_FILE_PATH,
+    modelOptionsConfigFilePath: MODEL_OPTIONS_CONFIG_FILE_PATH,
     cwd,
   });
   if (result.error) {
@@ -171,7 +176,7 @@ function formatPromptEnrichModelSelection(config: ChildPiAgentConfig): string {
 function applyPromptEnrichModelSelection(config: ChildPiAgentConfig): ChildPiAgentConfig {
   return applyChildAgentModelSelection(
     config,
-    getPromptEnrichModelOption(selectedPromptEnrichModelId),
+    getPromptEnrichModelOption(selectedPromptEnrichModelId ?? DEFAULT_MODEL_OPTION_ID),
   );
 }
 
@@ -378,7 +383,7 @@ function buildPromptEnrichTask(options: {
     "",
     "Enrichment objective:",
     "- Determine whether the ask is clear enough to act on, or whether it needs clarification or enrichment first.",
-    "- Compare the ask against relevant repo facts using the readsubagent tool when repo context could affect interpretation.",
+    "- For non-debug asks, compare the ask against relevant repo facts using readsubagent when repo context could affect interpretation; for debugging/failure asks, inspect directly and reserve uncertain diagnosis for debuggersubagent.",
     "- Produce an enriched user prompt, not a detailed implementation plan, todo list, code, patch, or execution strategy.",
     "- If the ask is clear, return exactly one enriched prompt.",
     "- If there are a few plausible interpretations or tradeoffs, return two or three enriched prompt options for the user to choose from.",
@@ -390,10 +395,10 @@ function buildPromptEnrichPrompt(task: string): string {
   return [
     "You are running as promptenrichsubagent, a standalone prompt-enrichment subagent for Pi.",
     "Your job is clarification and prompt enrichment only. Do not produce an implementation plan, todo list, code, patch, or execution strategy.",
-    "Use the readsubagent tool for factual inspection of relevant files, docs, configs, symbols, architecture, conventions, and existing behavior.",
-    "When calling readsubagent, ask only for factual repo findings, evidence, relationships, constraints, and uncertainty. Do not ask it for implementation plans, solution proposals, recommendations, or edit strategies.",
-    "The readsubagent tool has its own configured model; rely on it for repo investigation instead of doing raw inspection yourself.",
-    "Prefer at least one readsubagent delegation for repo-specific asks. Skip delegation only if the prompt is clearly repo-independent or the available context is already sufficient.",
+    "Use readsubagent only for non-debug scouting of relevant files, docs, configs, symbols, architecture, conventions, and existing behavior.",
+    "Never use readsubagent while debugging, investigating a failure or regression, or inspecting logs, traces, failure output, or other diagnostic artifacts. Inspect source/config/docs and evidence directly; when root cause is uncertain, direct the parent to use debuggersubagent.",
+    "When calling readsubagent, ask only for non-debug factual repo findings, relationships, constraints, and uncertainty. Do not ask it for implementation plans, solution proposals, recommendations, edit strategies, or diagnostic evidence.",
+    "Prefer at least one readsubagent delegation for repo-specific non-debug asks. Skip delegation for debugging/failure asks, repo-independent prompts, or when available context is already sufficient.",
     "An enriched prompt should preserve the user's intent while adding repo-specific context, relevant paths/symbols, constraints, assumptions, and known unknowns. It should be ready to act on, but it must not prescribe a detailed implementation plan.",
     "Return JSON only. Do not wrap it in markdown. Use exactly one of these shapes:",
     `{"kind":"prompts","summary":"short reason this is clear enough","prompts":[{"title":"Option title","rationale":"why this option","prompt":"enriched prompt text"}]}`,

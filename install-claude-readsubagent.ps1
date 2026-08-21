@@ -109,14 +109,12 @@ if (-not (Get-Command $piBin -ErrorAction SilentlyContinue)) {
 $tmpDir = Join-Path ([System.IO.Path]::GetTempPath()) "zz-claude-readsubagent-$([System.Guid]::NewGuid().ToString('N'))"
 New-Item -ItemType Directory -Force -Path $tmpDir | Out-Null
 try {
-  $agentTmp = Join-Path $tmpDir 'readsubagent.md'
   $serverTmp = Join-Path $tmpDir 'zz-readsubagent-mcp.py'
   $hookNudgeShTmp = Join-Path $tmpDir 'readsubagent-nudge.sh'
   $hookBlockExploreShTmp = Join-Path $tmpDir 'block-explore-subagent.sh'
   $hookNudgeTmp = Join-Path $tmpDir 'readsubagent-nudge.ps1'
   $hookBlockExploreTmp = Join-Path $tmpDir 'block-explore-subagent.ps1'
   $skillTmp = Join-Path $tmpDir 'SKILL.md'
-  Invoke-WebRequest -UseBasicParsing -Uri "$agentSourceBase/readsubagent.md" -OutFile $agentTmp
   Invoke-WebRequest -UseBasicParsing -Uri "$mcpSourceBase/zz-readsubagent-mcp.py" -OutFile $serverTmp
   if (-not $skipHooks) {
     Invoke-WebRequest -UseBasicParsing -Uri "$agentSourceBase/hooks/readsubagent-nudge.sh" -OutFile $hookNudgeShTmp
@@ -130,14 +128,14 @@ try {
 
   $serverName = 'zz_readsubagent'
   $serverArgsPath = '.zz-mcp/zz-readsubagent-mcp.py'
-  $relAgent = '.claude/agents/readsubagent.md'
+  $obsoleteAgent = '.claude/agents/readsubagent.md'
   $relHookNudgeSh = '.claude/hooks/readsubagent-nudge.sh'
   $relHookBlockExploreSh = '.claude/hooks/block-explore-subagent.sh'
   $relHookNudge = '.claude/hooks/readsubagent-nudge.ps1'
   $relHookBlockExplore = '.claude/hooks/block-explore-subagent.ps1'
   $relSkill = '.claude/skills/readsubagent/SKILL.md'
   $relServer = '.zz-mcp/zz-readsubagent-mcp.py'
-  $agentTarget = Join-Path $projectDir '.claude\agents\readsubagent.md'
+  $obsoleteAgentTarget = Join-Path $projectDir '.claude\agents\readsubagent.md'
   $hookNudgeShTarget = Join-Path $projectDir '.claude\hooks\readsubagent-nudge.sh'
   $hookBlockExploreShTarget = Join-Path $projectDir '.claude\hooks\block-explore-subagent.sh'
   $hookNudgeTarget = Join-Path $projectDir '.claude\hooks\readsubagent-nudge.ps1'
@@ -159,18 +157,12 @@ Before doing focused reads of specific implementation files, start with a
 read-planning pass through `readsubagent`, which delegates to a local model
 (Qwen via LM Studio, through a headless `pi` child).
 
-`readsubagent` is reachable three equivalent ways — use whichever fits:
+Use the **`readsubagent` skill**. The skill calls the direct MCP tool
+`mcp__zz_readsubagent__readsubagent`, served by
+`.zz-mcp/zz-readsubagent-mcp.py`; do not launch another Claude subagent.
 
-- the **`readsubagent` skill** (via the Skill tool),
-- the **`readsubagent` subagent** (`Agent(subagent_type="readsubagent")`), and
-- the **direct MCP tool `mcp__zz_readsubagent__readsubagent`**, served by
-  `.zz-mcp/zz-readsubagent-mcp.py`.
-
-Prefer the **direct MCP tool** when you already know the targets: it is the
-lowest-overhead path and gives the most control. Pass `question` (required) plus
-any of `path`/`paths`, `symbols`, `searchTerms`, `lineRanges`, `output`, and
-`maxReportChars` to scope the inspection. Reach for the skill or subagent when
-you want the wrapped read-planning workflow instead.
+Pass `question` (required) plus any of `path`/`paths`, `symbols`, `searchTerms`,
+`lineRanges`, `output`, and `maxReportChars` to scope the inspection.
 
 Use `readsubagent` (any entry point) to get a short subsystem map, candidate
 files, the smallest focused read list, useful search terms/line anchors, areas
@@ -202,6 +194,16 @@ inspection, not implementation planning or code-review judgments.
     return (Get-FileHash -Algorithm SHA256 -Path $path).Hash.ToLowerInvariant()
   }
 
+  function Get-ManifestHash([string]$rel) {
+    if (-not (Test-Path $manifestPath)) { return '' }
+    try {
+      $state = Get-Content $manifestPath -Raw | ConvertFrom-Json
+      $property = $state.file_hashes.PSObject.Properties[$rel]
+      if ($null -ne $property) { return [string]$property.Value }
+    } catch { return '' }
+    return ''
+  }
+
   function Set-MarkedBlock([string]$text, [string]$start, [string]$end, [string]$block) {
     $pattern = '(?s)' + [regex]::Escape($start) + '.*?' + [regex]::Escape($end)
     if ([regex]::IsMatch($text, $pattern)) {
@@ -212,14 +214,22 @@ inspection, not implementation planning or code-review judgments.
     return $block.TrimEnd()
   }
 
-  function Install-OwnedFile([string]$rel, [string]$target, [string]$tmp) {
-    if ((Test-Path $target) -and -not (Get-ManifestOwns $rel) -and -not $force) {
-      $same = (Get-FileSha256 $target) -eq (Get-FileSha256 $tmp)
-      if (-not $same) {
-        throw "Refusing to overwrite existing unowned $rel. Use --force if you want this installer to claim it."
-      }
-      return "unchanged existing matching $rel"
+  function Test-OwnedFile([string]$rel, [string]$target, [string]$tmp) {
+    if (-not (Test-Path $target) -or $force) { return $false }
+    $same = (Get-FileSha256 $target) -eq (Get-FileSha256 $tmp)
+    $owned = Get-ManifestOwns $rel
+    if (-not $owned -and -not $same) {
+      throw "Refusing to overwrite existing unowned $rel. Use --force if you want this installer to claim it."
     }
+    $expectedHash = Get-ManifestHash $rel
+    if ($owned -and $expectedHash -and (Get-FileSha256 $target) -ne $expectedHash -and -not $same) {
+      throw "Refusing to overwrite locally modified managed $rel. Use --force to replace it."
+    }
+    return $same
+  }
+
+  function Install-OwnedFile([string]$rel, [string]$target, [string]$tmp) {
+    if (Test-OwnedFile $rel $target $tmp) { return "unchanged existing matching $rel" }
     if ($dryRun) {
       $verb = if (Test-Path $target) { 'update' } else { 'create' }
       return "would $verb $rel"
@@ -242,7 +252,7 @@ inspection, not implementation planning or code-review judgments.
   }
 
   function Test-EntryHasScript([object]$entry, [string]$scriptName, [string]$arg) {
-    $text = $entry | ConvertTo-Json -Depth 10 -Compress
+    $text = $entry | ConvertTo-Json -Depth 100 -Compress
     return ($text -like "*$scriptName*" -and (-not $arg -or $text -like "*$arg*"))
   }
 
@@ -267,7 +277,9 @@ inspection, not implementation planning or code-review judgments.
     if ($dryRun) { return 'would merge readsubagent hooks into .claude/settings.json' }
     $settings = $null
     if (Test-Path $settingsJson) {
-      try { $settings = Get-Content $settingsJson -Raw | ConvertFrom-Json } catch { throw "Refusing to edit malformed .claude/settings.json: $_" }
+      $settingsRaw = Get-Content $settingsJson -Raw
+      if (-not $settingsRaw.TrimStart().StartsWith('{')) { throw 'Refusing to edit .claude/settings.json because root is not an object' }
+      try { $settings = $settingsRaw | ConvertFrom-Json } catch { throw "Refusing to edit malformed .claude/settings.json: $_" }
       if (-not ($settings -is [pscustomobject])) { throw 'Refusing to edit .claude/settings.json because root is not an object' }
     }
     if ($null -eq $settings) { $settings = [pscustomobject]@{} }
@@ -276,13 +288,108 @@ inspection, not implementation planning or code-review judgments.
     $changed = (Add-HookEvent $settings 'PreToolUse' (New-HookEntry '.claude/hooks/block-explore-subagent.ps1' '' 'Agent|Task') 'block-explore-subagent.ps1' '') -or $changed
     $changed = (Add-HookEvent $settings 'UserPromptSubmit' (New-HookEntry '.claude/hooks/readsubagent-nudge.ps1' 'reset' '') 'readsubagent-nudge.ps1' 'reset') -or $changed
     New-Item -ItemType Directory -Force -Path (Split-Path $settingsJson -Parent) | Out-Null
-    [System.IO.File]::WriteAllText($settingsJson, ($settings | ConvertTo-Json -Depth 10) + "`n")
+    [System.IO.File]::WriteAllText($settingsJson, ($settings | ConvertTo-Json -Depth 100) + "`n")
     if ($changed) { return 'merged readsubagent hooks into .claude/settings.json' }
     return 'readsubagent hooks already present in .claude/settings.json'
   }
 
+  function Test-ServerEntryMatches([object]$entry, [string]$expectedModel, [string]$expectedPiBin) {
+    if (-not ($entry -is [pscustomobject])) { return $false }
+    $entryNames = @($entry.PSObject.Properties.Name | Sort-Object)
+    if ((Compare-Object $entryNames @('args', 'command', 'env', 'type')).Count -ne 0) { return $false }
+    if ($entry.type -ne 'stdio' -or $entry.command -ne 'python3') { return $false }
+    if (@($entry.args).Count -ne 1 -or @($entry.args)[0] -ne $serverArgsPath) { return $false }
+    if (-not ($entry.env -is [pscustomobject])) { return $false }
+    $expectedEnvNames = @('ZZ_READSUBAGENT_MODEL')
+    if ($expectedPiBin -ne 'pi') { $expectedEnvNames += 'ZZ_READSUBAGENT_PI_BIN' }
+    $envNames = @($entry.env.PSObject.Properties.Name | Sort-Object)
+    if ((Compare-Object $envNames @($expectedEnvNames | Sort-Object)).Count -ne 0) { return $false }
+    if ($entry.env.ZZ_READSUBAGENT_MODEL -ne $expectedModel) { return $false }
+    if ($expectedPiBin -ne 'pi' -and $entry.env.ZZ_READSUBAGENT_PI_BIN -ne $expectedPiBin) { return $false }
+    return $true
+  }
+
+  function Test-ManagedMcpEntry([object]$servers) {
+    if ($force -or -not (Get-ManagedServer $serverName)) { return }
+    try {
+      $state = Get-Content $manifestPath -Raw | ConvertFrom-Json
+      $priorModel = [string]$state.server.model
+      $priorPiBin = [string]$state.server.pi_bin
+      if (-not $priorPiBin) { $priorPiBin = 'pi' }
+    } catch { $priorModel = ''; $priorPiBin = '' }
+    if (-not $priorModel) {
+      throw "Cannot verify legacy ownership of $serverName in .mcp.json. Use --force to replace it."
+    }
+    if (-not ($servers.PSObject.Properties.Name -contains $serverName) -or -not (Test-ServerEntryMatches $servers.$serverName $priorModel $priorPiBin)) {
+      throw "Refusing to overwrite locally modified managed $serverName server in .mcp.json. Use --force to replace it."
+    }
+  }
+
+  function Test-InstallerConfiguration() {
+    if (-not $skipHooks -and (Test-Path $settingsJson)) {
+      $settingsRaw = Get-Content $settingsJson -Raw
+      if (-not $settingsRaw.TrimStart().StartsWith('{')) { throw 'Refusing to edit .claude/settings.json because root is not an object' }
+      try { $settings = $settingsRaw | ConvertFrom-Json } catch { throw "Refusing to edit malformed .claude/settings.json: $_" }
+      if (-not ($settings -is [pscustomobject])) { throw 'Refusing to edit .claude/settings.json because root is not an object' }
+      if ($settings.PSObject.Properties.Name -contains 'hooks' -and $null -ne $settings.hooks -and -not ($settings.hooks -is [pscustomobject])) {
+        throw 'Refusing to edit .claude/settings.json because hooks is not an object'
+      }
+      if ($null -ne $settings.hooks) {
+        foreach ($event in @('PreToolUse', 'UserPromptSubmit')) {
+          if ($settings.hooks.PSObject.Properties.Name -contains $event -and $null -ne $settings.hooks.$event -and -not ($settings.hooks.$event -is [System.Array])) {
+            throw "Refusing to edit .claude/settings.json because hooks.$event is not an array"
+          }
+        }
+      }
+    }
+    if (-not $skipMcp -and (Test-Path $mcpJson)) {
+      $mcpRaw = Get-Content $mcpJson -Raw
+      if (-not $mcpRaw.TrimStart().StartsWith('{')) { throw 'Refusing to edit .mcp.json because root is not an object' }
+      try { $mcpData = $mcpRaw | ConvertFrom-Json } catch { throw "Refusing to edit malformed .mcp.json: $_" }
+      if (-not ($mcpData -is [pscustomobject])) { throw 'Refusing to edit .mcp.json because root is not an object' }
+      if ($mcpData.PSObject.Properties.Name -contains 'mcpServers' -and $null -ne $mcpData.mcpServers -and -not ($mcpData.mcpServers -is [pscustomobject])) {
+        throw 'Refusing to edit .mcp.json because mcpServers is not an object'
+      }
+      if ($null -ne $mcpData.mcpServers) { Test-ManagedMcpEntry $mcpData.mcpServers }
+    }
+  }
+
+  $preflightFiles = @(
+    [pscustomobject]@{ Rel = $relServer; Target = $serverTarget; Tmp = $serverTmp }
+  )
+  if (-not $skipHooks) {
+    $preflightFiles += @(
+      [pscustomobject]@{ Rel = $relHookNudgeSh; Target = $hookNudgeShTarget; Tmp = $hookNudgeShTmp }
+      [pscustomobject]@{ Rel = $relHookBlockExploreSh; Target = $hookBlockExploreShTarget; Tmp = $hookBlockExploreShTmp }
+      [pscustomobject]@{ Rel = $relHookNudge; Target = $hookNudgeTarget; Tmp = $hookNudgeTmp }
+      [pscustomobject]@{ Rel = $relHookBlockExplore; Target = $hookBlockExploreTarget; Tmp = $hookBlockExploreTmp }
+    )
+  }
+  if (-not $skipSkill) { $preflightFiles += [pscustomobject]@{ Rel = $relSkill; Target = $skillTarget; Tmp = $skillTmp } }
+  foreach ($item in $preflightFiles) { [void](Test-OwnedFile $item.Rel $item.Target $item.Tmp) }
+  Test-InstallerConfiguration
+
+  $mcpManagedThisRun = $false
   $actions = New-Object System.Collections.Generic.List[string]
-  $actions.Add((Install-OwnedFile $relAgent $agentTarget $agentTmp))
+  if (Test-Path $obsoleteAgentTarget) {
+    $prior = $null
+    try { if (Test-Path $manifestPath) { $prior = Get-Content $manifestPath -Raw | ConvertFrom-Json } } catch { $prior = $null }
+    if ($null -ne $prior -and @($prior.owned_files) -contains $obsoleteAgent) {
+      $expected = $null
+      if ($null -ne $prior.file_hashes) {
+        $property = $prior.file_hashes.PSObject.Properties[$obsoleteAgent]
+        if ($null -ne $property) { $expected = [string]$property.Value }
+      }
+      if ($expected -and (Get-FileSha256 $obsoleteAgentTarget) -ne $expected) {
+        $actions.Add("preserved locally modified obsolete $obsoleteAgent")
+      } elseif ($dryRun) {
+        $actions.Add("would remove obsolete $obsoleteAgent")
+      } else {
+        Remove-Item -Force $obsoleteAgentTarget
+        $actions.Add("removed obsolete $obsoleteAgent")
+      }
+    }
+  }
   $actions.Add((Install-OwnedFile $relServer $serverTarget $serverTmp))
   if ($skipHooks) {
     $actions.Add('skipped Claude readsubagent hook files')
@@ -304,12 +411,18 @@ inspection, not implementation planning or code-review judgments.
   } else {
     $data = $null
     if (Test-Path $mcpJson) {
-      try { $data = Get-Content $mcpJson -Raw | ConvertFrom-Json } catch { throw "Refusing to edit malformed .mcp.json: $_" }
+      $mcpRaw = Get-Content $mcpJson -Raw
+      if (-not $mcpRaw.TrimStart().StartsWith('{')) { throw 'Refusing to edit .mcp.json because root is not an object' }
+      try { $data = $mcpRaw | ConvertFrom-Json } catch { throw "Refusing to edit malformed .mcp.json: $_" }
     }
     if ($null -eq $data) { $data = [pscustomobject]@{} }
+    if (-not ($data -is [pscustomobject])) { throw 'Refusing to edit .mcp.json because root is not an object' }
     if (-not ($data.PSObject.Properties.Name -contains 'mcpServers') -or $null -eq $data.mcpServers) {
       $data | Add-Member -NotePropertyName mcpServers -NotePropertyValue ([pscustomobject]@{}) -Force
+    } elseif (-not ($data.mcpServers -is [pscustomobject])) {
+      throw 'Refusing to edit .mcp.json because mcpServers is not an object'
     }
+    Test-ManagedMcpEntry $data.mcpServers
     $existing = $data.mcpServers.PSObject.Properties.Name -contains $serverName
     $managed = Get-ManagedServer $serverName
     if ($existing -and -not $managed -and -not $force) {
@@ -327,7 +440,8 @@ inspection, not implementation planning or code-review judgments.
         env     = $envBlock
       }
       $data.mcpServers | Add-Member -NotePropertyName $serverName -NotePropertyValue $entry -Force
-      [System.IO.File]::WriteAllText($mcpJson, ($data | ConvertTo-Json -Depth 10) + "`n")
+      $mcpManagedThisRun = $true
+      [System.IO.File]::WriteAllText($mcpJson, ($data | ConvertTo-Json -Depth 100) + "`n")
       $actions.Add("registered $serverName server in .mcp.json")
     }
   }
@@ -344,17 +458,48 @@ inspection, not implementation planning or code-review judgments.
   }
 
   if (-not $dryRun) {
-    $ownedFiles = @($relAgent, $relServer)
+    $priorState = $null
+    if (Test-Path $manifestPath) {
+      try { $priorState = Get-Content $manifestPath -Raw | ConvertFrom-Json } catch { $priorState = $null }
+    }
+    $ownedFiles = @()
+    if ($null -ne $priorState) { $ownedFiles += @($priorState.owned_files) }
+    $ownedFiles = @($ownedFiles | Where-Object { $_ -ne $obsoleteAgent })
+    $ownedFiles += $relServer
     if (-not $skipHooks) { $ownedFiles += @($relHookNudgeSh, $relHookBlockExploreSh, $relHookNudge, $relHookBlockExplore) }
     if (-not $skipSkill) { $ownedFiles += $relSkill }
+    $ownedFiles = @($ownedFiles | Select-Object -Unique | Where-Object { Test-Path (Join-Path $projectDir $_) })
     $fileHashes = [ordered]@{}
-    foreach ($rel in $ownedFiles) { $fileHashes[$rel] = Get-FileSha256 (Join-Path $projectDir $rel) }
-    $managedBlocks = @()
-    if (-not $skipClaudeMd) { $managedBlocks += 'CLAUDE.md:zz-claude-readsubagent' }
-    $managedSettings = @()
-    if (-not $skipHooks) { $managedSettings += '.claude/settings.json:readsubagent-hooks' }
-    $managedServers = @()
-    if (-not $skipMcp) { $managedServers += $serverName }
+    $refreshedFiles = @($relServer)
+    if (-not $skipHooks) { $refreshedFiles += @($relHookNudgeSh, $relHookBlockExploreSh, $relHookNudge, $relHookBlockExplore) }
+    if (-not $skipSkill) { $refreshedFiles += $relSkill }
+    foreach ($rel in $ownedFiles) {
+      $priorHash = $null
+      if ($null -ne $priorState -and $null -ne $priorState.file_hashes) {
+        $priorProperty = $priorState.file_hashes.PSObject.Properties[$rel]
+        if ($null -ne $priorProperty) { $priorHash = [string]$priorProperty.Value }
+      }
+      if ((@($refreshedFiles) -contains $rel) -or -not $priorHash) {
+        $fileHashes[$rel] = Get-FileSha256 (Join-Path $projectDir $rel)
+      } else {
+        $fileHashes[$rel] = $priorHash
+      }
+    }
+    $managedBlocks = @(if ($skipClaudeMd -and $null -ne $priorState) { @($priorState.managed_blocks) } else { 'CLAUDE.md:zz-claude-readsubagent' })
+    $managedSettings = @(if ($skipHooks -and $null -ne $priorState) { @($priorState.managed_settings) } else { '.claude/settings.json:readsubagent-hooks' })
+    $managedServers = @(if ($skipMcp -and $null -ne $priorState) {
+      @($priorState.managed_servers)
+    } elseif ($mcpManagedThisRun) {
+      $serverName
+    })
+    $serverModel = $model
+    $serverPiBin = $piBin
+    $serverConfigPath = $mcpJson
+    if ($skipMcp -and $null -ne $priorState -and $null -ne $priorState.server) {
+      if ($priorState.server.model) { $serverModel = [string]$priorState.server.model }
+      if ($priorState.server.pi_bin) { $serverPiBin = [string]$priorState.server.pi_bin }
+      if ($priorState.server.config_path) { $serverConfigPath = [string]$priorState.server.config_path }
+    }
     $state = [ordered]@{
       installer        = 'zz-claude-readsubagent'
       schemaVersion    = 1
@@ -367,14 +512,14 @@ inspection, not implementation planning or code-review judgments.
       file_hashes      = $fileHashes
       server           = [ordered]@{
         name        = $serverName
-        model       = $model
-        pi_bin      = $piBin
-        config_path = $mcpJson
-        managed     = -not $skipMcp
+        model       = $serverModel
+        pi_bin      = $serverPiBin
+        config_path = $serverConfigPath
+        managed     = @($managedServers) -contains $serverName
       }
     }
     New-Item -ItemType Directory -Force -Path (Split-Path $manifestPath -Parent) | Out-Null
-    [System.IO.File]::WriteAllText($manifestPath, ($state | ConvertTo-Json -Depth 10) + "`n")
+    [System.IO.File]::WriteAllText($manifestPath, ($state | ConvertTo-Json -Depth 100) + "`n")
   }
 
   Write-Host ''

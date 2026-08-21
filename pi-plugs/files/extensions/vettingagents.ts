@@ -20,12 +20,15 @@ import {
   runChildPiAgent,
   sendChildAgentReportMessage,
   summarizeToolCalls,
-  truncateText,
   type RunStatus,
   type ToolCallSummary,
   type UsageStats,
 } from "./zz-lib/child-pi-agent.ts";
 import { createAgentMode } from "./lib/agent-mode.ts";
+import {
+  type BudgetedReportSection,
+  formatBudgetedVettingReport,
+} from "./lib/vetting-report-format.ts";
 import {
   type ChildAgentModelOption,
   applyChildAgentModelSelection,
@@ -47,6 +50,8 @@ import {
 } from "./lib/subagent-model-preferences.ts";
 
 const CONFIG_FILE_PATH = ".pi/extensions/vettingagents.config.jsonc";
+const DEFAULT_MODEL_OPTION_ID = "gpt-5.6-sol-medium";
+const MODEL_OPTIONS_CONFIG_FILE_PATH = ".pi/extensions/zz-agent-models.config.jsonc";
 const VETTINGAGENTS_MESSAGE_TYPE = "vettingagents-report";
 const VETTINGAGENTS_STATE_ENTRY_TYPE = "vettingagents-state";
 const STATUS_KEY = "vettingagents";
@@ -84,6 +89,8 @@ const MAIN_VETTINGAGENTS_PROMPT = [
   "</vettingagents>",
 ].join("\n");
 
+const VETTING_LENS_REPORT_TARGET_CHARS = 32_767;
+
 const DEFAULT_VETTINGAGENTS_CONFIG: ChildPiAgentConfig = {
   contextWindow: 272_000,
   endpoint: "http://127.0.0.1:1234",
@@ -91,11 +98,11 @@ const DEFAULT_VETTINGAGENTS_CONFIG: ChildPiAgentConfig = {
   model: "gpt-5.6-sol",
   provider: "openai-codex",
   providerRegistration: "none",
-  reportMaxChars: 36_000,
+  reportMaxChars: 100_000,
   requestTimeoutMs: 30 * 60 * 1_000,
   systemPrompt:
-    "You are a read-only adversarial vetting subagent spawned by Pi. Verify high-value documents, plans, implementation results, diffs, and code review targets without implementing changes. Be skeptical, evidence-driven, and specific. Inspect assigned evidence directly with your own read-only repo tools and model thread; do not delegate to other subagents. Do not edit or write files, do not run destructive commands, and do not perform git or PR operations. Return structured findings with blockers, major issues, evidence, uncertainty, and severity.",
-  thinking: "xhigh",
+    "You are a read-only adversarial vetting subagent spawned by Pi. Verify high-value documents, plans, implementation results, diffs, and code review targets without implementing changes. Be skeptical, evidence-driven, and specific. Inspect assigned evidence directly with your own read-only repo tools and model thread; do not delegate to other subagents. Do not edit or write files, do not run destructive commands, and do not perform git or PR operations. Never change machine or environment state: no package installs or removals (pip, npm, uv, cargo, apt, brew, or any other package manager), no virtualenv or toolchain creation, no version-manager switches, no global or user config changes, and no writes anywhere outside the repository. A missing tool is a verification gap to report, not a dependency to install. Return structured findings with blockers, major issues, evidence, uncertainty, and severity.",
+  thinking: "medium",
   tools: DEFAULT_TOOLS,
 };
 
@@ -186,7 +193,7 @@ function readVettingAgentsModelOptions(
   const result = readChildAgentModelOptions({
     agentName: "vettingagents",
     baseConfig,
-    configFilePath: CONFIG_FILE_PATH,
+    modelOptionsConfigFilePath: MODEL_OPTIONS_CONFIG_FILE_PATH,
     cwd,
   });
   if (result.error) {
@@ -224,7 +231,10 @@ function formatVettingAgentsModelSelection(config: ChildPiAgentConfig): string {
 }
 
 function applyVettingAgentsModelSelection(config: ChildPiAgentConfig): ChildPiAgentConfig {
-  return applyChildAgentModelSelection(config, getVettingAgentsModelOption(selectedVettingAgentsModelId));
+  return applyChildAgentModelSelection(
+    config,
+    getVettingAgentsModelOption(selectedVettingAgentsModelId ?? DEFAULT_MODEL_OPTION_ID),
+  );
 }
 
 function readActiveVettingAgentsConfig(cwd: string): ChildPiAgentConfig {
@@ -436,8 +446,11 @@ function getReportMaxChars(config: ChildPiAgentConfig, requested: number | undef
   return Math.min(config.reportMaxChars, Math.floor(requested));
 }
 
-function getPerLensMaxReportChars(totalMaxReportChars: number): number {
-  return Math.max(500, Math.floor(totalMaxReportChars / VETTING_LENSES.length));
+function getPerLensRequestedReportChars(totalMaxReportChars: number): number {
+  return Math.max(
+    1,
+    Math.min(VETTING_LENS_REPORT_TARGET_CHARS, Math.floor(totalMaxReportChars / VETTING_LENSES.length)),
+  );
 }
 
 function formatDelegatedTask(task: string, paths: readonly string[], focus: VettingFocus): string {
@@ -473,6 +486,7 @@ function formatDelegatedTask(task: string, paths: readonly string[], focus: Vett
     "- Cite repo-relative paths and line numbers when possible.",
     "- Do not paste raw grep/find/rg dumps, broad diffs, whole files, or large command transcripts.",
     "- Do not edit/write files, mutate git state, or perform PR/branch operations.",
+    "- Do not install packages or otherwise change machine or environment state; a missing tool is a verification gap to report, not a dependency to install.",
     "- Work only within this lens's own child thread/model and inspect evidence directly; do not delegate to other subagents.",
   ].join("\n");
 }
@@ -483,9 +497,10 @@ function buildVettingLensPrompt(lens: VettingLens, task: string): string {
     "Your purpose is adversarial verification of high-value documents, plans, implementation results, diffs, and code review targets. Work read-only.",
     "Do not coordinate with or reference the other vetting agents. Your report must stand on its own.",
     "Use only evidence you can inspect or clearly label as an assumption. Prefer repo-relative paths and line numbers.",
-    "Bash is allowed only for read-only inspection commands such as rg, find, ls, pwd, git status/log/diff --stat/--name-only, and non-mutating checks when explicitly useful.",
+    "Bash is allowed only for read-only inspection commands such as rg, find, ls, pwd, git status/log/diff --stat/--name-only, and non-mutating checks when explicitly useful. That list is an allowlist, and \"not destructive\" is not the test: never install or remove packages (pip, npm, uv, cargo, apt, brew, or any other package manager), never create virtualenvs or toolchains, never switch versions via a version manager, never change global or user config, and never write anywhere outside the repository including ~ and /tmp.",
     "Inspect files and repository evidence directly with this child thread's read-only tools; do not call or delegate to other subagents.",
     "Never edit/write files, never run destructive commands, and never perform git commits, pushes, branch changes, or PR operations.",
+    "If a tool you need is missing, fall back to what is available, do the check a cruder way, and record under verification gaps that you could not run the stronger check and why. A vetter that modifies the machine it is inspecting has compromised the thing it was asked to verify.",
     "",
     `Assigned lens: ${lens.label}`,
     ...lens.instructions.map((item) => `- ${item}`),
@@ -570,12 +585,9 @@ function prefixToolCalls(
   }));
 }
 
-function formatLensReport(
-  lensResult: VettingLensRunResult,
-  perLensMaxReportChars: number,
-): string {
+function formatLensReportSection(lensResult: VettingLensRunResult): BudgetedReportSection {
   const { lens, result } = lensResult;
-  const output = result.output.trim() || result.errorMessage || result.stderr || "(no output)";
+  const body = result.output.trim() || result.errorMessage || result.stderr || "(no output)";
   const statusLine = [
     `status: ${result.status}`,
     `durationMs: ${result.durationMs}`,
@@ -583,12 +595,10 @@ function formatLensReport(
     `toolCalls: ${result.toolCalls.length}`,
   ].join("; ");
 
-  return [
-    `## ${lens.label}`,
-    statusLine,
-    "",
-    truncateText(output, perLensMaxReportChars),
-  ].join("\n");
+  return {
+    body,
+    prefix: `## ${lens.label}\n${statusLine}\n\n`,
+  };
 }
 
 function formatVettingAgentsReport(options: {
@@ -597,7 +607,6 @@ function formatVettingAgentsReport(options: {
   readonly maxReportChars: number;
   readonly task: string;
 }): string {
-  const perLensMaxReportChars = getPerLensMaxReportChars(options.maxReportChars);
   const statuses = options.lensResults.map(({ lens, result }) => {
     const tools = result.toolCalls.length === 1 ? "1 tool" : `${result.toolCalls.length} tools`;
     const turns = result.usage.turns === 1 ? "1 turn" : `${result.usage.turns} turns`;
@@ -605,8 +614,7 @@ function formatVettingAgentsReport(options: {
   });
   const blockersHint =
     "Review each lens section for `Blockers` and `Major findings`. Repeated concerns across independent lenses should be treated as higher-confidence signals.";
-
-  const report = [
+  const preamble = [
     "# Vetting agents report",
     "",
     `Model selector: ${getModelSelector(options.config)}`,
@@ -617,10 +625,13 @@ function formatVettingAgentsReport(options: {
     "",
     `High-signal use: ${blockersHint}`,
     "",
-    ...options.lensResults.map((lensResult) => formatLensReport(lensResult, perLensMaxReportChars)),
   ].join("\n");
 
-  return truncateText(report, options.maxReportChars);
+  return formatBudgetedVettingReport({
+    maxChars: options.maxReportChars,
+    preamble,
+    sections: options.lensResults.map(formatLensReportSection),
+  });
 }
 
 function createFailedLensRunResult(
@@ -705,10 +716,10 @@ async function runVettingAgentsTask(options: {
   const searchTerms = normalizeStringList(options.searchTerms);
   const symbols = normalizeStringList(options.symbols);
   const maxReportChars = getReportMaxChars(options.config, options.maxReportChars);
-  const perLensMaxReportChars = getPerLensMaxReportChars(maxReportChars);
+  const perLensRequestedReportChars = getPerLensRequestedReportChars(maxReportChars);
   const task = formatDelegatedTask(options.task, options.paths, {
     criteria,
-    maxReportChars: perLensMaxReportChars,
+    maxReportChars: perLensRequestedReportChars,
     output: options.output,
     searchTerms,
     symbols,
